@@ -21,7 +21,6 @@ A professional web application for **Malware Incident Analysis (MIA)** and **Mal
 - [Keyboard Shortcuts](#-keyboard-shortcuts)
 - [Data Management](#-data-management)
 - [Export Options](#-export-options)
-- [Performance](#-performance)
 - [Development Scripts](#-development-scripts)
 - [Tech Stack](#-tech-stack)
 - [Project Structure / Cấu trúc dự án](#-project-structure--cấu-trúc-dự-án)
@@ -377,45 +376,6 @@ After export, you can choose to:
 
 ---
 
-## ⚡ Performance
-
-### Optimizations Implemented
-
-| Optimization | Impact |
-|--------------|--------|
-| **Lazy Loading** | Pages load on demand (~40% faster initial load) |
-| **Code Splitting** | 30+ separate chunks for optimal caching |
-| **Tree Shaking** | Aggressive dead code elimination |
-| **Virtual Scrolling** | IOC tables with 1000+ rows render smoothly |
-| **Debounced Saves** | Prevents excessive localStorage writes |
-| **Memoized Contexts** | Prevents unnecessary re-renders |
-| **Preload Hints** | Critical resources loaded early |
-| **Gzip + Brotli** | ~70% smaller transfers |
-
-### Bundle Size Targets
-
-| Category | Budget | Actual |
-|----------|--------|--------|
-| Entry Point | < 50 KB | ✅ |
-| Single Chunk | < 200 KB | ✅ |
-| Total JS | < 800 KB | ✅ |
-| Total CSS | < 100 KB | ✅ |
-
-### Monitoring Bundle Size
-
-```bash
-# After building, run:
-node scripts/bundle-size-report.js
-
-# Output includes:
-# - Size breakdown by chunk
-# - Gzip/Brotli sizes
-# - Budget warnings
-# - JSON metrics for CI/CD
-```
-
----
-
 ## 📜 Development Scripts
 
 | Script | Description |
@@ -686,20 +646,6 @@ npm install
 2. Click inside textarea first
 3. Press `Ctrl+V` / `Cmd+V`
 4. Check console for errors
-
-### Performance Issues
-
-```bash
-# Check bundle sizes
-node scripts/bundle-size-report.js
-
-# Profile in Chrome DevTools
-# 1. Open DevTools (F12)
-# 2. Performance tab
-# 3. Click Record
-# 4. Interact with app
-# 5. Stop and analyze
-```
 
 ---
 
