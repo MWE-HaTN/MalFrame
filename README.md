@@ -745,7 +745,6 @@ MIT License - see [LICENSE](LICENSE) for details.
 - [MITRE ATT&CK](https://attack.mitre.org/) - Threat framework
 - [MBC (Malware Behavior Catalog)](https://github.com/MBCProject/mbc-markdown) - Behavior mapping
 - [FLARE-VM](https://github.com/mandiant/flare-vm) - Analysis tools reference
-- [Shadcn/ui](https://ui.shadcn.com/) - Component library
 
 ---
 
