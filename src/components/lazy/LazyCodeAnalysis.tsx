@@ -3,7 +3,7 @@ import { SectionSkeleton } from "@/components/ui/section-skeleton";
 
 // Lazy load CodeAnalysisGroups component - reduces initial bundle by ~40KB
 const CodeAnalysisGroupsComponent = lazy(() => 
-  import("@/components/CodeAnalysisGroups").then(m => ({ default: m.CodeAnalysisGroups }))
+  import("@/features/mre/components/CodeAnalysisGroups").then(m => ({ default: m.CodeAnalysisGroups }))
 );
 
 // Re-export props type from the lazy component

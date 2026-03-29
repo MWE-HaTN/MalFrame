@@ -1,4 +1,4 @@
-import { ReactNode, useRef, useEffect, useState } from "react";
+import { useRef, useEffect, useState } from "react";
 import { Download, Upload, ChevronDown, File, FileText } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ClearDataDialog } from "@/components/ClearDataDialog";

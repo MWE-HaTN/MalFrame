@@ -3,7 +3,7 @@ import { SectionSkeleton } from "@/components/ui/section-skeleton";
 
 // Lazy load TimelineTable - includes @tanstack/react-virtual (~15KB)
 const TimelineTableComponent = lazy(() => 
-  import("@/components/TimelineTable").then(m => ({ default: m.TimelineTable }))
+  import("@/features/mia/components/TimelineTable").then(m => ({ default: m.TimelineTable }))
 );
 
 type TimelineTableProps = ComponentProps<typeof TimelineTableComponent>;

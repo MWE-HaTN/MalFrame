@@ -1,11 +1,10 @@
-import { useState, useEffect, useMemo, useCallback, memo } from "react";
-import { Button } from "@/components/ui/button";
+import { useState, useEffect, useMemo, useCallback, memo, useRef } from "react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { CheckCircle, Calendar } from "lucide-react";
+import { CheckCircle, Calendar, Download, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { STORAGE_KEYS } from "@/lib/storageKeys";
 import { ActivityDataSchema, safeJsonParse } from "@/lib/validationSchemas";
-import { useLanguage } from "@/contexts/LanguageContext";
+import { useLanguage } from "@/hooks/useLanguage";
 
 // Lazy import debug logger to reduce initial bundle
 const debugWarn = (message: string) => 
@@ -40,6 +39,7 @@ export const ActivityTracker = memo(function ActivityTracker() {
   const { t, language } = useLanguage();
   const [activityData, setActivityData] = useState<ActivityData>({ activities: [] });
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const importInputRef = useRef<HTMLInputElement>(null);
 
   // Load data from localStorage with validation
   useEffect(() => {
@@ -97,6 +97,47 @@ export const ActivityTracker = memo(function ActivityTracker() {
     }
   };
 
+  // Export activity data as JSON file
+  const handleExport = useCallback(() => {
+    const json = JSON.stringify(activityData, null, 2);
+    const blob = new Blob([json], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `malframe-activity-${new Date().toISOString().split("T")[0]}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    toast.success(t("activity.exportSuccess"));
+  }, [activityData, t]);
+
+  // Import activity data from JSON file (merges with existing)
+  const handleImport = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const parsed = JSON.parse(event.target?.result as string);
+        const result = ActivityDataSchema.safeParse(parsed);
+        if (!result.success) {
+          toast.error(t("activity.importError"));
+          return;
+        }
+        // Merge: union of existing + imported dates
+        const merged = Array.from(new Set([...activityData.activities, ...result.data.activities]));
+        saveData({ activities: merged });
+        toast.success(t("activity.importSuccess"));
+      } catch {
+        toast.error(t("activity.importError"));
+      }
+    };
+    reader.readAsText(file);
+    // Reset input so same file can be re-imported
+    e.target.value = "";
+  }, [activityData.activities, t]);
+
   // Format date for tooltip display - memoized formatter options
   const dateFormatOptions: Intl.DateTimeFormatOptions = useMemo(() => ({ 
     weekday: 'long', 
@@ -108,13 +149,13 @@ export const ActivityTracker = memo(function ActivityTracker() {
   const formatDateForTooltip = useCallback((dateString: string, count: number) => {
     const date = new Date(dateString);
     const formattedDate = date.toLocaleDateString('en-US', dateFormatOptions);
-    const activityText = count === 0 
-      ? 'No contributions' 
-      : count === 1 
-        ? '1 contribution' 
-        : `${count} contributions`;
+    const activityText = count === 0
+      ? t("activity.noSessions")
+      : count === 1
+        ? `1 ${t("activity.session")}`
+        : `${count} ${t("activity.sessions")}`;
     return { formattedDate, activityText };
-  }, [dateFormatOptions]);
+  }, [dateFormatOptions, t]);
 
   // Generate calendar grid for the selected year
   const calendarData = useMemo(() => {
@@ -306,12 +347,15 @@ export const ActivityTracker = memo(function ActivityTracker() {
                               onClick={() => toggleDateActivity(dayData.dateString)}
                             />
                           </TooltipTrigger>
-                          <TooltipContent 
-                            side="top" 
+                          <TooltipContent
+                            side="top"
                             className="bg-popover border border-border text-popover-foreground px-2 py-1.5 text-sm"
                           >
                             <div className="font-semibold text-primary">{activityText}</div>
                             <div className="text-muted-foreground text-xs">{formattedDate}</div>
+                            <div className="text-muted-foreground/60 text-xs mt-1 border-t border-border/40 pt-1">
+                              {count > 0 ? t("activity.clickToRemove") : t("activity.clickToTrack")}
+                            </div>
                           </TooltipContent>
                         </Tooltip>
                       );
@@ -345,6 +389,32 @@ export const ActivityTracker = memo(function ActivityTracker() {
           </div>
         </div>
       </div>
+
+      {/* Export / Import */}
+      <div className="flex items-center justify-end gap-2 mt-3 pt-3 border-t border-border/40">
+        <input
+          ref={importInputRef}
+          type="file"
+          accept=".json"
+          className="hidden"
+          onChange={handleImport}
+        />
+        <button
+          onClick={() => importInputRef.current?.click()}
+          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-mono text-muted-foreground border border-border/60 rounded hover:border-primary/50 hover:text-foreground transition-all"
+        >
+          <Upload className="w-3 h-3" />
+          {t("activity.import")}
+        </button>
+        <button
+          onClick={handleExport}
+          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-mono text-muted-foreground border border-border/60 rounded hover:border-primary/50 hover:text-foreground transition-all"
+        >
+          <Download className="w-3 h-3" />
+          {t("activity.export")}
+        </button>
+      </div>
     </div>
   );
 });
+

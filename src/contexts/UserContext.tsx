@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, useCallback, useMemo, type ReactNode } from "react";
+import { createContext, useState, useEffect, useCallback, useMemo, type ReactNode } from "react";
 import { STORAGE_KEYS } from "@/lib/storageKeys";
 import { UserProfileSchema, safeJsonParse } from "@/lib/validationSchemas";
 import { debugWarn } from "@/lib/debugLogger";
@@ -18,7 +18,7 @@ const defaultProfile: UserProfile = {
   githubUrl: "https://github.com/MWE-HaTN",
 };
 
-const UserContext = createContext<UserContextType | undefined>(undefined);
+export const UserContext = createContext<UserContextType | undefined>(undefined);
 
 export function UserProvider({ children }: { children: ReactNode }) {
   const [profile, setProfileState] = useState<UserProfile>(() => {
@@ -57,10 +57,3 @@ export function UserProvider({ children }: { children: ReactNode }) {
   );
 }
 
-export function useUser() {
-  const context = useContext(UserContext);
-  if (!context) {
-    throw new Error("useUser must be used within a UserProvider");
-  }
-  return context;
-}

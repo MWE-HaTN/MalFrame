@@ -13,4 +13,4 @@ export type {
 export { MBC_BASE_URL } from "./types";
 
 // Data - use dynamic import via hook for lazy loading
-// Import useMBCData directly from "@/hooks/useMBCData" when needed
+// Import useMBCData directly from "@/features/mre/hooks/useMBCData" when needed

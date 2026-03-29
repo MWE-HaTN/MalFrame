@@ -115,14 +115,14 @@ export function safeJsonParse<T>(jsonString: string): T {
 // Helper Schemas
 // ============================================
 
-const LogEntrySchema = z.object({
+export const LogEntrySchema = z.object({
   id: z.string(),
   text: z.string(),
   images: z.array(z.string()).optional().default([]).transform(sanitizeBase64Images),
   timestamp: z.string().optional(),
 });
 
-const PESectionDataSchema = z.object({
+export const PESectionDataSchema = z.object({
   id: z.string(),
   sectionName: z.string(),
   size: z.string(),
@@ -133,7 +133,7 @@ const PESectionDataSchema = z.object({
   timestamp: z.string().optional(),
 });
 
-const UnpackLayerSchema = z.object({
+export const UnpackLayerSchema = z.object({
   id: z.string(),
   layerNumber: z.number(),
   packerType: z.string(),
@@ -146,14 +146,14 @@ const UnpackLayerSchema = z.object({
   cleanedHash: z.string(),
 });
 
-const IOCSchema = z.object({
+export const IOCSchema = z.object({
   id: z.string(),
   type: z.string(),
   value: z.string(),
   description: z.string(),
 });
 
-const MBCMappingSchema = z.object({
+export const MBCMappingSchema = z.object({
   id: z.string(),
   name: z.string(),
   objectiveId: z.string(),
@@ -161,7 +161,7 @@ const MBCMappingSchema = z.object({
   type: z.enum(['behavior', 'micro', 'enhanced', 'sub-technique']),
 });
 
-const TimelineEntrySchema = z.object({
+export const TimelineEntrySchema = z.object({
   id: z.string(),
   time: z.string(),
   content: z.string(),
@@ -191,14 +191,14 @@ const RuntimeSubitemSchema = z.object({
   entries: z.array(RuntimeEntrySchema),
 });
 
-const RuntimeBehaviorDataSchema = z.object({
+export const RuntimeBehaviorDataSchema = z.object({
   groups: z.array(RuntimeGroupSchema),
   subitems: z.array(RuntimeSubitemSchema),
 });
 
 // Code Analysis schemas (relaxed for complex nested structure)
-const CodeAnalysisDataSchema = z.record(z.string(), z.unknown());
-const DeepDiveDataSchema = z.record(z.string(), z.unknown());
+export const CodeAnalysisDataSchema = z.record(z.string(), z.unknown());
+export const DeepDiveDataSchema = z.record(z.string(), z.unknown());
 
 // ============================================
 // Image Registry Schema
@@ -300,13 +300,13 @@ export const REDataSchema = z.object({
 }).passthrough();
 
 // MIA Dashboard Data Schema
-const MitreTechniqueSchema = z.object({ 
+export const MitreTechniqueSchema = z.object({
   id: z.string(), 
   name: z.string() 
 });
 
 // Artifact schema for MIA Dashboard - flexible to handle different formats
-const ArtifactSchema = z.object({
+export const ArtifactSchema = z.object({
   id: z.string(),
   name: z.string(),
   type: z.string(),

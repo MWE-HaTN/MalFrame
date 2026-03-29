@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, memo, useCallback } from "react";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, Info, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { STORAGE_KEYS } from "@/lib/storageKeys";
 import { SectionSkeleton } from "@/components/ui/section-skeleton";
@@ -13,6 +13,8 @@ interface CollapsibleSectionProps {
   storageKey?: string;
   forceClose?: number; // increment to force close
   headerAction?: React.ReactNode; // optional action button in header
+  /** Inline guidance text for analysts — shown/hidden via ℹ button, state persisted */
+  hint?: string;
   /** Enable lazy rendering - only render content when section is visible + open */
   lazy?: boolean;
   /** Skeleton variant when lazy loading */
@@ -58,13 +60,32 @@ function saveSectionState(key: string, isOpen: boolean) {
   localStorage.setItem(STORAGE_KEYS.SECTION_STATES, JSON.stringify(states));
 }
 
-// Clear all section states (reset to first visit behavior)
-// IMPORTANT: Does NOT clear MITRE cache - that persists across data clears
-export function clearAllSectionStates() {
-  // Clear section states only - MITRE cache is preserved automatically since we only remove specific keys
-  localStorage.removeItem(STORAGE_KEYS.SECTION_STATES);
-  localStorage.removeItem(STORAGE_KEYS.FIRST_VISIT);
+// Get hint states from localStorage
+function getHintStates(): Record<string, boolean> {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEYS.HINT_STATES);
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)) {
+        const result: Record<string, boolean> = {};
+        for (const key of Object.keys(parsed)) {
+          if (typeof parsed[key] === 'boolean') result[key] = parsed[key];
+        }
+        return result;
+      }
+    }
+    return {};
+  } catch {
+    return {};
+  }
 }
+
+function saveHintState(key: string, isOpen: boolean) {
+  const states = getHintStates();
+  states[key] = isOpen;
+  localStorage.setItem(STORAGE_KEYS.HINT_STATES, JSON.stringify(states));
+}
+
 
 // Memoized component to prevent unnecessary re-renders
 export const CollapsibleSection = memo(function CollapsibleSection({
@@ -76,6 +97,7 @@ export const CollapsibleSection = memo(function CollapsibleSection({
   storageKey,
   forceClose = 0,
   headerAction,
+  hint,
   lazy = false,
   skeletonVariant = "form",
   skeletonRows = 3,
@@ -85,6 +107,23 @@ export const CollapsibleSection = memo(function CollapsibleSection({
   const sectionRef = useRef<HTMLDivElement>(null);
   const [hasBeenVisible, setHasBeenVisible] = useState(!lazy);
   const [hasEverOpened, setHasEverOpened] = useState(false);
+
+  // Hint: default hidden — user opens on demand, state persists
+  const [hintOpen, setHintOpen] = useState(() => {
+    if (!hint) return false;
+    const states = getHintStates();
+    const hintKey = `hint-${key}`;
+    return hintKey in states ? states[hintKey] : false;
+  });
+
+  const handleHintToggle = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    setHintOpen(prev => {
+      const next = !prev;
+      saveHintState(`hint-${key}`, next);
+      return next;
+    });
+  }, [key]);
   
   const [isOpen, setIsOpen] = useState(() => {
     if (storageKey) {
@@ -170,6 +209,21 @@ export const CollapsibleSection = memo(function CollapsibleSection({
           <span className="title uppercase tracking-widest text-left">{title}</span>
         </div>
         <div className="flex items-center gap-2">
+          {hint && (
+            <div
+              onClick={handleHintToggle}
+              role="button"
+              aria-label="Toggle guidance"
+              className={cn(
+                "p-1 rounded transition-colors duration-150",
+                hintOpen
+                  ? "text-primary/80 hover:text-primary"
+                  : "text-muted-foreground/40 hover:text-muted-foreground"
+              )}
+            >
+              <Info className="w-3.5 h-3.5" />
+            </div>
+          )}
           {headerAction && (
             <div onClick={(e) => e.stopPropagation()}>
               {headerAction}
@@ -195,6 +249,19 @@ export const CollapsibleSection = memo(function CollapsibleSection({
             "p-4 space-y-4 transition-transform duration-200 ease-out",
             isOpen ? "translate-y-0" : "-translate-y-1"
           )}>
+            {hint && hintOpen && (
+              <div className="flex items-start gap-2.5 px-3 py-2.5 mb-2 rounded border border-primary/20 bg-primary/5 text-xs text-muted-foreground font-mono leading-relaxed">
+                <Info className="w-3.5 h-3.5 text-primary/60 mt-0.5 shrink-0" />
+                <span className="flex-1">{hint}</span>
+                <button
+                  onClick={handleHintToggle}
+                  className="text-muted-foreground/40 hover:text-muted-foreground transition-colors shrink-0 mt-0.5"
+                  aria-label="Dismiss guidance"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </div>
+            )}
             {showSkeleton ? (
               <SectionSkeleton variant={skeletonVariant} rows={skeletonRows} />
             ) : shouldRenderContent ? (

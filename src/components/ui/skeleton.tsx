@@ -88,12 +88,12 @@ function AnimatedCollapse({
 }: AnimatedCollapseProps) {
   return (
     <div className={cn(
-      "grid transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]",
+      "grid transition-all duration-300 ease-standard",
       isOpen ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"
     )}>
       <div className="overflow-hidden">
         <div className={cn(
-          "transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]",
+          "transition-all duration-300 ease-standard",
           isOpen ? "translate-y-0 opacity-100" : "-translate-y-2 opacity-0",
           className
         )}>

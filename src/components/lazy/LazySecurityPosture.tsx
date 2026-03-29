@@ -3,7 +3,7 @@ import { SectionSkeleton } from "@/components/ui/section-skeleton";
 
 // Lazy load SecurityPosture - includes Select, Tooltip (~15KB)
 const SecurityPostureComponent = lazy(() => 
-  import("@/components/SecurityPosture").then(m => ({ default: m.SecurityPosture }))
+  import("@/features/mre/components/SecurityPosture").then(m => ({ default: m.SecurityPosture }))
 );
 
 type SecurityPostureProps = ComponentProps<typeof SecurityPostureComponent>;

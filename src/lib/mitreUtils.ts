@@ -208,14 +208,6 @@ export function parseMitreStixData(bundle: MitreStixBundle): { tactics: MitreTac
     .filter(obj => obj.type === "x-mitre-tactic" && !obj.x_mitre_deprecated && !obj.revoked)
     .map(obj => {
       const extRef = obj.external_references?.find(r => r.source_name === "mitre-attack");
-      const phaseName = extRef?.external_id?.toLowerCase().replace(/^ta\d+$/, '') || '';
-      
-      // Derive the phase name from the tactic shortname in the reference URL
-      let tacticId = "";
-      const refUrl = obj.external_references?.find(r => r.source_name === "mitre-attack")?.url || "";
-      const urlMatch = refUrl.match(/\/tactics\/TA\d+/);
-      
-      // Get the proper phase name from kill chain references in techniques
       const objName = obj.name || "";
       return {
         stixId: obj.id,
@@ -314,7 +306,7 @@ export function parseMitreStixData(bundle: MitreStixBundle): { tactics: MitreTac
   // Sort tactics in the correct order
   const sortedTactics: MitreTactic[] = [];
   for (const tacticId of TACTIC_ORDER) {
-    for (const [phaseName, tactic] of tacticsMap.entries()) {
+    for (const [, tactic] of tacticsMap.entries()) {
       if (tactic.id === tacticId) {
         sortedTactics.push(tactic);
         break;
@@ -378,7 +370,7 @@ export async function loadMitreData(): Promise<{ tactics: MitreTactic[]; version
           inMemoryCacheValid = true;
           return parsed;
         }
-      } catch (e) {
+      } catch {
         debugWarn("Failed to parse cached MITRE data, will fetch fresh");
       }
     }

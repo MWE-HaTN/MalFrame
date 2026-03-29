@@ -1,5 +1,5 @@
 import { CircleCheck, Info, LoaderCircle, OctagonX, TriangleAlert } from "lucide-react";
-import { useTheme } from "@/contexts/ThemeContext";
+import { useTheme } from "@/hooks/useTheme";
 import { Toaster as Sonner } from "sonner";
 
 type ToasterProps = React.ComponentProps<typeof Sonner>;
@@ -39,3 +39,4 @@ const Toaster = ({ ...props }: ToasterProps) => {
 };
 
 export { Toaster };
+

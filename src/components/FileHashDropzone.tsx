@@ -3,7 +3,7 @@ import { Upload, Loader2 } from "lucide-react";
 import { cn, formatFileSize } from "@/lib/utils";
 import { toast } from "sonner";
 import { debugError } from "@/lib/debugLogger";
-import { useLanguage } from "@/contexts/LanguageContext";
+import { useLanguage } from "@/hooks/useLanguage";
 import { Progress } from "@/components/ui/progress";
 
 export interface FileDropInfo {
@@ -28,19 +28,19 @@ export function FileHashDropzone({ onHashGenerated, onFileDropped, onMultipleFil
   const [isProcessing, setIsProcessing] = useState(false);
   const [processingProgress, setProcessingProgress] = useState({ current: 0, total: 0, skipped: 0 });
 
-  const calculateSHA256 = async (file: File): Promise<string> => {
+  const calculateSHA256 = useCallback(async (file: File): Promise<string> => {
     const buffer = await file.arrayBuffer();
     const hashBuffer = await crypto.subtle.digest("SHA-256", buffer);
     const hashArray = Array.from(new Uint8Array(hashBuffer));
     const hashHex = hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
     return hashHex;
-  };
+  }, []);
 
-  const processFile = async (file: File): Promise<FileDropInfo> => {
+  const processFile = useCallback(async (file: File): Promise<FileDropInfo> => {
     const sha256 = await calculateSHA256(file);
     const sizeFormatted = formatFileSize(file.size);
     const md5 = sha256.substring(0, 32); // MD5-like hash
-    
+
     return {
       name: file.name,
       size: file.size,
@@ -48,7 +48,7 @@ export function FileHashDropzone({ onHashGenerated, onFileDropped, onMultipleFil
       sha256,
       md5,
     };
-  };
+  }, [calculateSHA256]);
 
   const handleFile = useCallback(async (file: File) => {
     setIsProcessing(true);
@@ -74,7 +74,7 @@ export function FileHashDropzone({ onHashGenerated, onFileDropped, onMultipleFil
       setIsProcessing(false);
       setProcessingProgress({ current: 0, total: 0, skipped: 0 });
     }
-  }, [onHashGenerated, onFileDropped, existingHashes]);
+  }, [processFile, onHashGenerated, onFileDropped, existingHashes]);
 
   const handleMultipleFiles = useCallback(async (files: File[]) => {
     if (files.length === 1) {
@@ -127,7 +127,7 @@ export function FileHashDropzone({ onHashGenerated, onFileDropped, onMultipleFil
       setIsProcessing(false);
       setProcessingProgress({ current: 0, total: 0, skipped: 0 });
     }
-  }, [handleFile, onMultipleFilesDropped, existingHashes]);
+  }, [handleFile, processFile, onMultipleFilesDropped, existingHashes]);
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -217,3 +217,4 @@ export function FileHashDropzone({ onHashGenerated, onFileDropped, onMultipleFil
     </div>
   );
 }
+

@@ -3,7 +3,7 @@ import { SectionSkeleton } from "@/components/ui/section-skeleton";
 
 // Lazy load MBCMapping component - reduces initial bundle by ~40KB
 const MBCMappingComponent = lazy(() => 
-  import("@/components/MBCMapping").then(m => ({ default: m.MBCMapping }))
+  import("@/features/mre/components/MBCMapping").then(m => ({ default: m.MBCMapping }))
 );
 
 // Re-export props type from the lazy component

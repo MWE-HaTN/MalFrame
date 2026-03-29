@@ -2,9 +2,9 @@ import { useState, useEffect } from "react";
 import { Header } from "@/components/Header";
 import { Globe, SlidersHorizontal, Sun, Moon, User, Github, Save, ExternalLink, Pencil, X } from "lucide-react";
 import { toast } from "sonner";
-import { useLanguage } from "@/contexts/LanguageContext";
-import { useTheme } from "@/contexts/ThemeContext";
-import { useUser } from "@/contexts/UserContext";
+import { useLanguage } from "@/hooks/useLanguage";
+import { useTheme } from "@/hooks/useTheme";
+import { useUser } from "@/hooks/useUser";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ActivityTracker } from "@/components/ActivityTracker";
@@ -341,3 +341,5 @@ export default function Settings() {
     </div>
   );
 }
+
+

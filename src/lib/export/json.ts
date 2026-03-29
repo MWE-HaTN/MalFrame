@@ -3,7 +3,7 @@ import { generateFileName, type ReportType } from "@/lib/fileNameUtils";
 import { downloadBlob } from "./helpers";
 
 export function exportJSON(
-  data: any, 
+  data: unknown,
   analyst: string, 
   fileName: string, 
   hash: string,

@@ -216,9 +216,10 @@ export function hasAnyMeaningfulValue(fields: Array<{ label: string; value: stri
 }
 
 /** Check if entry has content in specified keys (supports arrays) */
-export function hasContentInKeys(entry: Record<string, unknown>, keys: string[]): boolean {
+export function hasContentInKeys(entry: object, keys: string[]): boolean {
+  const rec = entry as Record<string, unknown>;
   return keys.some(key => {
-    const val = entry[key];
+    const val = rec[key];
     if (Array.isArray(val)) return val.length > 0 && val.some((v: unknown) => typeof v === 'string' && v.trim());
     return typeof val === 'string' && Boolean(val.trim());
   });

@@ -3,7 +3,8 @@
 import { jsPDF } from "jspdf";
 import { generateFileName } from "@/lib/fileNameUtils";
 import { formatReportHeader } from "@/lib/utils";
-import { extractLogText, formatFieldLabel, isMeaningful, formatLabelWithColon as formatLabel, clamp, hasContentInKeys } from "./helpers";
+import { extractLogText, isMeaningful, formatLabelWithColon as formatLabel, clamp } from "./helpers";
+import type { DFIRData } from "@/features/mia/types";
 
 // Colors for PDF export (matching MRE)
 const HEADER_COLOR: [number, number, number] = [0, 100, 80]; // Teal/Green
@@ -25,7 +26,7 @@ const SPACING = {
 };
 
 // Font family (will use default helvetica)
-let FONT_FAMILY = "helvetica";
+const FONT_FAMILY = "helvetica";
 
 /**
  * Fix orphan punctuation: if a line ends up being just punctuation, merge with previous
@@ -111,7 +112,7 @@ function addHeaderFooter(pdf: jsPDF, analyst: string) {
 }
 
 // Draw section header (like MRE)
-function drawSectionHeader(pdf: jsPDF, title: string, y: number, pageWidth: number): number {
+function drawSectionHeader(pdf: jsPDF, title: string, y: number, _pageWidth: number): number {
   if (y > 260) {
     pdf.addPage();
     y = LAYOUT.NEW_PAGE_START_Y;
@@ -391,7 +392,7 @@ function drawTextBlock(pdf: jsPDF, text: string, startY: number, pageWidth: numb
   return y + SPACING.AFTER_TABLE;
 }
 
-export function exportDFIRPDF(data: any, analyst: string, fileName: string, hash: string): void {
+export function exportDFIRPDF(data: DFIRData, analyst: string, fileName: string, hash: string): void {
   const pdf = new jsPDF();
   const pageWidth = pdf.internal.pageSize.getWidth();
   let y = LAYOUT.NEW_PAGE_START_Y;
@@ -421,7 +422,7 @@ export function exportDFIRPDF(data: any, analyst: string, fileName: string, hash
   }
 
   // 2. Sample Information - two column layout
-  const sampleInfo = data.sampleInfo || data.sampleInformation || {};
+  const sampleInfo = data.sampleInfo;
   const sampleLeft = [
     { label: "File Name", value: sampleInfo.fileName || "" },
     { label: "File Path", value: sampleInfo.filePath || "" },
@@ -470,8 +471,8 @@ export function exportDFIRPDF(data: any, analyst: string, fileName: string, hash
   }
 
   // 5. MITRE ATT&CK Mapping
-  const hasMeaningfulMitre = data.mitreMapping && Object.entries(data.mitreMapping).some(([_, techniques]: [string, any]) => 
-    techniques && techniques.length > 0 && techniques.some((t: any) => isMeaningful(t.id) || isMeaningful(t.name))
+  const hasMeaningfulMitre = data.mitreMapping && Object.entries(data.mitreMapping).some(([_tactic, techniques]: [string, { id: string; name: string }[]]) =>
+    techniques && techniques.length > 0 && techniques.some((t: { id: string; name: string }) => isMeaningful(t.id) || isMeaningful(t.name))
   );
   
   const MITRE_BASE_URL = "https://attack.mitre.org/techniques";
@@ -496,8 +497,8 @@ export function exportDFIRPDF(data: any, analyst: string, fileName: string, hash
   if (hasMeaningfulMitre) {
     y = drawSectionHeader(pdf, "MITRE ATT&CK Mapping", y, pageWidth);
     
-    Object.entries(data.mitreMapping).forEach(([tactic, techniques]: [string, any]) => {
-      const meaningfulTechniques = techniques.filter((t: any) => isMeaningful(t.id) || isMeaningful(t.name));
+    Object.entries(data.mitreMapping).forEach(([tactic, techniques]: [string, { id: string; name: string }[]]) => {
+      const meaningfulTechniques = techniques.filter((t: { id: string; name: string }) => isMeaningful(t.id) || isMeaningful(t.name));
       if (meaningfulTechniques.length === 0) return;
       
       if (y > LAYOUT.PAGE_BREAK_THRESHOLD) {
@@ -521,7 +522,7 @@ export function exportDFIRPDF(data: any, analyst: string, fileName: string, hash
       
       pdf.setFontSize(9);
       pdf.setFont(FONT_FAMILY, "normal");
-      meaningfulTechniques.forEach((technique: any) => {
+      meaningfulTechniques.forEach((technique: { id: string; name: string }) => {
         if (y > LAYOUT.PAGE_BREAK_THRESHOLD) {
           pdf.addPage();
           y = LAYOUT.NEW_PAGE_START_Y;
@@ -579,14 +580,14 @@ export function exportDFIRPDF(data: any, analyst: string, fileName: string, hash
   }
 
   // 8. IOCs
-  const meaningfulIocs = (data.iocs || []).filter((iocItem: any) => 
+  const meaningfulIocs = (data.iocs || []).filter((iocItem: { type: string; value: string; description: string }) =>
     isMeaningful(iocItem.type) || isMeaningful(iocItem.value) || isMeaningful(iocItem.description)
   );
-  
+
   if (meaningfulIocs.length > 0) {
     y = drawSectionHeader(pdf, "Indicators of Compromise (IOCs)", y, pageWidth);
-    
-    const iocFields = meaningfulIocs.map((ioc: any) => ({
+
+    const iocFields = meaningfulIocs.map((ioc: { type: string; value: string; description: string }) => ({
       label: ioc.type || "Unknown",
       value: `${ioc.value || '-'}${ioc.description ? ` - ${ioc.description}` : ''}`
     }));
@@ -594,14 +595,14 @@ export function exportDFIRPDF(data: any, analyst: string, fileName: string, hash
   }
 
   // 9. Timeline
-  const validTimelineEvents = (data.timeline || []).filter((timelineEvent: any) => 
+  const validTimelineEvents = (data.timeline || []).filter((timelineEvent: { time: string; content: string; severity: string }) =>
     isMeaningful(timelineEvent.time) || isMeaningful(timelineEvent.content)
   );
-  
+
   if (validTimelineEvents.length > 0) {
     y = drawSectionHeader(pdf, "Attack Timeline", y, pageWidth);
-    
-    const timelineFields = validTimelineEvents.map((event: any) => ({
+
+    const timelineFields = validTimelineEvents.map((event: { time: string; content: string; severity: string }) => ({
       label: `[${event.time || "N/A"}] (${event.severity || '-'})`,
       value: event.content || '-'
     }));
@@ -609,14 +610,14 @@ export function exportDFIRPDF(data: any, analyst: string, fileName: string, hash
   }
 
   // 10. Evidence Artifacts
-  const meaningfulArtifacts = (data.artifacts || []).filter((artifactItem: any) => 
+  const meaningfulArtifacts = (data.artifacts || []).filter((artifactItem: { type: string; name: string; sha256: string; md5: string; size?: string; usedIn?: string[] }) =>
     isMeaningful(artifactItem.type) || isMeaningful(artifactItem.name) || isMeaningful(artifactItem.sha256) || isMeaningful(artifactItem.md5)
   );
-  
+
   if (meaningfulArtifacts.length > 0) {
     y = drawSectionHeader(pdf, "Evidence Artifacts", y, pageWidth);
-    
-    meaningfulArtifacts.forEach((artifact: any) => {
+
+    meaningfulArtifacts.forEach((artifact: { type: string; name: string; sha256: string; md5: string; size?: string; usedIn?: string[] }) => {
       if (y > LAYOUT.PAGE_BREAK_THRESHOLD) {
         pdf.addPage();
         y = LAYOUT.NEW_PAGE_START_Y;

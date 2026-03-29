@@ -58,6 +58,7 @@ export const STORAGE_KEYS = {
   // ============================================
   SECTION_STATES: "dashboard-section-states",
   FIRST_VISIT: "dashboard-first-visit-done",
+  HINT_STATES: "dashboard-hint-states",
   
   // ============================================
   // Runtime Behavior Expanded States

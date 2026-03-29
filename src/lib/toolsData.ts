@@ -46,9 +46,10 @@ export const defaultToolsData: ToolCategory[] = [
     tools: [
       { name: "x64dbg", description: "User mode debugger optimized for reverse engineering and malware analysis.", projectUrl: "https://github.com/x64dbg/x64dbg" },
       { name: "x32dbg", description: "32-bit version of x64dbg debugger for Windows." },
+      { name: "ScyllaHide", description: "Anti-anti-debug plugin for x64dbg/OllyDbg — hides debugger from common detection techniques (IsDebuggerPresent, NtQueryInformationProcess, etc.).", projectUrl: "https://github.com/x64dbg/ScyllaHide" },
       { name: "WinDbg", description: "Microsoft's powerful debugger for Windows kernel and user mode debugging.", projectUrl: "https://docs.microsoft.com/en-us/windows-hardware/drivers/debugger/" },
       { name: "TTD", description: "Time Travel Debugging - record and replay execution for debugging." },
-      { name: "OllyDbg", description: "32-bit assembler level debugger for Windows." },
+      { name: "OllyDbg", description: "32-bit assembler level debugger for Windows. (Legacy, 2004-era — largely superseded by x64dbg. Only useful for old 32-bit malware that explicitly targets OllyDbg in anti-debug checks.)" },
       { name: "Immunity Debugger", description: "Debugger with Python API for exploit development." },
     ],
   },
@@ -218,7 +219,8 @@ export const defaultToolsData: ToolCategory[] = [
       { name: "AzureHound", description: "Azure/AzureAD data collector for BloodHound." },
       { name: "SharpHound", description: "C# data collector for BloodHound." },
       { name: "Impacket", description: "Python collection for working with network protocols." },
-      { name: "CrackMapExec", description: "Post-exploitation tool for network pentesting." },
+      { name: "NetExec (nxc)", description: "Post-exploitation tool for network pentesting — actively maintained successor to CrackMapExec (cme).", projectUrl: "https://github.com/Pennyw0rth/NetExec" },
+      { name: "CrackMapExec", description: "Post-exploitation tool for network pentesting. (Deprecated — replaced by NetExec. Use nxc instead.)" },
       { name: "Evil-WinRM", description: "WinRM shell for remote command execution." },
     ],
   },
@@ -237,6 +239,7 @@ export const defaultToolsData: ToolCategory[] = [
     name: "Networking",
     tools: [
       { name: "FakeNet-NG", description: "Dynamic network analysis tool for malware.", projectUrl: "https://github.com/mandiant/flare-fakenet-ng" },
+      { name: "INetSim", description: "Internet services simulation suite for malware analysis — simulates DNS, HTTP, SMTP, FTP and more in an isolated lab environment.", projectUrl: "https://www.inetsim.org/" },
       { name: "Fiddler", description: "Web debugging proxy for HTTP/HTTPS traffic.", projectUrl: "https://www.telerik.com/fiddler" },
       { name: "Wireshark", description: "Network protocol analyzer for traffic capture.", projectUrl: "https://www.wireshark.org/" },
       { name: "tshark", description: "Command-line network protocol analyzer." },
@@ -283,6 +286,7 @@ export const defaultToolsData: ToolCategory[] = [
       { name: "Task Explorer", description: "Task manager with PE analysis features." },
       { name: "Explorer Suite", description: "Suite of PE analysis tools including CFF Explorer." },
       { name: "ResourceHacker", description: "Resource editor for Windows executables.", projectUrl: "http://www.angusj.com/resourcehacker/" },
+      { name: "Scylla", description: "IAT (Import Address Table) fixer for manually unpacked PE files — reconstructs the import table after OEP dumping.", projectUrl: "https://github.com/NtQuery/Scylla" },
     ],
   },
   {
@@ -381,7 +385,7 @@ export const defaultToolsData: ToolCategory[] = [
       { name: "Process Monitor", description: "Monitor file, Registry, and process activity.", projectUrl: "https://docs.microsoft.com/en-us/sysinternals/downloads/procmon" },
       { name: "ProcDOT", description: "Visual malware analysis tool for ProcMon logs.", projectUrl: "https://www.procdot.com/" },
       { name: "rat-king-parser", description: "Parse config from common RAT families." },
-      { name: "Resource Hacker", description: "Resource editor for Windows executables." },
+      { name: "Frida", description: "Dynamic instrumentation toolkit — inject JS into native apps at runtime for hooking, tracing, and reverse engineering.", projectUrl: "https://frida.re/" },
       { name: "Sysinternals Suite", description: "Collection of Windows system utilities.", projectUrl: "https://docs.microsoft.com/en-us/sysinternals/" },
       { name: "System Informer", description: "Advanced system process manager (formerly Process Hacker).", projectUrl: "https://systeminformer.sourceforge.io/" },
       { name: "CAPEv2", description: "Malware sandbox for automated analysis.", projectUrl: "https://github.com/kevoreilly/CAPEv2" },
@@ -416,4 +420,4 @@ export const defaultToolsData: ToolCategory[] = [
 ];
 
 // Get the latest tools data version number for comparison
-export const TOOLS_DATA_VERSION = "2025.12.18";
+export const TOOLS_DATA_VERSION = "2026.03.28";

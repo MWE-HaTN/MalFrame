@@ -2,12 +2,12 @@ import { useState, useCallback } from "react";
 import { Layers } from "lucide-react";
 import { FormField } from "@/components/FormField";
 import { AnimatedCollapse } from "@/components/ui/skeleton";
-import { SubSectionHeader, useExpandedState } from "@/components/code-analysis/shared";
+import { SubSectionHeader, useExpandedState } from "@/features/mre/components/code-analysis/shared";
 import { StageCard } from "@/components/StageCard";
 import { useDragReorder } from "@/hooks/useDragReorder";
 import { STORAGE_KEYS } from "@/lib/storageKeys";
 import { generateId } from "@/lib/utils";
-import { useLanguage } from "@/contexts/LanguageContext";
+import { useLanguage } from "@/hooks/useLanguage";
 
 export interface ExecutionStage {
   id: string;
@@ -203,3 +203,4 @@ export function ExecutionStages({ stages, onStagesChange }: ExecutionStagesProps
     </div>
   );
 }
+

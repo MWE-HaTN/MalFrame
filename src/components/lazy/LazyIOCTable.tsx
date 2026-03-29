@@ -3,7 +3,7 @@ import { SectionSkeleton } from "@/components/ui/section-skeleton";
 
 // Lazy load IOCTable - includes @tanstack/react-virtual (~15KB)
 const IOCTableComponent = lazy(() => 
-  import("@/components/IOCTable").then(m => ({ default: m.IOCTable }))
+  import("@/features/mia/components/IOCTable").then(m => ({ default: m.IOCTable }))
 );
 
 type IOCTableProps = ComponentProps<typeof IOCTableComponent>;

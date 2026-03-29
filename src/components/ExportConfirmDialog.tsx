@@ -10,8 +10,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Progress } from "@/components/ui/progress";
-import { useTheme } from "@/contexts/ThemeContext";
-import { useLanguage } from "@/contexts/LanguageContext";
+import { useTheme } from "@/hooks/useTheme";
+import { useLanguage } from "@/hooks/useLanguage";
 import { Moon, Sun, X, FileText, Check, Image } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { trackTodayActivity } from "@/lib/activityUtils";
@@ -41,7 +41,6 @@ export function ExportConfirmDialog({
   const { t } = useLanguage();
   const [step, setStep] = useState<DialogStep>("theme-check");
   const [saveImages, setSaveImages] = useState(true);
-  const [clearData, setClearData] = useState(false);
   const [progress, setProgress] = useState(0);
   const progressIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -53,7 +52,6 @@ export function ExportConfirmDialog({
     if (open) {
       setStep("theme-check");
       setSaveImages(true);
-      setClearData(false);
       setProgress(0);
     }
   }, [open]);
@@ -83,7 +81,6 @@ export function ExportConfirmDialog({
   const handleCancel = () => {
     setStep("theme-check");
     setSaveImages(true);
-    setClearData(false);
     onOpenChange(false);
   };
 
@@ -386,3 +383,5 @@ export function ExportConfirmDialog({
     </Dialog>
   );
 }
+
+

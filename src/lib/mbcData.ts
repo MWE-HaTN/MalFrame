@@ -1,4 +1,4 @@
-// Malware Behavior Catalog (MBC) v3.1 - Normalized JSON Dataset
+// Malware Behavior Catalog (MBC) v3.2 - Normalized JSON Dataset
 // Source: https://github.com/MBCProject/mbc-markdown
 // Note: Types are exported from ./mbc/types.ts and ./mbc/index.ts
 
@@ -7,7 +7,7 @@ import { MBC_BASE_URL } from "./mbc/types";
 
 // Export only mbcData - types are exported from mbc/index.ts for better tree-shaking
 export const mbcData: MBCData = {
-  version: "v3.1",
+  version: "v3.2",
   objectives: [
     {
       objectiveId: "OB0001",
@@ -271,6 +271,7 @@ export const mbcData: MBCData = {
             { id: "B0012.004", name: "Jump Instructions" },
             { id: "B0012.005", name: "Value Dependent Jumps" },
             { id: "B0012.006", name: "Variable Recomposition" },
+            { id: "B0012.007", name: "Fake Function" },
           ]
         },
         {

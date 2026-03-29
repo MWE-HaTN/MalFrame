@@ -6,6 +6,8 @@ import viteCompression from "vite-plugin-compression";
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
+  base: mode === "production" ? "/MalFrame/" : "/",
+
   server: {
     host: "::",
     port: 8080,
@@ -24,7 +26,7 @@ export default defineConfig(({ mode }) => ({
     mode === "production" && viteCompression({
       algorithm: "gzip",
       ext: ".gz",
-      threshold: 1024, // Only compress files > 1KB
+      threshold: 1024,
       deleteOriginFile: false,
     }),
     // Brotli compression for production (better compression than gzip)
@@ -65,19 +67,9 @@ export default defineConfig(({ mode }) => ({
             return "vendor-virtual";
           }
           
-          // Radix UI components - consolidated (unused packages removed)
-          if (id.includes("@radix-ui/react-dialog") || id.includes("@radix-ui/react-alert-dialog")) {
-            return "vendor-dialog";
-          }
-          if (id.includes("@radix-ui/react-dropdown") || id.includes("@radix-ui/react-select")) {
-            return "vendor-menus";
-          }
-          if (id.includes("@radix-ui/react-tooltip") || 
-              id.includes("@radix-ui/react-collapsible") || id.includes("@radix-ui/react-checkbox")) {
-            return "vendor-ui";
-          }
+          // Radix UI — all in one chunk to avoid circular dependency warnings
           if (id.includes("@radix-ui")) {
-            return "vendor-radix-core";
+            return "vendor-radix";
           }
           
           // Icons - keep in main chunk for better caching (small per-icon size)
@@ -138,25 +130,25 @@ export default defineConfig(({ mode }) => ({
           }
           
           // Heavy components - already lazy loaded, ensure separate chunks
-          if (id.includes("src/components/MitreAttackMapping")) {
+          if (id.includes("src/features/mia/components/MitreAttackMapping")) {
             return "component-mitre";
           }
-          if (id.includes("src/components/MBCMapping")) {
+          if (id.includes("src/features/mre/components/MBCMapping")) {
             return "component-mbc";
           }
-          if (id.includes("src/components/IOCTable")) {
+          if (id.includes("src/features/mia/components/IOCTable")) {
             return "component-ioc";
           }
-          if (id.includes("src/components/CodeAnalysisGroups") || id.includes("src/components/code-analysis")) {
+          if (id.includes("src/features/mre/components/CodeAnalysisGroups") || id.includes("src/features/mre/components/code-analysis")) {
             return "component-code-analysis";
           }
-          if (id.includes("src/components/runtime-behavior")) {
+          if (id.includes("src/features/mre/components/runtime-behavior")) {
             return "component-runtime";
           }
-          if (id.includes("src/components/EvidenceArtifacts")) {
+          if (id.includes("src/features/mia/components/EvidenceArtifacts")) {
             return "component-evidence";
           }
-          if (id.includes("src/components/TimelineTable")) {
+          if (id.includes("src/features/mia/components/TimelineTable")) {
             return "component-timeline";
           }
           // UnpackingLayers - includes AlertDialog
@@ -172,11 +164,11 @@ export default defineConfig(({ mode }) => ({
             return "component-dropzone";
           }
           // StaticAnalysisCards + SecurityPosture
-          if (id.includes("src/components/StaticAnalysisCards") || id.includes("src/components/SecurityPosture")) {
+          if (id.includes("src/features/mre/components/StaticAnalysisCards") || id.includes("src/features/mre/components/SecurityPosture")) {
             return "component-static-analysis";
           }
           // PESectionEntry + PackedDropdown
-          if (id.includes("src/components/PESectionEntry") || id.includes("src/components/PackedDropdown")) {
+          if (id.includes("src/features/mre/components/PESectionEntry") || id.includes("src/features/mre/components/PackedDropdown")) {
             return "component-pe-analysis";
           }
           // ExportConfirmDialog - includes Dialog, Checkbox
@@ -210,7 +202,7 @@ export default defineConfig(({ mode }) => ({
         },
         // Optimize asset file names
         assetFileNames: (assetInfo) => {
-          const name = assetInfo.name || '';
+          const name = assetInfo.names?.[0] || '';
           if (name.endsWith('.css')) {
             return 'assets/css/[name]-[hash][extname]';
           }
@@ -233,7 +225,7 @@ export default defineConfig(({ mode }) => ({
   optimizeDeps: {
     include: [
       "react",
-      "react-dom", 
+      "react-dom",
       "react-router-dom",
       "lucide-react",
     ],

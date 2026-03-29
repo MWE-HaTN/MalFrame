@@ -1,0 +1,71 @@
+name: Feature Request
+description: Suggest a new feature or improvement for MalFrame
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for suggesting a new feature!
+        The more context you provide, the easier it is to evaluate and implement.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem / Use Case
+      description: What workflow or analysis task does this feature improve?
+      placeholder: |
+        When analyzing ransomware, I need to document encryption keys found
+        during unpacking. Currently there's no dedicated field for this.
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed Solution
+      description: Describe the feature you'd like to see.
+      placeholder: |
+        Add a "Crypto Keys" subsection under Code Analysis with fields for
+        algorithm, key value, and context.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Relevant Area
+      multiple: true
+      options:
+        - MIA Dashboard
+        - MRE Dashboard
+        - Tools Page
+        - Export (PDF/Word/JSON)
+        - MITRE ATT&CK Integration
+        - MBC Integration
+        - UI / Design
+        - Performance
+        - Translations (EN/VN)
+        - Other
+    validations:
+      required: true
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: How important is this to your workflow?
+      options:
+        - Nice to have
+        - Would improve efficiency
+        - Blocks my workflow
+    validations:
+      required: true
+
+  - type: textarea
+    id: references
+    attributes:
+      label: References / Prior Art
+      description: Links to tools, standards, or examples that inspired this request.
+      placeholder: |
+        - CAPA output format: https://github.com/mandiant/capa
+        - MBC behavior: https://github.com/MBCProject/mbc-markdown

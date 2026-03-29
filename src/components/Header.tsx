@@ -3,10 +3,10 @@ import { useEffect, useState, useRef, useCallback, type MouseEvent } from "react
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Settings, Terminal, Wrench, ArrowLeftRight } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useLanguage } from "@/contexts/LanguageContext";
+import { useLanguage } from "@/hooks/useLanguage";
 import { Button } from "@/components/ui/button";
 import { STORAGE_KEYS } from "@/lib/storageKeys";
-import { preloadRoutes } from "@/App";
+import { preloadRoutes } from "@/lib/preloadRoutes";
 import { LazyEasterEgg, ACTIVATION_COUNT } from "./header/EasterEgg";
 import { ActivityBadge } from "./header/ActivityBadge";
 
@@ -190,7 +190,4 @@ export function Header() {
   );
 }
 
-// Export helper to get saved dashboard preference
-export function getSavedDashboard(): string {
-  return localStorage.getItem(STORAGE_KEYS.LAST_DASHBOARD) || "/mia";
-}
+

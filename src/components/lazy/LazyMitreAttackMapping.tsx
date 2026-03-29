@@ -3,7 +3,7 @@ import { SectionSkeleton } from "@/components/ui/section-skeleton";
 
 // Lazy load MitreAttackMapping component - reduces initial bundle by ~50KB
 const MitreAttackMappingComponent = lazy(() => 
-  import("@/components/MitreAttackMapping").then(m => ({ default: m.MitreAttackMapping }))
+  import("@/features/mia/components/MitreAttackMapping").then(m => ({ default: m.MitreAttackMapping }))
 );
 
 // Re-export props type from the lazy component

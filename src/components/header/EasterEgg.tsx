@@ -2,7 +2,7 @@
  * Hidden feature component - Content encoded for privacy
  * This file contains obfuscated configuration data
  */
-import { lazy, Suspense, useState, useEffect, memo } from "react";
+import { useState, useEffect, memo, useMemo } from "react";
 import { LinkedinIcon } from "lucide-react";
 import {
   Dialog,
@@ -52,13 +52,13 @@ export const EasterEggDialog = memo(function EasterEggDialog({
   const [typingText, setTypingText] = useState("");
   const [currentTypingLine, setCurrentTypingLine] = useState(-1);
   
-  const content = _c();
-  const lines = [
+  const content = useMemo(() => _c(), []);
+  const lines = useMemo(() => [
     { full: `${content.l1.l} ${content.l1.v}`, prefix: content.l1.p },
     { full: `${content.l2.l} ${content.l2.v}`, prefix: content.l2.p },
     { full: content.l3.l, prefix: content.l3.p, hasLink: true, url: content.l3.u },
     { full: content.l4.v, isQuote: true },
-  ];
+  ], [content]);
 
   // Reset animation when dialog opens
   useEffect(() => {

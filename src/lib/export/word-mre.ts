@@ -7,8 +7,6 @@ import {
   formatSignatureStatus,
   formatDllMitigations,
   SEMANTIC_COLORS_HEX,
-  getPackedSemanticLevel,
-  getPackerSemanticLevel,
   getRWXSemanticLevel,
   getEntropySemanticLevel,
   getFieldSemanticLevel,
@@ -16,7 +14,12 @@ import {
   hasAnyMeaningfulValue,
   downloadBlob,
 } from "./helpers";
-import type { PESectionData } from "@/types/dashboard";
+import type { PESectionData, UnpackLayer } from "@/types/dashboard";
+import type { CodeAnalysisData, DeepDiveData } from "@/features/mre/components/CodeAnalysisGroups";
+import type { InterestingFunction, ControlFlowEntry, APIUsageEntry, ObfuscationEntry, BreakpointEvent, MemoryRegion, RuntimeAPITrace, CryptoEntry } from "@/features/mre/components/code-analysis/types";
+import type { ExecutionStage } from "@/components/ExecutionStages";
+import type { RuntimeBehaviorData, TriggerEntry, AntiDebugEntry, AntiVMEntry, ExecutionFlowEntry, SystemArtifactEntry, PersistenceEntry, NetworkBehaviorEntry, MemoryBehaviorEntry, ProcessInjectionEntry } from "@/features/mre/components/runtime-behavior";
+import type { REData } from "@/features/mre/types";
 
 const HEADER_COLOR = "006450"; // Teal/Green
 const LABEL_COLOR = "000000"; // Black
@@ -24,16 +27,6 @@ const LABEL_COLOR = "000000"; // Black
 // Get hex color from semantic level
 function getSemanticHex(level: keyof typeof SEMANTIC_COLORS_HEX | null): string | null {
   return level ? SEMANTIC_COLORS_HEX[level] : null;
-}
-
-// Get semantic color for Packed value (YES/NO)
-function getPackedColorHex(value: string): string | null {
-  return getSemanticHex(getPackedSemanticLevel(value));
-}
-
-// Get semantic color for Packer name
-function getPackerColorHex(value: string): string | null {
-  return getSemanticHex(getPackerSemanticLevel(value));
 }
 
 // Get semantic color for RWX permissions
@@ -53,17 +46,17 @@ function getSemanticColorHex(label: string, value: string): string | null {
 
 // Helper to extract code analysis (with new field: role)
 // Filters out entries that have no meaningful content
-function extractCodeAnalysis(codeAnalysis: any): Record<string, string> {
+function extractCodeAnalysis(codeAnalysis: CodeAnalysisData): Record<string, string> {
   if (!codeAnalysis) return {};
   const extractedResult: Record<string, string> = {};
   const staticCodeData = codeAnalysis.staticCodeAnalysis;
   const dynamicCodeData = codeAnalysis.dynamicCodeAnalysis;
-  
-  
+
+
   if (staticCodeData?.interestingFunctions?.length > 0) {
     const filtered = staticCodeData.interestingFunctions
-      .filter((e: any) => hasContentInKeys(e, ['functionName', 'rvaAddress', 'role', 'notes']))
-      .map((funcEntry: any) => {
+      .filter((e: InterestingFunction) => hasContentInKeys(e, ['functionName', 'rvaAddress', 'role', 'notes']))
+      .map((funcEntry: InterestingFunction) => {
         let formattedLine = `${funcEntry.functionName} @ ${funcEntry.rvaAddress}`;
         if (funcEntry.role) formattedLine += ` [Role: ${funcEntry.role}]`;
         if (funcEntry.notes) formattedLine += `: ${funcEntry.notes}`;
@@ -74,43 +67,43 @@ function extractCodeAnalysis(codeAnalysis: any): Record<string, string> {
   }
   if (staticCodeData?.controlFlow?.length > 0) {
     const filtered = staticCodeData.controlFlow
-      .filter((e: any) => hasContentInKeys(e, ['loopBranchNotes', 'cfgObservations']))
-      .map((cfEntry: any) => `Loops/Branch: ${cfEntry.loopBranchNotes}, CFG: ${cfEntry.cfgObservations}`)
+      .filter((e: ControlFlowEntry) => hasContentInKeys(e, ['loopBranchNotes', 'cfgObservations']))
+      .map((cfEntry: ControlFlowEntry) => `Loops/Branch: ${cfEntry.loopBranchNotes}, CFG: ${cfEntry.cfgObservations}`)
       .filter((lineText: string) => lineText.replace(/Loops\/Branch: , CFG: /g, "").trim());
     if (filtered.length) extractedResult.controlFlow = filtered.join("\n");
   }
   if (staticCodeData?.apiUsage?.length > 0) {
     const filtered = staticCodeData.apiUsage
-      .filter((e: any) => hasContentInKeys(e, ['apiName', 'purposeBehavior']))
-      .map((apiEntry: any) => `${apiEntry.apiName}: ${apiEntry.purposeBehavior}`)
+      .filter((e: APIUsageEntry) => hasContentInKeys(e, ['apiName', 'purposeBehavior']))
+      .map((apiEntry: APIUsageEntry) => `${apiEntry.apiName}: ${apiEntry.purposeBehavior}`)
       .filter((lineText: string) => lineText.trim() !== ":");
     if (filtered.length) extractedResult.apiUsage = filtered.join("\n");
   }
   if (staticCodeData?.obfuscation?.length > 0) {
     const filtered = staticCodeData.obfuscation
-      .filter((e: any) => hasContentInKeys(e, ['technique', 'evidence']))
-      .map((obfEntry: any) => `${obfEntry.technique}: ${obfEntry.evidence}`)
+      .filter((e: ObfuscationEntry) => hasContentInKeys(e, ['technique', 'evidence']))
+      .map((obfEntry: ObfuscationEntry) => `${obfEntry.technique}: ${obfEntry.evidence}`)
       .filter((lineText: string) => lineText.trim() !== ":");
     if (filtered.length) extractedResult.obfuscation = filtered.join("\n");
   }
   if (dynamicCodeData?.breakpointEvents?.length > 0) {
     const filtered = dynamicCodeData.breakpointEvents
-      .filter((e: any) => hasContentInKeys(e, ['eventType', 'whereTriggered', 'notes']))
-      .map((bpEntry: any) => `[${bpEntry.eventType}] ${bpEntry.whereTriggered}: ${bpEntry.notes}`)
+      .filter((e: BreakpointEvent) => hasContentInKeys(e, ['eventType', 'whereTriggered', 'notes']))
+      .map((bpEntry: BreakpointEvent) => `[${bpEntry.eventType}] ${bpEntry.whereTriggered}: ${bpEntry.notes}`)
       .filter((lineText: string) => lineText.trim() !== "[] :");
     if (filtered.length) extractedResult.breakpointEvents = filtered.join("\n");
   }
   if (dynamicCodeData?.memoryRegions?.length > 0) {
     const filtered = dynamicCodeData.memoryRegions
-      .filter((e: any) => hasContentInKeys(e, ['allocation', 'address', 'behavior']))
-      .map((memEntry: any) => `[${memEntry.allocation}] ${memEntry.address}: ${memEntry.behavior}`)
+      .filter((e: MemoryRegion) => hasContentInKeys(e, ['allocation', 'address', 'behavior']))
+      .map((memEntry: MemoryRegion) => `[${memEntry.allocation}] ${memEntry.address}: ${memEntry.behavior}`)
       .filter((lineText: string) => lineText.trim() !== "[] :");
     if (filtered.length) extractedResult.memoryRegions = filtered.join("\n");
   }
   if (dynamicCodeData?.runtimeApiTrace?.length > 0) {
     const filtered = dynamicCodeData.runtimeApiTrace
-      .filter((e: any) => hasContentInKeys(e, ['api', 'arguments', 'returnValue']))
-      .map((traceEntry: any) => `${traceEntry.api}(${traceEntry.arguments}) → ${traceEntry.returnValue}`)
+      .filter((e: RuntimeAPITrace) => hasContentInKeys(e, ['api', 'arguments', 'returnValue']))
+      .map((traceEntry: RuntimeAPITrace) => `${traceEntry.api}(${traceEntry.arguments}) → ${traceEntry.returnValue}`)
       .filter((lineText: string) => lineText.trim() !== "() →");
     if (filtered.length) extractedResult.runtimeAPITrace = filtered.join("\n");
   }
@@ -118,14 +111,14 @@ function extractCodeAnalysis(codeAnalysis: any): Record<string, string> {
 }
 
 // Helper to extract deep dive data (with new field: analystHypothesis, entryCondition, etc.)
-function extractDeepDive(deepDive: any, unpackLayers: any[]): Record<string, string> {
+function extractDeepDive(deepDive: DeepDiveData & { microBehaviors?: { id: string; name: string; objectiveName: string; pathToMd?: string }[] }, unpackLayers: UnpackLayer[]): Record<string, string> {
   const extractedResult: Record<string, string> = {};
   const unpackText = extractUnpackLayers(unpackLayers);
   if (unpackText && unpackText.trim()) extractedResult.unpackingLayers = unpackText;
   
   if (deepDive?.executionStages?.length > 0) {
     const stagesText = deepDive.executionStages
-      .map((stageEntry: any) => {
+      .map((stageEntry: ExecutionStage) => {
         const hasStageContent =
           (stageEntry.entryCondition && stageEntry.entryCondition.trim()) ||
           (stageEntry.actions && stageEntry.actions.trim()) ||
@@ -156,7 +149,7 @@ function extractDeepDive(deepDive: any, unpackLayers: any[]): Record<string, str
   }
   if (deepDive?.cryptoEntries?.length > 0) {
     const cryptoText = deepDive.cryptoEntries
-      .map((cryptoEntry: any) => {
+      .map((cryptoEntry: CryptoEntry) => {
         // Check if has meaningful content
         const hasAlgo = cryptoEntry.algorithm && cryptoEntry.algorithm.trim();
         const hasKeyIv = cryptoEntry.keyIv && cryptoEntry.keyIv.trim();
@@ -174,8 +167,8 @@ function extractDeepDive(deepDive: any, unpackLayers: any[]): Record<string, str
   }
   if (deepDive?.microBehaviors?.length > 0) {
     const microText = deepDive.microBehaviors
-      .filter((microEntry: any) => microEntry.id && microEntry.id.trim() && microEntry.name && microEntry.name.trim())
-      .map((microEntry: any) => {
+      .filter((microEntry: { id: string; name: string; objectiveName: string; pathToMd?: string }) => microEntry.id && microEntry.id.trim() && microEntry.name && microEntry.name.trim())
+      .map((microEntry: { id: string; name: string; objectiveName: string; pathToMd?: string }) => {
         const objectiveSlug = (microEntry.objectiveName || '').toLowerCase().replace(/\s+/g, '-');
         const behaviorUrl = microEntry.pathToMd 
           ? `https://github.com/MBCProject/mbc-markdown/blob/main/${microEntry.pathToMd}`
@@ -191,21 +184,21 @@ function extractDeepDive(deepDive: any, unpackLayers: any[]): Record<string, str
 
 // Helper to extract runtime behavior (with new field: effect)
 // Filters out entries that have no meaningful content
-function extractRuntimeBehaviorWithEffect(runtimeBehavior: any): Record<string, string> {
+function extractRuntimeBehaviorWithEffect(runtimeBehavior: RuntimeBehaviorData): Record<string, string> {
   if (!runtimeBehavior) return {};
   const extractedResult: Record<string, string> = {};
-  
+
   if (runtimeBehavior.triggersEnabled && runtimeBehavior.triggers?.length > 0) {
     const filtered = runtimeBehavior.triggers
-      .filter((e: any) => hasContentInKeys(e, ['name', 'description']))
-      .map((triggerEntry: any) => `${triggerEntry.name}: ${triggerEntry.description}`)
+      .filter((e: TriggerEntry) => hasContentInKeys(e, ['name', 'description']))
+      .map((triggerEntry: TriggerEntry) => `${triggerEntry.name}: ${triggerEntry.description}`)
       .filter((lineText: string) => lineText.trim() !== ":");
     if (filtered.length) extractedResult.triggers = filtered.join("\n");
   }
   if (runtimeBehavior.antiDebugEnabled && runtimeBehavior.antiDebug?.length > 0) {
     const filtered = runtimeBehavior.antiDebug
-      .filter((e: any) => hasContentInKeys(e, ['categoryTags', 'apis', 'effect', 'notes']))
-      .map((debugEntry: any) => {
+      .filter((e: AntiDebugEntry) => hasContentInKeys(e, ['categoryTags', 'apis', 'effect', 'notes']))
+      .map((debugEntry: AntiDebugEntry) => {
         let formattedLine = `[${debugEntry.categoryTags?.join(", ")}] APIs: ${debugEntry.apis?.join(", ")}`;
         if (debugEntry.effect) formattedLine += ` | Effect: ${debugEntry.effect}`;
         if (debugEntry.notes) formattedLine += ` - ${debugEntry.notes}`;
@@ -216,8 +209,8 @@ function extractRuntimeBehaviorWithEffect(runtimeBehavior: any): Record<string, 
   }
   if (runtimeBehavior.antiVMEnabled && runtimeBehavior.antiVM?.length > 0) {
     const filtered = runtimeBehavior.antiVM
-      .filter((e: any) => hasContentInKeys(e, ['methodTags', 'indicator', 'effect', 'notes']))
-      .map((vmEntry: any) => {
+      .filter((e: AntiVMEntry) => hasContentInKeys(e, ['methodTags', 'indicator', 'effect', 'notes']))
+      .map((vmEntry: AntiVMEntry) => {
         let formattedLine = `[${vmEntry.methodTags?.join(", ")}] ${vmEntry.indicator}`;
         if (vmEntry.effect) formattedLine += ` | Effect: ${vmEntry.effect}`;
         if (vmEntry.notes) formattedLine += ` - ${vmEntry.notes}`;
@@ -228,43 +221,43 @@ function extractRuntimeBehaviorWithEffect(runtimeBehavior: any): Record<string, 
   }
   if (runtimeBehavior.executionFlowEnabled && runtimeBehavior.executionFlow?.length > 0) {
     const filtered = runtimeBehavior.executionFlow
-      .filter((e: any) => hasContentInKeys(e, ['stepName', 'description']))
-      .map((flowEntry: any) => `${flowEntry.stepName}: ${flowEntry.description}`)
+      .filter((e: ExecutionFlowEntry) => hasContentInKeys(e, ['stepName', 'description']))
+      .map((flowEntry: ExecutionFlowEntry) => `${flowEntry.stepName}: ${flowEntry.description}`)
       .filter((lineText: string) => lineText.trim() !== ":");
     if (filtered.length) extractedResult.executionFlow = filtered.join("\n");
   }
   if (runtimeBehavior.systemArtifactsEnabled && runtimeBehavior.systemArtifacts?.length > 0) {
     const filtered = runtimeBehavior.systemArtifacts
-      .filter((e: any) => hasContentInKeys(e, ['typeTags', 'path', 'notes']))
-      .map((artifactEntry: any) => `[${artifactEntry.typeTags?.join(", ")}] ${artifactEntry.path} - ${artifactEntry.notes}`)
+      .filter((e: SystemArtifactEntry) => hasContentInKeys(e, ['typeTags', 'path', 'notes']))
+      .map((artifactEntry: SystemArtifactEntry) => `[${artifactEntry.typeTags?.join(", ")}] ${artifactEntry.path} - ${artifactEntry.notes}`)
       .filter((lineText: string) => lineText.trim() && lineText !== "[]  - ");
     if (filtered.length) extractedResult.systemArtifacts = filtered.join("\n");
   }
   if (runtimeBehavior.persistenceEnabled && runtimeBehavior.persistence?.length > 0) {
     const filtered = runtimeBehavior.persistence
-      .filter((e: any) => hasContentInKeys(e, ['typeTags', 'path', 'notes']))
-      .map((persistEntry: any) => `[${persistEntry.typeTags?.join(", ")}] ${persistEntry.path} - ${persistEntry.notes}`)
+      .filter((e: PersistenceEntry) => hasContentInKeys(e, ['typeTags', 'path', 'notes']))
+      .map((persistEntry: PersistenceEntry) => `[${persistEntry.typeTags?.join(", ")}] ${persistEntry.path} - ${persistEntry.notes}`)
       .filter((lineText: string) => lineText.trim() && lineText !== "[]  - ");
     if (filtered.length) extractedResult.persistence = filtered.join("\n");
   }
   if (runtimeBehavior.networkEnabled && runtimeBehavior.network?.length > 0) {
     const filtered = runtimeBehavior.network
-      .filter((e: any) => hasContentInKeys(e, ['behaviorTags', 'indicator', 'notes']))
-      .map((netEntry: any) => `[${netEntry.behaviorTags?.join(", ")}] ${netEntry.indicator} - ${netEntry.notes}`)
+      .filter((e: NetworkBehaviorEntry) => hasContentInKeys(e, ['behaviorTags', 'indicator', 'notes']))
+      .map((netEntry: NetworkBehaviorEntry) => `[${netEntry.behaviorTags?.join(", ")}] ${netEntry.indicator} - ${netEntry.notes}`)
       .filter((lineText: string) => lineText.trim() && lineText !== "[]  - ");
     if (filtered.length) extractedResult.networkBehavior = filtered.join("\n");
   }
   if (runtimeBehavior.memoryEnabled && runtimeBehavior.memory?.length > 0) {
     const filtered = runtimeBehavior.memory
-      .filter((e: any) => hasContentInKeys(e, ['eventTags', 'region', 'notes']))
-      .map((memEntry: any) => `[${memEntry.eventTags?.join(", ")}] ${memEntry.region} - ${memEntry.notes}`)
+      .filter((e: MemoryBehaviorEntry) => hasContentInKeys(e, ['eventTags', 'region', 'notes']))
+      .map((memEntry: MemoryBehaviorEntry) => `[${memEntry.eventTags?.join(", ")}] ${memEntry.region} - ${memEntry.notes}`)
       .filter((lineText: string) => lineText.trim() && lineText !== "[]  - ");
     if (filtered.length) extractedResult.memoryBehavior = filtered.join("\n");
   }
   if (runtimeBehavior.processInjectionEnabled && runtimeBehavior.processInjection?.length > 0) {
     const filtered = runtimeBehavior.processInjection
-      .filter((e: any) => hasContentInKeys(e, ['techniqueTags', 'targetProcess', 'apiChain', 'notes']))
-      .map((injectionEntry: any) => `[${injectionEntry.techniqueTags?.join(", ")}] Target: ${injectionEntry.targetProcess}, APIs: ${injectionEntry.apiChain?.join(" → ")} - ${injectionEntry.notes}`)
+      .filter((e: ProcessInjectionEntry) => hasContentInKeys(e, ['techniqueTags', 'targetProcess', 'apiChain', 'notes']))
+      .map((injectionEntry: ProcessInjectionEntry) => `[${injectionEntry.techniqueTags?.join(", ")}] Target: ${injectionEntry.targetProcess}, APIs: ${injectionEntry.apiChain?.join(" → ")} - ${injectionEntry.notes}`)
       .filter((lineText: string) => lineText.trim() && lineText !== "[] Target: , APIs:  - ");
     if (filtered.length) extractedResult.processInjection = filtered.join("\n");
   }
@@ -624,7 +617,7 @@ function createKeyValueParagraphs(content: Record<string, string>): Paragraph[] 
   return resultParagraphs;
 }
 
-export async function exportREWord(reportData: any, analystName: string, fileName: string, fileHash: string): Promise<void> {
+export async function exportREWord(reportData: REData, analystName: string, fileName: string, fileHash: string): Promise<void> {
   // Reset section counter for Roman numerals
   resetSectionCounter();
   
@@ -760,28 +753,28 @@ export async function exportREWord(reportData: any, analystName: string, fileNam
   }
 
   // ===== MBC MAPPING =====
-  const meaningfulMbc = (reportData.detection?.mbcMapping || []).filter((mbcItem: any) => {
+  const meaningfulMbc = (reportData.detection?.mbcMapping || []).filter((mbcItem: { id: string; name: string; objectiveName: string; pathToMd?: string }) => {
     const hasId = mbcItem.id && mbcItem.id.trim() && mbcItem.id.trim() !== '-';
     const hasName = mbcItem.name && mbcItem.name.trim() && mbcItem.name.trim() !== '-';
     return hasId || hasName;
   });
-  
+
   if (meaningfulMbc.length > 0) {
     documentChildren.push(createSectionHeader("MBC Mapping"));
-    const groupedByObjective: Record<string, any[]> = {};
-    meaningfulMbc.forEach((mbcItem: any) => {
+    const groupedByObjective: Record<string, { id: string; name: string; objectiveName: string; pathToMd?: string }[]> = {};
+    meaningfulMbc.forEach((mbcItem: { id: string; name: string; objectiveName: string; pathToMd?: string }) => {
       const objectiveKey = mbcItem.objectiveName || "Other";
       if (!groupedByObjective[objectiveKey]) groupedByObjective[objectiveKey] = [];
       groupedByObjective[objectiveKey].push(mbcItem);
     });
-    Object.entries(groupedByObjective).forEach(([objectiveName, behaviorsList]: [string, any[]]) => {
+    Object.entries(groupedByObjective).forEach(([objectiveName, behaviorsList]: [string, { id: string; name: string; objectiveName: string; pathToMd?: string }[]]) => {
       const objectiveSlug = objectiveName.toLowerCase().replace(/\s+/g, '-');
       // Use tree/main for folder navigation
       const objectiveUrl = `https://github.com/MBCProject/mbc-markdown/tree/main/${objectiveSlug}`;
-      
+
       // Build behavior links
       const behaviorLinkElements: (TextRun | ExternalHyperlink)[] = [];
-      behaviorsList.forEach((behaviorEntry: any, behaviorIndex: number) => {
+      behaviorsList.forEach((behaviorEntry: { id: string; name: string; pathToMd?: string }, behaviorIndex: number) => {
         // Use blob/main for file view
         const behaviorUrl = behaviorEntry.pathToMd 
           ? `https://github.com/MBCProject/mbc-markdown/blob/main/${behaviorEntry.pathToMd}`
@@ -818,16 +811,16 @@ export async function exportREWord(reportData: any, analystName: string, fileNam
   }
 
   // ===== IOCs =====
-  const meaningfulIocs = (reportData.detection?.iocs || []).filter((iocEntry: any) => {
+  const meaningfulIocs = (reportData.detection?.iocs || []).filter((iocEntry: { type: string; value: string; description: string }) => {
     const hasType = iocEntry.type && iocEntry.type.trim() && iocEntry.type.trim() !== '-';
     const hasValue = iocEntry.value && iocEntry.value.trim() && iocEntry.value.trim() !== '-';
     const hasDescription = iocEntry.description && iocEntry.description.trim() && iocEntry.description.trim() !== '-';
     return hasType || hasValue || hasDescription;
   });
-  
+
   if (meaningfulIocs.length > 0) {
     documentChildren.push(createSectionHeader("Indicators of Compromise"));
-    meaningfulIocs.forEach((iocEntry: any) => {
+    meaningfulIocs.forEach((iocEntry: { type: string; value: string; description: string }) => {
       documentChildren.push(new Paragraph({
         children: [new TextRun({ text: `[${iocEntry.type || '-'}] ${iocEntry.value || '-'} - ${iocEntry.description || '-'}`, size: 20 })],
         spacing: { after: 50 },

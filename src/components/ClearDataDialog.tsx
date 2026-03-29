@@ -10,7 +10,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { X, TriangleAlert } from "lucide-react";
-import { useLanguage } from "@/contexts/LanguageContext";
+import { useLanguage } from "@/hooks/useLanguage";
 
 interface ClearDataDialogProps {
   onConfirm: () => void;
@@ -55,3 +55,4 @@ export function ClearDataDialog({ onConfirm, trigger }: ClearDataDialogProps) {
     </AlertDialog>
   );
 }
+

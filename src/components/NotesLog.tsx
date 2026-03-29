@@ -1,7 +1,7 @@
 import { useRef, useEffect, ClipboardEvent, memo } from "react";
 import { cn, generateId } from "@/lib/utils";
 import { Plus, Trash2, Image, ChevronUp, ChevronDown } from "lucide-react";
-import { useLanguage } from "@/contexts/LanguageContext";
+import { useLanguage } from "@/hooks/useLanguage";
 import type { LogEntry } from "@/types/dashboard";
 import { AutoTextarea } from "@/components/ui/auto-textarea";
 import { ImageGrid } from "@/components/ui/image-grid";
@@ -258,3 +258,4 @@ export const NotesLog = memo(function NotesLog({ entries, onEntriesChange, place
     </div>
   );
 });
+

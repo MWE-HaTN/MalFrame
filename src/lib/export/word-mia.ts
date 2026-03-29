@@ -1,9 +1,10 @@
 // Word Export for MIA (Malware Incident Analysis) - v2
 // Updated to match MRE layout style with two-column format
-import { Document, Packer, Paragraph, TextRun, HeadingLevel, Header, Footer, PageNumber, AlignmentType, Table, TableRow, TableCell, WidthType, BorderStyle } from "docx";
+import { Document, Packer, Paragraph, TextRun, Header, Footer, PageNumber, AlignmentType, Table, TableRow, TableCell, WidthType, BorderStyle } from "docx";
 import { generateFileName } from "@/lib/fileNameUtils";
 import { formatReportHeader } from "@/lib/utils";
-import { extractLogText, formatFieldLabel, isMeaningful, downloadBlob } from "./helpers";
+import { extractLogText, isMeaningful, downloadBlob } from "./helpers";
+import type { DFIRData } from "@/features/mia/types";
 
 const HEADER_COLOR = "006450"; // Teal/Green
 const LABEL_COLOR = "000000"; // Black
@@ -217,7 +218,7 @@ function createSingleColumnTable(fields: Array<{ label: string; value: string }>
   });
 }
 
-export async function exportDFIRWord(data: any, analyst: string, fileName: string, hash: string): Promise<void> {
+export async function exportDFIRWord(data: DFIRData, analyst: string, fileName: string, hash: string): Promise<void> {
   // Reset section counter for Roman numerals
   resetSectionCounter();
   
@@ -253,7 +254,7 @@ export async function exportDFIRWord(data: any, analyst: string, fileName: strin
   }
 
   // 2. Sample Information - two column layout
-  const sampleInfo = data.sampleInfo || data.sampleInformation || {};
+  const sampleInfo = data.sampleInfo;
   const sampleLeft = [
     { label: "File Name", value: sampleInfo.fileName || "" },
     { label: "File Path", value: sampleInfo.filePath || "" },
@@ -305,15 +306,15 @@ export async function exportDFIRWord(data: any, analyst: string, fileName: strin
   }
 
   // 5. MITRE ATT&CK Mapping
-  const hasMeaningfulMitre = data.mitreMapping && Object.entries(data.mitreMapping).some(([_, techniques]: [string, any]) => 
-    techniques && techniques.length > 0 && techniques.some((t: any) => isMeaningful(t.id) || isMeaningful(t.name))
+  const hasMeaningfulMitre = data.mitreMapping && Object.entries(data.mitreMapping).some(([_tactic, techniques]: [string, { id: string; name: string }[]]) =>
+    techniques && techniques.length > 0 && techniques.some((t: { id: string; name: string }) => isMeaningful(t.id) || isMeaningful(t.name))
   );
-  
+
   if (hasMeaningfulMitre) {
     paragraphs.push(createSectionHeader("MITRE ATT&CK Mapping"));
-    
-    Object.entries(data.mitreMapping).forEach(([tactic, techniques]: [string, any]) => {
-      const meaningfulTechniques = techniques.filter((t: any) => isMeaningful(t.id) || isMeaningful(t.name));
+
+    Object.entries(data.mitreMapping).forEach(([tactic, techniques]: [string, { id: string; name: string }[]]) => {
+      const meaningfulTechniques = techniques.filter((t: { id: string; name: string }) => isMeaningful(t.id) || isMeaningful(t.name));
       if (meaningfulTechniques.length === 0) return;
       
       paragraphs.push(
@@ -325,7 +326,7 @@ export async function exportDFIRWord(data: any, analyst: string, fileName: strin
         })
       );
       
-      meaningfulTechniques.forEach((technique: any) => {
+      meaningfulTechniques.forEach((technique: { id: string; name: string }) => {
         paragraphs.push(
           new Paragraph({
             children: [
@@ -385,14 +386,14 @@ export async function exportDFIRWord(data: any, analyst: string, fileName: strin
   }
 
   // 8. IOCs
-  const meaningfulIocs = (data.iocs || []).filter((iocItem: any) => 
+  const meaningfulIocs = (data.iocs || []).filter((iocItem: { type: string; value: string; description: string }) =>
     isMeaningful(iocItem.type) || isMeaningful(iocItem.value) || isMeaningful(iocItem.description)
   );
-  
+
   if (meaningfulIocs.length > 0) {
     paragraphs.push(createSectionHeader("Indicators of Compromise (IOCs)"));
-    
-    const iocFields = meaningfulIocs.map((ioc: any) => ({
+
+    const iocFields = meaningfulIocs.map((ioc: { type: string; value: string; description: string }) => ({
       label: ioc.type || "Unknown",
       value: `${ioc.value || '-'}${ioc.description ? ` - ${ioc.description}` : ''}`
     }));
@@ -401,14 +402,14 @@ export async function exportDFIRWord(data: any, analyst: string, fileName: strin
   }
 
   // 9. Timeline
-  const validTimelineEvents = (data.timeline || []).filter((timelineEvent: any) => 
+  const validTimelineEvents = (data.timeline || []).filter((timelineEvent: { time: string; content: string; severity: string }) =>
     isMeaningful(timelineEvent.time) || isMeaningful(timelineEvent.content)
   );
-  
+
   if (validTimelineEvents.length > 0) {
     paragraphs.push(createSectionHeader("Attack Timeline"));
-    
-    const timelineFields = validTimelineEvents.map((event: any) => ({
+
+    const timelineFields = validTimelineEvents.map((event: { time: string; content: string; severity: string }) => ({
       label: `[${event.time || "N/A"}] (${event.severity || '-'})`,
       value: event.content || '-'
     }));
@@ -417,14 +418,14 @@ export async function exportDFIRWord(data: any, analyst: string, fileName: strin
   }
 
   // 10. Evidence Artifacts
-  const meaningfulArtifacts = (data.artifacts || []).filter((artifactItem: any) => 
+  const meaningfulArtifacts = (data.artifacts || []).filter((artifactItem: { type: string; name: string; sha256: string; md5: string; size?: string; usedIn?: string[] }) =>
     isMeaningful(artifactItem.type) || isMeaningful(artifactItem.name) || isMeaningful(artifactItem.sha256) || isMeaningful(artifactItem.md5)
   );
-  
+
   if (meaningfulArtifacts.length > 0) {
     paragraphs.push(createSectionHeader("Evidence Artifacts"));
-    
-    meaningfulArtifacts.forEach((artifact: any) => {
+
+    meaningfulArtifacts.forEach((artifact: { type: string; name: string; sha256: string; md5: string; size?: string; usedIn?: string[] }) => {
       const artifactLeft = [
         { label: "Type", value: artifact.type || "" },
         { label: "Name", value: artifact.name || "" },

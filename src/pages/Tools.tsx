@@ -1,10 +1,10 @@
 import { Header } from "@/components/Header";
-import { useLanguage } from "@/contexts/LanguageContext";
+import { useLanguage } from "@/hooks/useLanguage";
 import { useState, useEffect, useMemo } from "react";
 import { ChevronDown, ChevronRight, ChevronsDownUp, ChevronsUpDown, Search, ExternalLink, RefreshCw, Info, Globe, X, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import { useToolsData, loadToolsData } from "@/hooks/useToolsData";
+import { useToolsData } from "@/hooks/useToolsData";
 import type { ToolCategory } from "@/lib/toolsData";
 import {
   Tooltip,
@@ -58,7 +58,7 @@ export default function Tools() {
   );
 
   // Use saved data or default data
-  const activeToolsData = toolsData ?? defaultData ?? [];
+  const activeToolsData = useMemo(() => toolsData ?? defaultData ?? [], [toolsData, defaultData]);
   const currentVersion = latestVersion ?? "1.0";
 
   // Check if update is available
@@ -380,3 +380,4 @@ export default function Tools() {
     </div>
   );
 }
+

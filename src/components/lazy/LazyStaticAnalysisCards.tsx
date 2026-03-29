@@ -3,7 +3,7 @@ import { SectionSkeleton } from "@/components/ui/section-skeleton";
 
 // Lazy load StaticAnalysisCards - includes FileInfoField (~8KB)
 const StaticAnalysisCardsComponent = lazy(() => 
-  import("@/components/StaticAnalysisCards").then(m => ({ default: m.StaticAnalysisCards }))
+  import("@/features/mre/components/StaticAnalysisCards").then(m => ({ default: m.StaticAnalysisCards }))
 );
 
 type StaticAnalysisCardsProps = ComponentProps<typeof StaticAnalysisCardsComponent>;

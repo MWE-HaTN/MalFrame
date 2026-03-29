@@ -1,9 +1,10 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Bug, Microscope, ArrowRight, Database, FileJson, Terminal, Target, Shield } from "lucide-react";
-import { Header, getSavedDashboard } from "@/components/Header";
-import { useLanguage } from "@/contexts/LanguageContext";
+import { Header } from "@/components/Header";
+import { useLanguage } from "@/hooks/useLanguage";
 import { useState, useEffect, memo } from "react";
-import { preloadRoutes } from "@/App";
+import { preloadRoutes } from "@/lib/preloadRoutes";
+import { getSavedDashboard } from "@/lib/navigation";
 import { useTypingAnimation } from "@/hooks/useTypingAnimation";
 
 // Lazy load MITRE utils to reduce initial bundle (~15KB saved)
@@ -189,3 +190,4 @@ const StatItem = memo(function StatItem({ value, label }: { value: string; label
     </div>
   );
 });
+

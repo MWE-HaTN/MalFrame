@@ -1,10 +1,10 @@
 import { useEffect } from "react";
 import { FileText, Cpu, Code, Activity, Database } from "lucide-react";
 import { Header } from "@/components/Header";
-import { 
-  LazyMBCMapping, 
-  LazyIOCTable, 
-  LazyRuntimeBehavior, 
+import {
+  LazyMBCMapping,
+  LazyIOCTable,
+  LazyRuntimeBehavior,
   LazyCodeAnalysisGroups,
   LazyFileHashDropzone,
   LazyExportConfirmDialog,
@@ -14,40 +14,82 @@ import {
   LazyPackedDropdown,
 } from "@/components/lazy";
 import { FormField } from "@/components/FormField";
-import { CollapsibleSection, clearAllSectionStates } from "@/components/CollapsibleSection";
-import { PackerSuspectedDropdown } from "@/components/PackerSuspectedDropdown";
+import { CollapsibleSection } from "@/components/CollapsibleSection";
+import { PackerSuspectedDropdown } from "@/features/mre/components/PackerSuspectedDropdown";
 import { ScrollToTop } from "@/components/ScrollToTop";
 import { DashboardHeader } from "@/components/dashboard";
-import { BackgroundSection, SummarySection, OSINTLookupSection } from "@/components/mre";
+import { CaseSwitcher } from "@/components/CaseSwitcher";
+import { BackgroundSection, SummarySection, OSINTLookupSection } from "@/features/mre/components";
 
-import { useLanguage } from "@/contexts/LanguageContext";
+import { useLanguage } from "@/hooks/useLanguage";
 import { useDashboardData } from "@/hooks/useDashboardData";
+import { useCaseManager } from "@/hooks/useCaseManager";
 import { useImportJSON } from "@/hooks/useImportJSON";
 import { useDashboardExport } from "@/hooks/useDashboardExport";
 import { lazyExportJSON, lazyExportREPDF, lazyExportREWord, preloadREPDF, preloadREWord } from "@/lib/lazyExport";
-import { 
-  prefetchMBCMapping, 
-  prefetchRuntimeBehavior, 
-  prefetchCodeAnalysis, 
+import {
+  prefetchMBCMapping,
+  prefetchRuntimeBehavior,
+  prefetchCodeAnalysis,
   prefetchIOCTable,
   prefetchStaticAnalysisCards,
   prefetchSecurityPosture,
   prefetchPESectionEntry,
 } from "@/lib/lazyPrefetch";
 import { generateFileName } from "@/lib/fileNameUtils";
+import { clearAllSectionStates } from "@/lib/sectionState";
 import { toast } from "sonner";
 import { validateREData } from "@/lib/validationSchemas";
 
-// Import from extracted modules
-import type { REData } from "@/types/mre";
-import { MRE_STORAGE_KEY, initialREData, defaultSummary } from "@/lib/mre/constants";
-import { transformForExport } from "@/lib/mre/transform";
-import { migrateREData } from "@/lib/mre/migrate";
+import type { REData } from "@/features/mre/types";
+import { MRE_STORAGE_KEY, initialREData, defaultSummary } from "@/features/mre/services/constants";
+import { transformForExport } from "@/features/mre/services/transform";
+import { migrateREData } from "@/features/mre/services/migrate";
+
+// ─────────────────────────────────────────────
+// Outer shell: case manager + page chrome
+// ─────────────────────────────────────────────
 
 export default function MREDashboard() {
+  const caseManager = useCaseManager("mre", MRE_STORAGE_KEY);
+
+  return (
+    <div className="min-h-screen bg-background cyber-grid flex flex-col">
+      <Header />
+      <ScrollToTop />
+      <main id="main-content" className="container max-w-7xl mx-auto py-6 space-y-4 flex-1">
+        <CaseSwitcher
+          cases={caseManager.cases}
+          activeCaseId={caseManager.activeCaseId}
+          createCase={caseManager.createCase}
+          switchCase={caseManager.switchCase}
+          deleteCase={caseManager.deleteCase}
+          renameCase={caseManager.renameCase}
+        />
+        {caseManager.activeCaseId && (
+          <MREDashboardBody
+            key={caseManager.activeCaseId}
+            storageKey={caseManager.activeStorageKey}
+          />
+        )}
+      </main>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────
+// Inner body: dashboard data + all sections
+// Re-mounts on case switch via key prop
+// ─────────────────────────────────────────────
+
+interface MREDashboardBodyProps {
+  storageKey: string;
+}
+
+function MREDashboardBody({ storageKey }: MREDashboardBodyProps) {
   const { t } = useLanguage();
   const { data, setData, clearData, forceCloseCounter } = useDashboardData<REData>({
-    storageKey: MRE_STORAGE_KEY,
+    storageKey,
     initialData: initialREData,
     migrateData: migrateREData,
     clearSuccessMessage: t("clear.success"),
@@ -56,10 +98,7 @@ export default function MREDashboard() {
   const handleHashGenerated = (hash: string, fileName: string, fileSize: number) => {
     setData((prev) => ({
       ...prev,
-      background: {
-        ...prev.background,
-        fileName: fileName,
-      },
+      background: { ...prev.background, fileName },
       staticAnalysis: {
         ...prev.staticAnalysis,
         sha256: hash,
@@ -75,8 +114,7 @@ export default function MREDashboard() {
 
   const handleExportJSON = async () => {
     try {
-      // Helper to check if an entry has any meaningful data
-      const hasData = <T extends object>(obj: T, excludeKeys = ['id', 'timestamp', 'images']): boolean => 
+      const hasData = <T extends object>(obj: T, excludeKeys = ['id', 'timestamp', 'images']): boolean =>
         Object.entries(obj).some(([key, value]) => {
           if (excludeKeys.includes(key)) return false;
           if (Array.isArray(value)) return value.length > 0;
@@ -84,7 +122,6 @@ export default function MREDashboard() {
           return Boolean(value);
         });
 
-      // Filter empty entries before export
       const cleanedData: REData = {
         ...data,
         staticAnalysis: {
@@ -123,9 +160,9 @@ export default function MREDashboard() {
         },
         deepDive: {
           ...data.deepDive,
-          executionStages: data.deepDive.executionStages.filter((stage) => 
-            stage.entryPoint || stage.entryCondition || stage.purpose || stage.actions || 
-            stage.exitCondition || stage.failureAbortBehavior || stage.transitionMethod || 
+          executionStages: data.deepDive.executionStages.filter((stage) =>
+            stage.entryPoint || stage.entryCondition || stage.purpose || stage.actions ||
+            stage.exitCondition || stage.failureAbortBehavior || stage.transitionMethod ||
             stage.apisUsed || stage.artifacts || stage.ioc
           ),
           cryptoEntries: data.deepDive.cryptoEntries.filter((entry) => hasData(entry)),
@@ -138,7 +175,7 @@ export default function MREDashboard() {
           summary: data.detection?.summary || defaultSummary,
         },
       };
-      
+
       const exportData = transformForExport(cleanedData);
       await lazyExportJSON(exportData, data.background.analyst, data.background.fileName, data.staticAnalysis.sha256, "MRE");
       toast.success(t("export.success.json"));
@@ -168,7 +205,6 @@ export default function MREDashboard() {
   const { importJSON } = useImportJSON({
     validate: validateREData,
     onSuccess: (importedData) => {
-      localStorage.removeItem(MRE_STORAGE_KEY);
       clearAllSectionStates();
       const normalizedData = migrateREData(importedData as Record<string, unknown>);
       setData(normalizedData);
@@ -205,259 +241,253 @@ export default function MREDashboard() {
     } else {
       await handleExportWord();
     }
-    
     if (clearDataAfter) {
       clearData();
     }
   };
 
   return (
-    <div className="min-h-screen bg-background cyber-grid flex flex-col">
-      <Header />
-      <ScrollToTop />
-      
-      <main id="main-content" className="container max-w-7xl mx-auto py-6 space-y-4 flex-1">
-        {/* Page Header */}
-        <DashboardHeader
-          title={t("mre.title")}
-          subtitle={t("mre.subtitle")}
-          onImport={importJSON}
-          onClear={clearData}
-          importLabel={t("common.import")}
-          exportLabel={t("common.export")}
-          exportOptions={[
-            { type: "json", label: t("export.json"), onClick: handleExportJSONClick },
-            { type: "pdf", label: t("export.pdf"), onClick: handleExportPDFClick },
-            { type: "word", label: t("export.word"), onClick: handleExportWordClick },
-          ]}
-        />
+    <>
+      {/* Page Header */}
+      <DashboardHeader
+        title={t("mre.title")}
+        subtitle={t("mre.subtitle")}
+        onImport={importJSON}
+        onClear={clearData}
+        importLabel={t("common.import")}
+        exportLabel={t("common.export")}
+        exportOptions={[
+          { type: "json", label: t("export.json"), onClick: handleExportJSONClick },
+          { type: "pdf", label: t("export.pdf"), onClick: handleExportPDFClick },
+          { type: "word", label: t("export.word"), onClick: handleExportWordClick },
+        ]}
+      />
 
-        {/* File Drop Zone */}
-        <LazyFileHashDropzone onHashGenerated={handleHashGenerated} />
+      {/* File Drop Zone */}
+      <LazyFileHashDropzone onHashGenerated={handleHashGenerated} />
 
-        {/* Background Section */}
-        <BackgroundSection
-          data={data.background}
-          onChange={(background) => setData((p) => ({ ...p, background }))}
-          forceCloseCounter={forceCloseCounter}
-        />
+      {/* Background Section */}
+      <BackgroundSection
+        data={data.background}
+        onChange={(background) => setData((p) => ({ ...p, background }))}
+        forceCloseCounter={forceCloseCounter}
+      />
 
-        {/* Static Analysis Section */}
-        <CollapsibleSection 
-          title={t("mre.staticAnalysis")} 
-          icon={<Cpu className="w-4 h-4" />} 
-          defaultOpen={true} 
-          storageKey="re-static-analysis" 
-          forceClose={forceCloseCounter} 
-          lazy 
-          skeletonVariant="form" 
-          skeletonRows={5}
-          onPrefetch={() => {
-            prefetchStaticAnalysisCards();
-            prefetchSecurityPosture();
-            prefetchPESectionEntry();
+      {/* Static Analysis Section */}
+      <CollapsibleSection
+        title={t("mre.staticAnalysis")}
+        icon={<Cpu className="w-4 h-4" />}
+        defaultOpen={true}
+        storageKey="re-static-analysis"
+        forceClose={forceCloseCounter}
+        lazy
+        skeletonVariant="form"
+        skeletonRows={5}
+        onPrefetch={() => {
+          prefetchStaticAnalysisCards();
+          prefetchSecurityPosture();
+          prefetchPESectionEntry();
+        }}
+        hint={t("hint.mre.staticAnalysis")}
+      >
+        <OSINTLookupSection
+          data={{
+            virusTotal: data.staticAnalysis.virusTotal,
+            malwareBazaar: data.staticAnalysis.malwareBazaar,
+            anyRun: data.staticAnalysis.anyRun,
+            tiNotes: data.staticAnalysis.tiNotes,
           }}
-        >
-          {/* OSINT Lookup */}
-          <OSINTLookupSection
-            data={{
-              virusTotal: data.staticAnalysis.virusTotal,
-              malwareBazaar: data.staticAnalysis.malwareBazaar,
-              anyRun: data.staticAnalysis.anyRun,
-              tiNotes: data.staticAnalysis.tiNotes,
-            }}
-            onChange={(patch) => setData((p) => ({ ...p, staticAnalysis: { ...p.staticAnalysis, ...patch } }))}
+          onChange={(patch) => setData((p) => ({ ...p, staticAnalysis: { ...p.staticAnalysis, ...patch } }))}
+        />
+
+        <LazyStaticAnalysisCards
+          data={{
+            sha256: data.staticAnalysis.sha256,
+            impHash: data.staticAnalysis.impHash,
+            fileType: data.staticAnalysis.fileType,
+            fileSize: data.staticAnalysis.fileSize,
+            compileTime: data.staticAnalysis.compileTime,
+            fileEntropy: data.staticAnalysis.fileEntropy,
+            entryPoint: data.staticAnalysis.entryPoint,
+            imageBase: data.staticAnalysis.imageBase,
+            architecture: data.staticAnalysis.architecture,
+            numberOfSections: data.staticAnalysis.numberOfSections,
+            characteristics: data.staticAnalysis.characteristics,
+            subsystem: data.staticAnalysis.subsystem,
+          }}
+          onChange={(patch) => setData((p) => ({ ...p, staticAnalysis: { ...p.staticAnalysis, ...patch } }))}
+        />
+
+        <LazySecurityPosture
+          signatureStatus={data.staticAnalysis.signatureStatus}
+          dllMitigations={data.staticAnalysis.dllMitigations}
+          onSignatureChange={(value) => setData((p) => ({ ...p, staticAnalysis: { ...p.staticAnalysis, signatureStatus: value } }))}
+          onMitigationsChange={(mitigations) => setData((p) => ({ ...p, staticAnalysis: { ...p.staticAnalysis, dllMitigations: mitigations } }))}
+        />
+
+        <div className="space-y-2 mb-4">
+          <label className="label-cyber block">{t("mre.peSections")}</label>
+          <LazyPESectionEntry
+            entries={data.staticAnalysis.peSections || []}
+            onEntriesChange={(entries) => setData((p) => ({ ...p, staticAnalysis: { ...p.staticAnalysis, peSections: entries } }))}
           />
+        </div>
 
-          {/* Basic File Info + PE Structure */}
-          <LazyStaticAnalysisCards
-            data={{
-              sha256: data.staticAnalysis.sha256,
-              impHash: data.staticAnalysis.impHash,
-              fileType: data.staticAnalysis.fileType,
-              fileSize: data.staticAnalysis.fileSize,
-              compileTime: data.staticAnalysis.compileTime,
-              fileEntropy: data.staticAnalysis.fileEntropy,
-              entryPoint: data.staticAnalysis.entryPoint,
-              imageBase: data.staticAnalysis.imageBase,
-              architecture: data.staticAnalysis.architecture,
-              numberOfSections: data.staticAnalysis.numberOfSections,
-              characteristics: data.staticAnalysis.characteristics,
-              subsystem: data.staticAnalysis.subsystem,
-            }}
-            onChange={(patch) => setData((p) => ({ ...p, staticAnalysis: { ...p.staticAnalysis, ...patch } }))}
-          />
-
-          {/* Security Posture */}
-          <LazySecurityPosture
-            signatureStatus={data.staticAnalysis.signatureStatus}
-            dllMitigations={data.staticAnalysis.dllMitigations}
-            onSignatureChange={(value) => setData((p) => ({ ...p, staticAnalysis: { ...p.staticAnalysis, signatureStatus: value } }))}
-            onMitigationsChange={(mitigations) => setData((p) => ({ ...p, staticAnalysis: { ...p.staticAnalysis, dllMitigations: mitigations } }))}
-          />
-
-          {/* PE Sections table */}
-          <div className="space-y-2 mb-4">
-            <label className="label-cyber block">{t("mre.peSections")}</label>
-            <LazyPESectionEntry
-              entries={data.staticAnalysis.peSections || []}
-              onEntriesChange={(entries) => setData((p) => ({ ...p, staticAnalysis: { ...p.staticAnalysis, peSections: entries } }))}
-            />
-          </div>
-
-          {/* PACKED + Packer Suspected */}
-          <div className={`grid grid-cols-1 ${data.staticAnalysis.isPacked === "yes" ? "lg:grid-cols-2" : ""} gap-4 mb-4`}>
-            <LazyPackedDropdown
-              isPacked={data.staticAnalysis.isPacked}
-              onPackedChange={(v) => setData((p) => ({ ...p, staticAnalysis: { ...p.staticAnalysis, isPacked: v } }))}
-              unpackLayers={data.staticAnalysis.unpackLayers}
-              onUnpackLayersChange={(layers) => setData((p) => ({ ...p, staticAnalysis: { ...p.staticAnalysis, unpackLayers: layers } }))}
-            />
-            {data.staticAnalysis.isPacked === "yes" && (
-              <PackerSuspectedDropdown
-                value={data.staticAnalysis.packerSuspected}
-                onChange={(v) => setData((p) => ({ ...p, staticAnalysis: { ...p.staticAnalysis, packerSuspected: v } }))}
-              />
-            )}
-          </div>
-
-          {/* Strings Detection | Imports/Exports */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <FormField
-              label={t("mre.stringsDetection")}
-              type="textarea"
-              rows={3}
-              value={data.staticAnalysis.stringsDetection}
-              onChange={(v) => setData((p) => ({ ...p, staticAnalysis: { ...p.staticAnalysis, stringsDetection: v } }))}
-              placeholder={t("mre.placeholder.stringsDetection")}
-            />
-            <FormField
-              label={t("mre.importsExports")}
-              type="textarea"
-              rows={3}
-              value={data.staticAnalysis.importsExports}
-              onChange={(v) => setData((p) => ({ ...p, staticAnalysis: { ...p.staticAnalysis, importsExports: v } }))}
-              placeholder={t("mre.placeholder.importsExports")}
-            />
-          </div>
-        </CollapsibleSection>
-
-        {/* Runtime Behavior Section */}
-        <CollapsibleSection 
-          title={t("mre.runtimeBehavior")} 
-          icon={<Activity className="w-4 h-4" />} 
-          storageKey="re-runtime-behavior" 
-          forceClose={forceCloseCounter} 
-          lazy 
-          skeletonVariant="form" 
-          skeletonRows={4}
-          onPrefetch={prefetchRuntimeBehavior}
-        >
-          <LazyRuntimeBehavior
-            data={data.codeBehavior.runtimeBehavior}
-            onChange={(runtimeBehavior) => setData((p) => ({ ...p, codeBehavior: { ...p.codeBehavior, runtimeBehavior } }))}
-          />
-        </CollapsibleSection>
-
-        {/* Code Analysis Section */}
-        <CollapsibleSection 
-          title={t("mre.codeAnalysis")} 
-          icon={<Code className="w-4 h-4" />} 
-          storageKey="re-code-analysis" 
-          forceClose={forceCloseCounter} 
-          lazy 
-          skeletonVariant="form" 
-          skeletonRows={4}
-          onPrefetch={prefetchCodeAnalysis}
-        >
-          <LazyCodeAnalysisGroups
-            codeData={data.codeBehavior.codeAnalysis}
-            onCodeDataChange={(codeAnalysis) => setData((p) => ({
-              ...p,
-              codeBehavior: { ...p.codeBehavior, codeAnalysis }
-            }))}
-            deepDiveData={data.deepDive}
-            onDeepDiveDataChange={(deepDive) => setData((p) => ({ ...p, deepDive }))}
+        <div className={`grid grid-cols-1 ${data.staticAnalysis.isPacked === "yes" ? "lg:grid-cols-2" : ""} gap-4 mb-4`}>
+          <LazyPackedDropdown
             isPacked={data.staticAnalysis.isPacked}
+            onPackedChange={(v) => setData((p) => ({ ...p, staticAnalysis: { ...p.staticAnalysis, isPacked: v } }))}
             unpackLayers={data.staticAnalysis.unpackLayers}
             onUnpackLayersChange={(layers) => setData((p) => ({ ...p, staticAnalysis: { ...p.staticAnalysis, unpackLayers: layers } }))}
-            onClearPacked={() => setData((p) => ({ ...p, staticAnalysis: { ...p.staticAnalysis, isPacked: "" } }))}
           />
-        </CollapsibleSection>
+          {data.staticAnalysis.isPacked === "yes" && (
+            <PackerSuspectedDropdown
+              value={data.staticAnalysis.packerSuspected}
+              onChange={(v) => setData((p) => ({ ...p, staticAnalysis: { ...p.staticAnalysis, packerSuspected: v } }))}
+            />
+          )}
+        </div>
 
-        {/* Malware Behavior Mapping */}
-        <CollapsibleSection 
-          title={t("mre.mbcMapping")} 
-          icon={<Database className="w-4 h-4" />} 
-          storageKey="re-mbc" 
-          forceClose={forceCloseCounter} 
-          lazy 
-          skeletonVariant="table" 
-          skeletonRows={5}
-          onPrefetch={prefetchMBCMapping}
-        >
-          <LazyMBCMapping
-            mapping={data.detection?.mbcMapping ?? []}
-            onMappingChange={(mapping) => setData((p) => ({ ...p, detection: { ...p.detection, mbcMapping: mapping } }))}
-          />
-        </CollapsibleSection>
-
-        {/* YARA Signature */}
-        <CollapsibleSection 
-          title={t("mre.yaraSignature")} 
-          icon={<FileText className="w-4 h-4" />} 
-          storageKey="re-yara" 
-          forceClose={forceCloseCounter} 
-          lazy 
-          skeletonVariant="default" 
-          skeletonRows={4}
-        >
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           <FormField
-            label={t("mre.yaraRule")}
+            label={t("mre.stringsDetection")}
             type="textarea"
-            rows={12}
-            value={data.detection?.yaraSignature || ""}
-            onChange={(v) => setData((p) => ({ ...p, detection: { ...p.detection, yaraSignature: v } }))}
-            placeholder={`rule MalwareName {\n    meta:\n        author = "Your name"\n        description = "Detection for..."\n    strings:\n        $s1 = "string1"\n        $s2 = { 00 11 22 33 }\n    condition:\n        any of them\n}`}
-            mono
+            rows={3}
+            value={data.staticAnalysis.stringsDetection}
+            onChange={(v) => setData((p) => ({ ...p, staticAnalysis: { ...p.staticAnalysis, stringsDetection: v } }))}
+            placeholder={t("mre.placeholder.stringsDetection")}
           />
-        </CollapsibleSection>
-
-        {/* IOC Table */}
-        <CollapsibleSection 
-          title={t("mre.iocTable")} 
-          icon={<Database className="w-4 h-4" />} 
-          storageKey="re-ioc" 
-          forceClose={forceCloseCounter} 
-          lazy 
-          skeletonVariant="table" 
-          skeletonRows={4}
-          onPrefetch={prefetchIOCTable}
-        >
-          <LazyIOCTable
-            iocs={data.detection?.iocs || []}
-            onIOCsChange={(iocs) => setData((p) => ({ ...p, detection: { ...p.detection, iocs } }))}
+          <FormField
+            label={t("mre.importsExports")}
+            type="textarea"
+            rows={3}
+            value={data.staticAnalysis.importsExports}
+            onChange={(v) => setData((p) => ({ ...p, staticAnalysis: { ...p.staticAnalysis, importsExports: v } }))}
+            placeholder={t("mre.placeholder.importsExports")}
           />
-        </CollapsibleSection>
+        </div>
+      </CollapsibleSection>
 
-        {/* Summary */}
-        <SummarySection
-          data={data.detection.summary}
-          onChange={(summary) => setData((p) => ({ ...p, detection: { ...p.detection, summary } }))}
-          forceCloseCounter={forceCloseCounter}
+      {/* Runtime Behavior Section */}
+      <CollapsibleSection
+        title={t("mre.runtimeBehavior")}
+        icon={<Activity className="w-4 h-4" />}
+        storageKey="re-runtime-behavior"
+        forceClose={forceCloseCounter}
+        lazy
+        skeletonVariant="form"
+        skeletonRows={4}
+        onPrefetch={prefetchRuntimeBehavior}
+        hint={t("hint.mre.runtimeBehavior")}
+      >
+        <LazyRuntimeBehavior
+          data={data.codeBehavior.runtimeBehavior}
+          onChange={(runtimeBehavior) => setData((p) => ({ ...p, codeBehavior: { ...p.codeBehavior, runtimeBehavior } }))}
         />
+      </CollapsibleSection>
 
-        {/* Export Confirm Dialog */}
-        <LazyExportConfirmDialog
-          open={exportDialogOpen}
-          onOpenChange={setExportDialogOpen}
-          reportName={getReportName()}
-          exportType={pendingExportType}
-          onConfirmExport={handleConfirmExport}
-          hasImages={false}
-          imageCount={0}
+      {/* Code Analysis Section */}
+      <CollapsibleSection
+        title={t("mre.codeAnalysis")}
+        icon={<Code className="w-4 h-4" />}
+        storageKey="re-code-analysis"
+        forceClose={forceCloseCounter}
+        lazy
+        skeletonVariant="form"
+        skeletonRows={4}
+        onPrefetch={prefetchCodeAnalysis}
+        hint={t("hint.mre.codeAnalysis")}
+      >
+        <LazyCodeAnalysisGroups
+          codeData={data.codeBehavior.codeAnalysis}
+          onCodeDataChange={(codeAnalysis) => setData((p) => ({
+            ...p,
+            codeBehavior: { ...p.codeBehavior, codeAnalysis }
+          }))}
+          deepDiveData={data.deepDive}
+          onDeepDiveDataChange={(deepDive) => setData((p) => ({ ...p, deepDive }))}
+          isPacked={data.staticAnalysis.isPacked}
+          unpackLayers={data.staticAnalysis.unpackLayers}
+          onUnpackLayersChange={(layers) => setData((p) => ({ ...p, staticAnalysis: { ...p.staticAnalysis, unpackLayers: layers } }))}
+          onClearPacked={() => setData((p) => ({ ...p, staticAnalysis: { ...p.staticAnalysis, isPacked: "" } }))}
         />
-      </main>
-    </div>
+      </CollapsibleSection>
+
+      {/* Malware Behavior Mapping */}
+      <CollapsibleSection
+        title={t("mre.mbcMapping")}
+        icon={<Database className="w-4 h-4" />}
+        storageKey="re-mbc"
+        forceClose={forceCloseCounter}
+        lazy
+        skeletonVariant="table"
+        skeletonRows={5}
+        onPrefetch={prefetchMBCMapping}
+        hint={t("hint.mre.mbc")}
+      >
+        <LazyMBCMapping
+          mapping={data.detection?.mbcMapping ?? []}
+          onMappingChange={(mapping) => setData((p) => ({ ...p, detection: { ...p.detection, mbcMapping: mapping } }))}
+        />
+      </CollapsibleSection>
+
+      {/* YARA Signature */}
+      <CollapsibleSection
+        title={t("mre.yaraSignature")}
+        icon={<FileText className="w-4 h-4" />}
+        storageKey="re-yara"
+        forceClose={forceCloseCounter}
+        lazy
+        skeletonVariant="default"
+        skeletonRows={4}
+        hint={t("hint.mre.yara")}
+      >
+        <FormField
+          label={t("mre.yaraRule")}
+          type="textarea"
+          rows={12}
+          value={data.detection?.yaraSignature || ""}
+          onChange={(v) => setData((p) => ({ ...p, detection: { ...p.detection, yaraSignature: v } }))}
+          placeholder={`rule MalwareName {\n    meta:\n        author = "Your name"\n        description = "Detection for..."\n    strings:\n        $s1 = "string1"\n        $s2 = { 00 11 22 33 }\n    condition:\n        any of them\n}`}
+          mono
+        />
+      </CollapsibleSection>
+
+      {/* IOC Table */}
+      <CollapsibleSection
+        title={t("mre.iocTable")}
+        icon={<Database className="w-4 h-4" />}
+        storageKey="re-ioc"
+        forceClose={forceCloseCounter}
+        lazy
+        skeletonVariant="table"
+        skeletonRows={4}
+        onPrefetch={prefetchIOCTable}
+        hint={t("hint.mre.ioc")}
+      >
+        <LazyIOCTable
+          iocs={data.detection?.iocs || []}
+          onIOCsChange={(iocs) => setData((p) => ({ ...p, detection: { ...p.detection, iocs } }))}
+        />
+      </CollapsibleSection>
+
+      {/* Summary */}
+      <SummarySection
+        data={data.detection.summary}
+        onChange={(summary) => setData((p) => ({ ...p, detection: { ...p.detection, summary } }))}
+        forceCloseCounter={forceCloseCounter}
+      />
+
+      {/* Export Confirm Dialog */}
+      <LazyExportConfirmDialog
+        open={exportDialogOpen}
+        onOpenChange={setExportDialogOpen}
+        reportName={getReportName()}
+        exportType={pendingExportType}
+        onConfirmExport={handleConfirmExport}
+        hasImages={false}
+        imageCount={0}
+      />
+    </>
   );
 }

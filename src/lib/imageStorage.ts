@@ -1,9 +1,12 @@
 // Image Storage Utility
-// Manages images with naming convention: hash_fieldName_index
+// Manages the legacy image registry in localStorage and the IDB images store.
+// Note: dashboard images (processTreeImages, etc.) are embedded in the dashboard JSON
+// and live in the IndexedDB 'dashboard' store — not here.
 
 import { STORAGE_KEYS } from "@/lib/storageKeys";
 import { validateImageRegistry, safeJsonParse } from "@/lib/validationSchemas";
 import { debugWarn, debugError } from "@/lib/debugLogger";
+import { dbDelete } from "@/lib/db";
 
 interface StoredImage {
   id: string; // hash_fieldName_index
@@ -56,12 +59,15 @@ function saveImagesToStorage(images: StoredImage[]): void {
 export function clearImagesForHash(hash: string): void {
   const registry = getStoredImages();
   const shortHash = hash.slice(0, 8) || "nohash";
-  
+
   const remainingImages = registry.images.filter((img) => img.hash !== shortHash);
   saveImagesToStorage(remainingImages);
 }
 
-// Clear all images
+// Clear all images from localStorage and IndexedDB images store
 export function clearAllImages(): void {
   localStorage.removeItem(STORAGE_KEYS.IMAGES);
+  dbDelete("images", STORAGE_KEYS.IMAGES).catch(() => {
+    // Silently ignore — images store may not have this key
+  });
 }

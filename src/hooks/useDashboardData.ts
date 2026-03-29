@@ -1,12 +1,14 @@
 import { useState, useEffect, useCallback, useRef, type Dispatch, type SetStateAction } from "react";
-import { useUser } from "@/contexts/UserContext";
-import { clearAllSectionStates } from "@/components/CollapsibleSection";
+import { useUser } from "@/hooks/useUser";
+import { clearAllSectionStates } from "@/lib/sectionState";
+import { dbGet, dbSet, dbDelete } from "@/lib/db";
+import { debugError } from "@/lib/debugLogger";
 import { toast } from "sonner";
 
 interface UseDashboardDataOptions<T> {
   storageKey: string;
   initialData: T;
-  migrateData: (saved: any) => T;
+  migrateData: (saved: unknown) => T;
   onClearExtra?: () => void;
   clearSuccessMessage?: string;
 }
@@ -19,7 +21,7 @@ interface UseDashboardDataReturn<T> {
   profileName: string;
 }
 
-// Debounce delay for localStorage saves (ms)
+// Debounce delay for IndexedDB saves (ms)
 const SAVE_DEBOUNCE = 500;
 
 export function useDashboardData<T extends { background: { analyst: string; date: string } }>(
@@ -29,18 +31,64 @@ export function useDashboardData<T extends { background: { analyst: string; date
   const [forceCloseCounter, setForceCloseCounter] = useState(0);
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const [data, setData] = useState<T>(() => {
-    const saved = localStorage.getItem(options.storageKey);
-    if (saved) {
+  // Start with initialData — IDB load happens async in useEffect below
+  const [data, setData] = useState<T>(options.initialData);
+
+  // Tracks whether the initial IDB load has completed — prevents saving empty state over real data
+  const isLoadedRef = useRef(false);
+
+  // Mirror of current data for use in cleanup function (avoids stale closure)
+  const dataRef = useRef<T>(options.initialData);
+  useEffect(() => {
+    dataRef.current = data;
+  }, [data]);
+
+  // Capture storageKey at mount — stable within component lifetime (parent uses key prop for case switching)
+  const storageKeyRef = useRef(options.storageKey);
+
+  // Load from IndexedDB on mount, with fallback migration from localStorage
+  useEffect(() => {
+    let cancelled = false;
+
+    async function load() {
       try {
-        const parsed = JSON.parse(saved);
-        return options.migrateData(parsed);
-      } catch {
-        return options.initialData;
+        let loaded = await dbGet<unknown>("dashboard", options.storageKey);
+
+        if (loaded == null) {
+          // Migrate from localStorage if this is the first time using IDB
+          const lsRaw = localStorage.getItem(options.storageKey);
+          if (lsRaw) {
+            try {
+              const parsed = JSON.parse(lsRaw) as unknown;
+              loaded = options.migrateData(parsed);
+              await dbSet("dashboard", options.storageKey, loaded);
+              localStorage.removeItem(options.storageKey);
+            } catch {
+              // Corrupted localStorage data — ignore, use initialData
+            }
+          }
+        } else {
+          loaded = options.migrateData(loaded);
+        }
+
+        if (!cancelled && loaded != null) {
+          setData(loaded as T);
+        }
+      } catch (e) {
+        debugError("useDashboardData: failed to load from IDB", e);
+      } finally {
+        if (!cancelled) {
+          isLoadedRef.current = true;
+        }
       }
     }
-    return options.initialData;
-  });
+
+    load();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Only on mount — storageKey is stable per component instance (key prop controls remount)
 
   // Auto-populate analyst field from user profile
   useEffect(() => {
@@ -52,14 +100,18 @@ export function useDashboardData<T extends { background: { analyst: string; date
     }
   }, [profile.name, data.background.analyst]);
 
-  // Debounced persist to localStorage
+  // Debounced persist to IndexedDB — skips until initial load is done
   useEffect(() => {
+    if (!isLoadedRef.current) return;
+
     if (saveTimeoutRef.current) {
       clearTimeout(saveTimeoutRef.current);
     }
-    
+
     saveTimeoutRef.current = setTimeout(() => {
-      localStorage.setItem(options.storageKey, JSON.stringify(data));
+      dbSet("dashboard", options.storageKey, data).catch((e) =>
+        debugError("useDashboardData: failed to save to IDB", e)
+      );
     }, SAVE_DEBOUNCE);
 
     return () => {
@@ -69,14 +121,17 @@ export function useDashboardData<T extends { background: { analyst: string; date
     };
   }, [data, options.storageKey]);
 
-  // Cleanup timeout on unmount (data is already saved by debounced effect)
+  // Flush pending save immediately on unmount (e.g., when user switches cases)
   useEffect(() => {
     return () => {
       if (saveTimeoutRef.current) {
         clearTimeout(saveTimeoutRef.current);
       }
+      if (isLoadedRef.current) {
+        dbSet("dashboard", storageKeyRef.current, dataRef.current).catch(() => {});
+      }
     };
-  }, []);
+  }, []); // Mount only — uses refs to avoid stale closures
 
   const clearData = useCallback(() => {
     const resetData: T = {
@@ -87,9 +142,11 @@ export function useDashboardData<T extends { background: { analyst: string; date
         date: new Date().toISOString().split("T")[0],
       },
     };
-    
+
     setData(resetData);
-    localStorage.removeItem(options.storageKey);
+    dbDelete("dashboard", options.storageKey).catch((e) =>
+      debugError("useDashboardData: failed to delete from IDB", e)
+    );
     clearAllSectionStates();
     setForceCloseCounter((counter) => counter + 1);
     options.onClearExtra?.();

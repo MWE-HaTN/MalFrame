@@ -3,7 +3,7 @@ import { SectionSkeleton } from "@/components/ui/section-skeleton";
 
 // Lazy load EvidenceArtifacts - includes dropdown menu components (~20KB)
 const EvidenceArtifactsComponent = lazy(() => 
-  import("@/components/EvidenceArtifacts").then(m => ({ default: m.EvidenceArtifacts }))
+  import("@/features/mia/components/EvidenceArtifacts").then(m => ({ default: m.EvidenceArtifacts }))
 );
 
 type EvidenceArtifactsProps = ComponentProps<typeof EvidenceArtifactsComponent>;

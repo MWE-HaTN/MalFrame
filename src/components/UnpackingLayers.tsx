@@ -3,11 +3,11 @@ import { ChevronUp, Layers, Trash2 } from "lucide-react";
 import { FormField } from "@/components/FormField";
 import { cn, generateId } from "@/lib/utils";
 import { AnimatedCollapse } from "@/components/ui/skeleton";
-import { SubSectionHeader, useExpandedState } from "@/components/code-analysis/shared";
+import { SubSectionHeader, useExpandedState } from "@/features/mre/components/code-analysis/shared";
 import { useDragReorder } from "@/hooks/useDragReorder";
 import type { UnpackLayer } from "@/types/dashboard";
 import { STORAGE_KEYS } from "@/lib/storageKeys";
-import { useLanguage } from "@/contexts/LanguageContext";
+import { useLanguage } from "@/hooks/useLanguage";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -144,7 +144,7 @@ export function UnpackingLayers({
                   onDragEnd={dragProps.onDragEnd}
                   className={cn(
                     "bg-background/50 border border-border/50 rounded-sm overflow-hidden",
-                    "transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]",
+                    "transition-all duration-300 ease-standard",
                     "hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5",
                     "hover:-translate-y-0.5 hover:scale-[1.01]",
                     "cursor-grab active:cursor-grabbing",
@@ -247,3 +247,4 @@ export function UnpackingLayers({
     </div>
   );
 }
+

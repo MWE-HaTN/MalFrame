@@ -3,7 +3,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 // Lazy load PackedDropdown - includes Select, UnpackingLayers (~18KB)
 const PackedDropdownComponent = lazy(() => 
-  import("@/components/PackedDropdown").then(m => ({ default: m.PackedDropdown }))
+  import("@/features/mre/components/PackedDropdown").then(m => ({ default: m.PackedDropdown }))
 );
 
 type PackedDropdownProps = ComponentProps<typeof PackedDropdownComponent>;

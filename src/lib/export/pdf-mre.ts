@@ -9,8 +9,6 @@ import {
   formatLabelWithColon as formatLabel,
   clamp,
   SEMANTIC_COLORS_RGB,
-  getPackedSemanticLevel,
-  getPackerSemanticLevel,
   getRWXSemanticLevel,
   getEntropySemanticLevel,
   getFieldSemanticLevel,
@@ -18,7 +16,12 @@ import {
   hasAnyMeaningfulValue,
 } from "./helpers";
 import { registerFonts, getFontFamily } from "./fontLoader";
-import type { PESectionData } from "@/types/dashboard";
+import type { PESectionData, UnpackLayer } from "@/types/dashboard";
+import type { CodeAnalysisData, DeepDiveData } from "@/features/mre/components/CodeAnalysisGroups";
+import type { InterestingFunction, ControlFlowEntry, APIUsageEntry, ObfuscationEntry, BreakpointEvent, MemoryRegion, RuntimeAPITrace, CryptoEntry } from "@/features/mre/components/code-analysis/types";
+import type { ExecutionStage } from "@/components/ExecutionStages";
+import type { RuntimeBehaviorData, TriggerEntry, AntiDebugEntry, AntiVMEntry, ExecutionFlowEntry, SystemArtifactEntry, PersistenceEntry, NetworkBehaviorEntry, MemoryBehaviorEntry, ProcessInjectionEntry } from "@/features/mre/components/runtime-behavior";
+import type { REData } from "@/features/mre/types";
 
 // Colors for PDF export
 const HEADER_COLOR: [number, number, number] = [0, 100, 80]; // Teal/Green
@@ -28,16 +31,6 @@ const GRAY: [number, number, number] = [100, 100, 100];
 // Get RGB color from semantic level
 function getSemanticRGB(level: keyof typeof SEMANTIC_COLORS_RGB | null): [number, number, number] {
   return level ? SEMANTIC_COLORS_RGB[level] : BLACK;
-}
-
-// Get semantic color for Packed value (YES/NO)
-function getPackedColor(value: string): [number, number, number] {
-  return getSemanticRGB(getPackedSemanticLevel(value));
-}
-
-// Get semantic color for Packer name (if detected, it's suspicious)
-function getPackerColor(value: string): [number, number, number] {
-  return getSemanticRGB(getPackerSemanticLevel(value));
 }
 
 // Get semantic color for RWX permissions
@@ -58,13 +51,6 @@ function getSemanticColorForField(label: string, value: string): [number, number
 
 // Dynamic font family (will be "Roboto" if loaded, "helvetica" otherwise)
 let FONT_FAMILY = "helvetica";
-
-// Layout constants for consistency
-const LAYOUT = {
-  PAGE_MARGIN: 15,                // Left/right margin
-  PAGE_BREAK_THRESHOLD: 270,      // Y position to trigger page break
-  NEW_PAGE_START_Y: 25,           // Y position after page break
-} as const;
 
 // Spacing constants for section gaps
 const SPACING = {
@@ -174,7 +160,7 @@ function resetSectionCounter() {
 }
 
 // Draw a section header with Roman numeral (like "I. BACKGROUND") - with spacing before
-function drawSectionHeader(pdf: jsPDF, title: string, y: number, pageWidth: number): number {
+function drawSectionHeader(pdf: jsPDF, title: string, y: number, _pageWidth: number): number {
   // Add spacing before header (except at top of page)
   if (y > 30) {
     y += SPACING.SECTION_GAP;
@@ -1022,17 +1008,17 @@ function drawPESectionsTable(pdf: jsPDF, sections: PESectionData[], startY: numb
 
 // Helper to extract code analysis (with new fields: role, analystHypothesis)
 // Filters out entries that have no meaningful content
-function extractCodeAnalysis(codeAnalysis: any): Record<string, string> {
+function extractCodeAnalysis(codeAnalysis: CodeAnalysisData): Record<string, string> {
   if (!codeAnalysis) return {};
   const extractedResult: Record<string, string> = {};
   const staticCodeData = codeAnalysis.staticCodeAnalysis;
   const dynamicCodeData = codeAnalysis.dynamicCodeAnalysis;
-  
-  
+
+
   if (staticCodeData?.interestingFunctions?.length > 0) {
     const filtered = staticCodeData.interestingFunctions
-      .filter((e: any) => hasContentInKeys(e, ['functionName', 'rvaAddress', 'role', 'notes']))
-      .map((funcEntry: any) => {
+      .filter((e: InterestingFunction) => hasContentInKeys(e, ['functionName', 'rvaAddress', 'role', 'notes']))
+      .map((funcEntry: InterestingFunction) => {
         let formattedLine = `${funcEntry.functionName} @ ${funcEntry.rvaAddress}`;
         if (funcEntry.role) formattedLine += ` [Role: ${funcEntry.role}]`;
         if (funcEntry.notes) formattedLine += `: ${funcEntry.notes}`;
@@ -1043,43 +1029,43 @@ function extractCodeAnalysis(codeAnalysis: any): Record<string, string> {
   }
   if (staticCodeData?.controlFlow?.length > 0) {
     const filtered = staticCodeData.controlFlow
-      .filter((e: any) => hasContentInKeys(e, ['loopBranchNotes', 'cfgObservations']))
-      .map((cfEntry: any) => `Loops/Branch: ${cfEntry.loopBranchNotes}, CFG: ${cfEntry.cfgObservations}`)
+      .filter((e: ControlFlowEntry) => hasContentInKeys(e, ['loopBranchNotes', 'cfgObservations']))
+      .map((cfEntry: ControlFlowEntry) => `Loops/Branch: ${cfEntry.loopBranchNotes}, CFG: ${cfEntry.cfgObservations}`)
       .filter((lineText: string) => lineText.replace(/Loops\/Branch: , CFG: /g, "").trim());
     if (filtered.length) extractedResult.controlFlow = filtered.join("\n");
   }
   if (staticCodeData?.apiUsage?.length > 0) {
     const filtered = staticCodeData.apiUsage
-      .filter((e: any) => hasContentInKeys(e, ['apiName', 'purposeBehavior']))
-      .map((apiEntry: any) => `${apiEntry.apiName}: ${apiEntry.purposeBehavior}`)
+      .filter((e: APIUsageEntry) => hasContentInKeys(e, ['apiName', 'purposeBehavior']))
+      .map((apiEntry: APIUsageEntry) => `${apiEntry.apiName}: ${apiEntry.purposeBehavior}`)
       .filter((lineText: string) => lineText.trim() !== ":");
     if (filtered.length) extractedResult.apiUsage = filtered.join("\n");
   }
   if (staticCodeData?.obfuscation?.length > 0) {
     const filtered = staticCodeData.obfuscation
-      .filter((e: any) => hasContentInKeys(e, ['technique', 'evidence']))
-      .map((obfEntry: any) => `${obfEntry.technique}: ${obfEntry.evidence}`)
+      .filter((e: ObfuscationEntry) => hasContentInKeys(e, ['technique', 'evidence']))
+      .map((obfEntry: ObfuscationEntry) => `${obfEntry.technique}: ${obfEntry.evidence}`)
       .filter((lineText: string) => lineText.trim() !== ":");
     if (filtered.length) extractedResult.obfuscation = filtered.join("\n");
   }
   if (dynamicCodeData?.breakpointEvents?.length > 0) {
     const filtered = dynamicCodeData.breakpointEvents
-      .filter((e: any) => hasContentInKeys(e, ['eventType', 'whereTriggered', 'notes']))
-      .map((bpEntry: any) => `[${bpEntry.eventType}] ${bpEntry.whereTriggered}: ${bpEntry.notes}`)
+      .filter((e: BreakpointEvent) => hasContentInKeys(e, ['eventType', 'whereTriggered', 'notes']))
+      .map((bpEntry: BreakpointEvent) => `[${bpEntry.eventType}] ${bpEntry.whereTriggered}: ${bpEntry.notes}`)
       .filter((lineText: string) => lineText.trim() !== "[] :");
     if (filtered.length) extractedResult.breakpointEvents = filtered.join("\n");
   }
   if (dynamicCodeData?.memoryRegions?.length > 0) {
     const filtered = dynamicCodeData.memoryRegions
-      .filter((e: any) => hasContentInKeys(e, ['allocation', 'address', 'behavior']))
-      .map((memEntry: any) => `[${memEntry.allocation}] ${memEntry.address}: ${memEntry.behavior}`)
+      .filter((e: MemoryRegion) => hasContentInKeys(e, ['allocation', 'address', 'behavior']))
+      .map((memEntry: MemoryRegion) => `[${memEntry.allocation}] ${memEntry.address}: ${memEntry.behavior}`)
       .filter((lineText: string) => lineText.trim() !== "[] :");
     if (filtered.length) extractedResult.memoryRegions = filtered.join("\n");
   }
   if (dynamicCodeData?.runtimeApiTrace?.length > 0) {
     const filtered = dynamicCodeData.runtimeApiTrace
-      .filter((e: any) => hasContentInKeys(e, ['api', 'arguments', 'returnValue']))
-      .map((traceEntry: any) => `${traceEntry.api}(${traceEntry.arguments}) → ${traceEntry.returnValue}`)
+      .filter((e: RuntimeAPITrace) => hasContentInKeys(e, ['api', 'arguments', 'returnValue']))
+      .map((traceEntry: RuntimeAPITrace) => `${traceEntry.api}(${traceEntry.arguments}) → ${traceEntry.returnValue}`)
       .filter((lineText: string) => lineText.trim() !== "() →");
     if (filtered.length) extractedResult.runtimeAPITrace = filtered.join("\n");
   }
@@ -1087,14 +1073,14 @@ function extractCodeAnalysis(codeAnalysis: any): Record<string, string> {
 }
 
 // Helper to extract deep dive data (with new fields: analystHypothesis, entryCondition, exitCondition, failureAbortBehavior)
-function extractDeepDive(deepDive: any, unpackLayers: any[]): Record<string, string> {
+function extractDeepDive(deepDive: DeepDiveData & { microBehaviors?: { id: string; name: string; objectiveName: string; pathToMd?: string }[] }, unpackLayers: UnpackLayer[]): Record<string, string> {
   const extractedResult: Record<string, string> = {};
   const unpackText = extractUnpackLayers(unpackLayers);
   if (unpackText && unpackText.trim()) extractedResult.unpackingLayers = unpackText;
   
   if (deepDive?.executionStages?.length > 0) {
     const stagesText = deepDive.executionStages
-      .map((stageEntry: any) => {
+      .map((stageEntry: ExecutionStage) => {
         const hasStageContent =
           (stageEntry.entryCondition && stageEntry.entryCondition.trim()) ||
           (stageEntry.actions && stageEntry.actions.trim()) ||
@@ -1125,7 +1111,7 @@ function extractDeepDive(deepDive: any, unpackLayers: any[]): Record<string, str
   }
   if (deepDive?.cryptoEntries?.length > 0) {
     const cryptoText = deepDive.cryptoEntries
-      .map((cryptoEntry: any) => {
+      .map((cryptoEntry: CryptoEntry) => {
         // Check if has meaningful content
         const hasAlgo = cryptoEntry.algorithm && cryptoEntry.algorithm.trim();
         const hasKeyIv = cryptoEntry.keyIv && cryptoEntry.keyIv.trim();
@@ -1143,8 +1129,8 @@ function extractDeepDive(deepDive: any, unpackLayers: any[]): Record<string, str
   }
   if (deepDive?.microBehaviors?.length > 0) {
     const microText = deepDive.microBehaviors
-      .filter((microEntry: any) => microEntry.id && microEntry.id.trim() && microEntry.name && microEntry.name.trim())
-      .map((microEntry: any) => {
+      .filter((microEntry: { id: string; name: string; objectiveName: string; pathToMd?: string }) => microEntry.id && microEntry.id.trim() && microEntry.name && microEntry.name.trim())
+      .map((microEntry: { id: string; name: string; objectiveName: string; pathToMd?: string }) => {
         const objectiveSlug = (microEntry.objectiveName || '').toLowerCase().replace(/\s+/g, '-');
         const behaviorUrl = microEntry.pathToMd 
           ? `https://github.com/MBCProject/mbc-markdown/blob/main/${microEntry.pathToMd}`
@@ -1161,21 +1147,21 @@ function extractDeepDive(deepDive: any, unpackLayers: any[]): Record<string, str
 
 // Helper to extract runtime behavior (with new field: effect)
 // Filters out entries that have no meaningful content
-function extractRuntimeBehaviorWithEffect(runtimeBehavior: any): Record<string, string> {
+function extractRuntimeBehaviorWithEffect(runtimeBehavior: RuntimeBehaviorData): Record<string, string> {
   if (!runtimeBehavior) return {};
   const extractedResult: Record<string, string> = {};
-  
+
   if (runtimeBehavior.triggersEnabled && runtimeBehavior.triggers?.length > 0) {
     const filtered = runtimeBehavior.triggers
-      .filter((e: any) => hasContentInKeys(e, ['name', 'description']))
-      .map((triggerEntry: any) => `${triggerEntry.name}: ${triggerEntry.description}`)
+      .filter((e: TriggerEntry) => hasContentInKeys(e, ['name', 'description']))
+      .map((triggerEntry: TriggerEntry) => `${triggerEntry.name}: ${triggerEntry.description}`)
       .filter((lineText: string) => lineText.trim() !== ":");
     if (filtered.length) extractedResult.triggers = filtered.join("\n");
   }
   if (runtimeBehavior.antiDebugEnabled && runtimeBehavior.antiDebug?.length > 0) {
     const filtered = runtimeBehavior.antiDebug
-      .filter((e: any) => hasContentInKeys(e, ['categoryTags', 'apis', 'effect', 'notes']))
-      .map((debugEntry: any) => {
+      .filter((e: AntiDebugEntry) => hasContentInKeys(e, ['categoryTags', 'apis', 'effect', 'notes']))
+      .map((debugEntry: AntiDebugEntry) => {
         let formattedLine = `[${debugEntry.categoryTags?.join(", ")}] APIs: ${debugEntry.apis?.join(", ")}`;
         if (debugEntry.effect) formattedLine += ` | Effect: ${debugEntry.effect}`;
         if (debugEntry.notes) formattedLine += ` - ${debugEntry.notes}`;
@@ -1186,8 +1172,8 @@ function extractRuntimeBehaviorWithEffect(runtimeBehavior: any): Record<string, 
   }
   if (runtimeBehavior.antiVMEnabled && runtimeBehavior.antiVM?.length > 0) {
     const filtered = runtimeBehavior.antiVM
-      .filter((e: any) => hasContentInKeys(e, ['methodTags', 'indicator', 'effect', 'notes']))
-      .map((vmEntry: any) => {
+      .filter((e: AntiVMEntry) => hasContentInKeys(e, ['methodTags', 'indicator', 'effect', 'notes']))
+      .map((vmEntry: AntiVMEntry) => {
         let formattedLine = `[${vmEntry.methodTags?.join(", ")}] ${vmEntry.indicator}`;
         if (vmEntry.effect) formattedLine += ` | Effect: ${vmEntry.effect}`;
         if (vmEntry.notes) formattedLine += ` - ${vmEntry.notes}`;
@@ -1198,50 +1184,50 @@ function extractRuntimeBehaviorWithEffect(runtimeBehavior: any): Record<string, 
   }
   if (runtimeBehavior.executionFlowEnabled && runtimeBehavior.executionFlow?.length > 0) {
     const filtered = runtimeBehavior.executionFlow
-      .filter((e: any) => hasContentInKeys(e, ['stepName', 'description']))
-      .map((flowEntry: any) => `${flowEntry.stepName}: ${flowEntry.description}`)
+      .filter((e: ExecutionFlowEntry) => hasContentInKeys(e, ['stepName', 'description']))
+      .map((flowEntry: ExecutionFlowEntry) => `${flowEntry.stepName}: ${flowEntry.description}`)
       .filter((lineText: string) => lineText.trim() !== ":");
     if (filtered.length) extractedResult.executionFlow = filtered.join("\n");
   }
   if (runtimeBehavior.systemArtifactsEnabled && runtimeBehavior.systemArtifacts?.length > 0) {
     const filtered = runtimeBehavior.systemArtifacts
-      .filter((e: any) => hasContentInKeys(e, ['typeTags', 'path', 'notes']))
-      .map((artifactEntry: any) => `[${artifactEntry.typeTags?.join(", ")}] ${artifactEntry.path} - ${artifactEntry.notes}`)
+      .filter((e: SystemArtifactEntry) => hasContentInKeys(e, ['typeTags', 'path', 'notes']))
+      .map((artifactEntry: SystemArtifactEntry) => `[${artifactEntry.typeTags?.join(", ")}] ${artifactEntry.path} - ${artifactEntry.notes}`)
       .filter((lineText: string) => lineText.trim() && lineText !== "[]  - ");
     if (filtered.length) extractedResult.systemArtifacts = filtered.join("\n");
   }
   if (runtimeBehavior.persistenceEnabled && runtimeBehavior.persistence?.length > 0) {
     const filtered = runtimeBehavior.persistence
-      .filter((e: any) => hasContentInKeys(e, ['typeTags', 'path', 'notes']))
-      .map((persistEntry: any) => `[${persistEntry.typeTags?.join(", ")}] ${persistEntry.path} - ${persistEntry.notes}`)
+      .filter((e: PersistenceEntry) => hasContentInKeys(e, ['typeTags', 'path', 'notes']))
+      .map((persistEntry: PersistenceEntry) => `[${persistEntry.typeTags?.join(", ")}] ${persistEntry.path} - ${persistEntry.notes}`)
       .filter((lineText: string) => lineText.trim() && lineText !== "[]  - ");
     if (filtered.length) extractedResult.persistence = filtered.join("\n");
   }
   if (runtimeBehavior.networkEnabled && runtimeBehavior.network?.length > 0) {
     const filtered = runtimeBehavior.network
-      .filter((e: any) => hasContentInKeys(e, ['behaviorTags', 'indicator', 'notes']))
-      .map((netEntry: any) => `[${netEntry.behaviorTags?.join(", ")}] ${netEntry.indicator} - ${netEntry.notes}`)
+      .filter((e: NetworkBehaviorEntry) => hasContentInKeys(e, ['behaviorTags', 'indicator', 'notes']))
+      .map((netEntry: NetworkBehaviorEntry) => `[${netEntry.behaviorTags?.join(", ")}] ${netEntry.indicator} - ${netEntry.notes}`)
       .filter((lineText: string) => lineText.trim() && lineText !== "[]  - ");
     if (filtered.length) extractedResult.networkBehavior = filtered.join("\n");
   }
   if (runtimeBehavior.memoryEnabled && runtimeBehavior.memory?.length > 0) {
     const filtered = runtimeBehavior.memory
-      .filter((e: any) => hasContentInKeys(e, ['eventTags', 'region', 'notes']))
-      .map((memEntry: any) => `[${memEntry.eventTags?.join(", ")}] ${memEntry.region} - ${memEntry.notes}`)
+      .filter((e: MemoryBehaviorEntry) => hasContentInKeys(e, ['eventTags', 'region', 'notes']))
+      .map((memEntry: MemoryBehaviorEntry) => `[${memEntry.eventTags?.join(", ")}] ${memEntry.region} - ${memEntry.notes}`)
       .filter((lineText: string) => lineText.trim() && lineText !== "[]  - ");
     if (filtered.length) extractedResult.memoryBehavior = filtered.join("\n");
   }
   if (runtimeBehavior.processInjectionEnabled && runtimeBehavior.processInjection?.length > 0) {
     const filtered = runtimeBehavior.processInjection
-      .filter((e: any) => hasContentInKeys(e, ['techniqueTags', 'targetProcess', 'apiChain', 'notes']))
-      .map((injectionEntry: any) => `[${injectionEntry.techniqueTags?.join(", ")}] Target: ${injectionEntry.targetProcess}, APIs: ${injectionEntry.apiChain?.join(" → ")} - ${injectionEntry.notes}`)
+      .filter((e: ProcessInjectionEntry) => hasContentInKeys(e, ['techniqueTags', 'targetProcess', 'apiChain', 'notes']))
+      .map((injectionEntry: ProcessInjectionEntry) => `[${injectionEntry.techniqueTags?.join(", ")}] Target: ${injectionEntry.targetProcess}, APIs: ${injectionEntry.apiChain?.join(" → ")} - ${injectionEntry.notes}`)
       .filter((lineText: string) => lineText.trim() && lineText !== "[] Target: , APIs:  - ");
     if (filtered.length) extractedResult.processInjection = filtered.join("\n");
   }
   return extractedResult;
 }
 
-export function exportREPDF(reportData: any, analystName: string, fileName: string, fileHash: string): void {
+export function exportREPDF(reportData: REData, analystName: string, fileName: string, fileHash: string): void {
   const pdf = new jsPDF();
   
   // Register custom Unicode fonts if available
@@ -1384,21 +1370,21 @@ export function exportREPDF(reportData: any, analystName: string, fileName: stri
   }
 
   // ===== MBC MAPPING =====
-  const meaningfulMbc = (reportData.detection?.mbcMapping || []).filter((mbcItem: any) => {
+  const meaningfulMbc = (reportData.detection?.mbcMapping || []).filter((mbcItem: { id: string; name: string; objectiveName: string; pathToMd?: string }) => {
     const hasId = mbcItem.id && mbcItem.id.trim() && mbcItem.id.trim() !== '-';
     const hasName = mbcItem.name && mbcItem.name.trim() && mbcItem.name.trim() !== '-';
     return hasId || hasName;
   });
-  
+
   if (meaningfulMbc.length > 0) {
     currentY = drawSectionHeader(pdf, "MBC Mapping", currentY, pageWidth);
-    const groupedByObjective: Record<string, any[]> = {};
-    meaningfulMbc.forEach((mbcItem: any) => {
+    const groupedByObjective: Record<string, { id: string; name: string; pathToMd?: string }[]> = {};
+    meaningfulMbc.forEach((mbcItem: { id: string; name: string; objectiveName: string; pathToMd?: string }) => {
       const objectiveKey = mbcItem.objectiveName || "Other";
       if (!groupedByObjective[objectiveKey]) groupedByObjective[objectiveKey] = [];
       groupedByObjective[objectiveKey].push(mbcItem);
     });
-    Object.entries(groupedByObjective).forEach(([objectiveName, behaviorsList]: [string, any[]]) => {
+    Object.entries(groupedByObjective).forEach(([objectiveName, behaviorsList]: [string, { id: string; name: string; pathToMd?: string }[]]) => {
       if (currentY > 270) { pdf.addPage(); currentY = 25; }
       
       // Objective header with link
@@ -1413,7 +1399,7 @@ export function exportREPDF(reportData: any, analystName: string, fileName: stri
       
       // Behaviors - each on its own line
       pdf.setFont(FONT_FAMILY, "normal");
-      behaviorsList.forEach((behaviorEntry: any) => {
+      behaviorsList.forEach((behaviorEntry: { id: string; name: string; pathToMd?: string }) => {
         if (currentY > 270) { pdf.addPage(); currentY = 25; }
         
         const xPosition = 20; // Indent for behaviors
@@ -1451,16 +1437,16 @@ export function exportREPDF(reportData: any, analystName: string, fileName: stri
   }
 
   // ===== IOCs =====
-  const meaningfulIocs = (reportData.detection?.iocs || []).filter((iocEntry: any) => {
+  const meaningfulIocs = (reportData.detection?.iocs || []).filter((iocEntry: { type: string; value: string; description: string }) => {
     const hasType = iocEntry.type && iocEntry.type.trim() && iocEntry.type.trim() !== '-';
     const hasValue = iocEntry.value && iocEntry.value.trim() && iocEntry.value.trim() !== '-';
     const hasDescription = iocEntry.description && iocEntry.description.trim() && iocEntry.description.trim() !== '-';
     return hasType || hasValue || hasDescription;
   });
-  
+
   if (meaningfulIocs.length > 0) {
     currentY = drawSectionHeader(pdf, "Indicators of Compromise", currentY, pageWidth);
-    meaningfulIocs.forEach((iocEntry: any) => {
+    meaningfulIocs.forEach((iocEntry: { type: string; value: string; description: string }) => {
       if (currentY > 270) { pdf.addPage(); currentY = 25; }
       pdf.setFontSize(9);
       pdf.setTextColor(...BLACK);

@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, useCallback, useMemo, type ReactNode } from "react";
+import { createContext, useState, useEffect, useCallback, useMemo, type ReactNode } from "react";
 import { STORAGE_KEYS } from "@/lib/storageKeys";
 import { translations, type Language } from "@/lib/translations";
 
@@ -8,7 +8,7 @@ interface LanguageContextType {
   t: (key: string) => string;
 }
 
-const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
+export const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
 
 export function LanguageProvider({ children }: { children: ReactNode }) {
   const [language, setLanguageState] = useState<Language>(() => {
@@ -38,13 +38,4 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
   );
 }
 
-export function useLanguage() {
-  const context = useContext(LanguageContext);
-  if (context === undefined) {
-    throw new Error("useLanguage must be used within a LanguageProvider");
-  }
-  return context;
-}
-
-// Re-export Language type for convenience
 export type { Language };

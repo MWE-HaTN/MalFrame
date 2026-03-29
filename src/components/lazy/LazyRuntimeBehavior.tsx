@@ -3,7 +3,7 @@ import { SectionSkeleton } from "@/components/ui/section-skeleton";
 
 // Lazy load RuntimeBehavior component - reduces initial bundle by ~30KB
 const RuntimeBehaviorComponent = lazy(() => 
-  import("@/components/runtime-behavior/RuntimeBehavior").then(m => ({ default: m.RuntimeBehavior }))
+  import("@/features/mre/components/runtime-behavior/RuntimeBehavior").then(m => ({ default: m.RuntimeBehavior }))
 );
 
 // Re-export props type from the lazy component

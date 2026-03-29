@@ -1,4 +1,5 @@
 import type { Config } from "tailwindcss";
+import tailwindAnimate from "tailwindcss-animate";
 
 export default {
   darkMode: ["class"],
@@ -123,6 +124,9 @@ export default {
           "50%": { opacity: "0.8", boxShadow: "0 0 16px hsl(var(--primary) / 0.6)" },
         },
       },
+      transitionTimingFunction: {
+        "standard": "cubic-bezier(0.4, 0, 0.2, 1)",
+      },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
@@ -135,5 +139,5 @@ export default {
       },
     },
   },
-  plugins: [require("tailwindcss-animate")],
+  plugins: [tailwindAnimate],
 } satisfies Config;
