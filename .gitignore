@@ -19,6 +19,7 @@ settings.local.json
 *.tsbuildinfo
 
 # Claude Code — ignore personal settings, keep CLAUDE.md
+.claude/settings.json
 .claude/settings.local.json
 
 # Logs
