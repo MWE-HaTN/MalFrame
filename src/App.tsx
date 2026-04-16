@@ -28,6 +28,17 @@ const AppRoutes = memo(function AppRoutes() {
     preloadAllRoutes();
   }, []);
 
+  // Prevent browser from navigating to dropped files outside designated drop zones
+  useEffect(() => {
+    const prevent = (e: DragEvent) => e.preventDefault();
+    document.addEventListener("dragover", prevent);
+    document.addEventListener("drop", prevent);
+    return () => {
+      document.removeEventListener("dragover", prevent);
+      document.removeEventListener("drop", prevent);
+    };
+  }, []);
+
   return (
     <Suspense fallback={<PageLoadingSkeleton />}>
       <Routes>

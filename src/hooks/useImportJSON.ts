@@ -34,6 +34,9 @@ export function useImportJSON<T>(options: UseImportJSONOptions<T>) {
           onSuccess(validationResult.data);
           toast.success(successMessage);
         };
+        fileReader.onerror = () => {
+          toast.error("Failed to read file");
+        };
         fileReader.readAsText(selectedFile);
       }
     };

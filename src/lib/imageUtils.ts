@@ -48,14 +48,19 @@ export function handleImageFileSelect(
   const files = event.target.files;
   if (!files) return;
 
-  Array.from(files).forEach((file) => {
-    if (file.type.startsWith("image/")) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const base64 = e.target?.result as string;
-        onImagesChange([...currentImages, base64]);
-      };
-      reader.readAsDataURL(file);
-    }
+  const imageFiles = Array.from(files).filter((f) => f.type.startsWith("image/"));
+  if (imageFiles.length === 0) return;
+
+  const reads = imageFiles.map(
+    (file) =>
+      new Promise<string>((resolve) => {
+        const reader = new FileReader();
+        reader.onload = (e) => resolve(e.target?.result as string);
+        reader.readAsDataURL(file);
+      })
+  );
+
+  Promise.all(reads).then((base64s) => {
+    onImagesChange([...currentImages, ...base64s]);
   });
 }

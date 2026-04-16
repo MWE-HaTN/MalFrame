@@ -112,15 +112,16 @@ function MREDashboardBody({ storageKey }: MREDashboardBodyProps) {
     return String(err);
   };
 
+  const hasData = <T extends object>(obj: T, excludeKeys = ['id', 'timestamp', 'images']): boolean =>
+    Object.entries(obj).some(([key, value]) => {
+      if (excludeKeys.includes(key)) return false;
+      if (Array.isArray(value)) return value.length > 0;
+      if (typeof value === 'boolean') return false;
+      return Boolean(value);
+    });
+
   const handleExportJSON = async () => {
     try {
-      const hasData = <T extends object>(obj: T, excludeKeys = ['id', 'timestamp', 'images']): boolean =>
-        Object.entries(obj).some(([key, value]) => {
-          if (excludeKeys.includes(key)) return false;
-          if (Array.isArray(value)) return value.length > 0;
-          if (typeof value === 'boolean') return false;
-          return Boolean(value);
-        });
 
       const cleanedData: REData = {
         ...data,
@@ -235,7 +236,7 @@ function MREDashboardBody({ storageKey }: MREDashboardBodyProps) {
     return generateFileName(data.background.analyst, data.background.fileName, data.staticAnalysis.sha256, ext);
   };
 
-  const handleConfirmExport = async (_shouldSaveImages: boolean, clearDataAfter: boolean) => {
+  const handleConfirmExport = async (_: boolean, clearDataAfter: boolean) => {
     if (pendingExportType === "pdf") {
       await handleExportPDF();
     } else {

@@ -98,14 +98,13 @@ export async function lazyExportJSON(
   hash: string,
   reportType?: ReportType
 ): Promise<void> {
-  // If already loaded, run synchronously to preserve user-gesture download behavior
   if (jsonModule) {
-    jsonModule.exportJSON(data, analyst, fileName, hash, reportType);
+    await jsonModule.exportJSON(data, analyst, fileName, hash, reportType);
     return;
   }
 
   const { exportJSON } = await loadJSONModule();
-  exportJSON(data, analyst, fileName, hash, reportType);
+  await exportJSON(data, analyst, fileName, hash, reportType);
 }
 
 /**
@@ -118,12 +117,12 @@ export async function lazyExportDFIRPDF(
   hash: string
 ): Promise<void> {
   if (dfirPdfModule) {
-    dfirPdfModule.exportDFIRPDF(data, analyst, fileName, hash);
+    await dfirPdfModule.exportDFIRPDF(data, analyst, fileName, hash);
     return;
   }
 
   const { exportDFIRPDF } = await loadDFIRPDFModule();
-  exportDFIRPDF(data, analyst, fileName, hash);
+  await exportDFIRPDF(data, analyst, fileName, hash);
 }
 
 /**
@@ -158,12 +157,12 @@ export async function lazyExportREPDF(
   await loadFonts();
   
   if (rePdfModule) {
-    rePdfModule.exportREPDF(data, analyst, fileName, hash);
+    await rePdfModule.exportREPDF(data, analyst, fileName, hash);
     return;
   }
 
   const { exportREPDF } = await loadREPDFModule();
-  exportREPDF(data, analyst, fileName, hash);
+  await exportREPDF(data, analyst, fileName, hash);
 }
 
 /**
@@ -183,4 +182,3 @@ export async function lazyExportREWord(
   const { exportREWord } = await loadREWordModule();
   await exportREWord(data, analyst, fileName, hash);
 }
-

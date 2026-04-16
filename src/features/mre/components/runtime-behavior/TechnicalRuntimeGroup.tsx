@@ -1,6 +1,6 @@
 import { Wifi, MemoryStick, Syringe } from "lucide-react";
 import { generateId } from "@/lib/utils";
-import { RuntimeBehaviorData, RuntimeEntry } from "./types";
+import { RuntimeBehaviorData } from "./types";
 import { NETWORK_TYPES, MEMORY_TYPES, INJECTION_TECHNIQUES, INJECTION_APIS } from "./constants";
 import {
   GroupHeader,
@@ -20,13 +20,6 @@ interface TechnicalRuntimeGroupProps {
   onToggleGroup: () => void;
   expandedSubItems: Record<string, boolean>;
   onToggleSubItem: (key: string) => void;
-  onSubItemToggle: (
-    enabledKey: keyof RuntimeBehaviorData,
-    dataKey: keyof RuntimeBehaviorData,
-    defaultEntry: RuntimeEntry,
-    enabled: boolean,
-    subItemKey: string
-  ) => void;
   update: <K extends keyof RuntimeBehaviorData>(key: K, value: RuntimeBehaviorData[K]) => void;
   updateMany: (patch: Partial<RuntimeBehaviorData>) => void;
 }
@@ -37,7 +30,6 @@ export function TechnicalRuntimeGroup({
   onToggleGroup,
   expandedSubItems,
   onToggleSubItem,
-  onSubItemToggle,
   update,
   updateMany,
 }: TechnicalRuntimeGroupProps) {
@@ -79,8 +71,6 @@ export function TechnicalRuntimeGroup({
         <SubItemRow
           title={t("runtime.technical.networkBehavior")}
           icon={<Wifi className="w-4 h-4" />}
-          enabled={data.networkEnabled}
-          onToggle={(v) => onSubItemToggle("networkEnabled", "network", { id: generateId(), behaviorTags: [], indicator: "", notes: "", images: [] }, v, "network")}
           isExpanded={expandedSubItems["network"]}
           onExpandToggle={() => onToggleSubItem("network")}
           count={data.network.length}
@@ -142,8 +132,6 @@ export function TechnicalRuntimeGroup({
         <SubItemRow
           title={t("runtime.technical.memoryBehavior")}
           icon={<MemoryStick className="w-4 h-4" />}
-          enabled={data.memoryEnabled}
-          onToggle={(v) => onSubItemToggle("memoryEnabled", "memory", { id: generateId(), eventTags: [], region: "", notes: "", images: [] }, v, "memory")}
           isExpanded={expandedSubItems["memory"]}
           onExpandToggle={() => onToggleSubItem("memory")}
           count={data.memory.length}
@@ -205,8 +193,6 @@ export function TechnicalRuntimeGroup({
         <SubItemRow
           title={t("runtime.technical.processInjection")}
           icon={<Syringe className="w-4 h-4" />}
-          enabled={data.processInjectionEnabled}
-          onToggle={(v) => onSubItemToggle("processInjectionEnabled", "processInjection", { id: generateId(), techniqueTags: [], targetProcess: "", apiChain: [], notes: "", images: [] }, v, "injection")}
           isExpanded={expandedSubItems["injection"]}
           onExpandToggle={() => onToggleSubItem("injection")}
           count={data.processInjection.length}

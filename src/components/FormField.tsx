@@ -3,6 +3,7 @@ import { cn } from "@/lib/utils";
 import { handleImagePaste, handleImageFileSelect } from "@/lib/imageUtils";
 import { Image } from "lucide-react";
 import { ImageGrid } from "@/components/ui/image-grid";
+import { DatePicker } from "@/components/ui/date-picker";
 
 interface FormFieldProps {
   label: string;
@@ -122,6 +123,15 @@ export const FormField = memo(function FormField({
           style={{ minHeight: `${minHeight}px` }}
           className={cn(inputClasses, "resize-none flex-1")}
         />
+      ) : type === "date" ? (
+        <DatePicker
+          id={fieldId}
+          name={fieldName}
+          value={value}
+          onChange={onChange}
+          placeholder={placeholder}
+          className={className}
+        />
       ) : (
         <input
           id={fieldId}
@@ -129,7 +139,6 @@ export const FormField = memo(function FormField({
           type={type}
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          onPaste={handlePaste}
           placeholder={placeholder}
           className={inputClasses}
         />

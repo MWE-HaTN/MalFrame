@@ -14,17 +14,16 @@ A professional web application for **Malware Incident Analysis (MIA)** and **Mal
 
 ## Table of Contents
 
-- [Quick Start / Bắt đầu nhanh](#-quick-start--bắt-đầu-nhanh)
-- [Installation Guide / Hướng dẫn cài đặt](#-installation-guide--hướng-dẫn-cài-đặt)
-- [Features Overview / Tổng quan tính năng](#-features-overview--tổng-quan-tính-năng)
-- [Dashboard Usage / Hướng dẫn sử dụng](#-dashboard-usage--hướng-dẫn-sử-dụng)
-- [Keyboard Shortcuts](#-keyboard-shortcuts)
+- [Quick Start](#-quick-start)
+- [Features Overview](#-features-overview)
+- [Dashboard Usage](#-dashboard-usage)
+- [Multi-Case Management](#-multi-case-management)
 - [Data Management](#-data-management)
 - [Export Options](#-export-options)
 - [Development Scripts](#-development-scripts)
 - [Tech Stack](#-tech-stack)
-- [Project Structure / Cấu trúc dự án](#-project-structure--cấu-trúc-dự-án)
-- [Troubleshooting / Xử lý lỗi](#-troubleshooting--xử-lý-lỗi)
+- [Project Structure](#-project-structure)
+- [Troubleshooting](#-troubleshooting)
 - [Contributing](#-contributing)
 
 ---
@@ -39,16 +38,6 @@ A professional web application for **Malware Incident Analysis (MIA)** and **Mal
 | npm | v9+ | Included with Node.js |
 | Git | Latest | [git-scm.com](https://git-scm.com/) |
 
-**Bun** (faster alternative):
-
-```bash
-# Windows (PowerShell)
-powershell -c "irm bun.sh/install.ps1 | iex"
-
-# macOS / Linux
-curl -fsSL https://bun.sh/install | bash
-```
-
 ### Installation
 
 ```bash
@@ -57,43 +46,21 @@ git clone https://github.com/MWE-HaTN/MalFrame.git
 cd MalFrame
 
 # 2. Install dependencies
-npm install    # or: bun install
+npm install
 
 # 3. Start development server
-npm run dev    # or: bun run dev
+npm run dev
 
-# 4. Open browser → http://localhost:8080
+# 4. Open browser → https://localhost:8088
 ```
+
+> **Note**: The dev server uses a self-signed SSL certificate (required for `crypto.subtle` and file downloads). Your browser will show a security warning on first launch — click **Advanced → Proceed** to continue. When accessing from another machine on the network, use `https://<your-ip>:8088`.
 
 ### Production Build
 
 ```bash
 npm run build
 npm run preview
-
-# Bundle size report
-node scripts/bundle-size-report.js
-```
-
-### Docker (Optional)
-
-```dockerfile
-FROM node:20-alpine AS builder
-WORKDIR /app
-COPY package*.json ./
-RUN npm ci
-COPY . .
-RUN npm run build
-
-FROM nginx:alpine
-COPY --from=builder /app/dist /usr/share/nginx/html
-EXPOSE 80
-CMD ["nginx", "-g", "daemon off;"]
-```
-
-```bash
-docker build -t malframe .
-docker run -p 8080:80 malframe
 ```
 
 ---
@@ -102,8 +69,9 @@ docker run -p 8080:80 malframe
 
 | Feature | MIA | MRE | Description |
 |---------|:---:|:---:|-------------|
-| File Hash Generator | ✅ | ✅ | Drag & drop → SHA256/MD5/SHA1 |
-| Image Paste | ✅ | ✅ | Ctrl+V screenshots into textareas |
+| Multi-Case Management | ✅ | ✅ | Multiple independent cases, inline rename, tab switching |
+| File Hash Generator | ✅ | ✅ | Drag & drop → SHA256 + MD5 |
+| Image Paste | ✅ | ✅ | Ctrl+V screenshots into any textarea |
 | MITRE ATT&CK Mapping | ✅ | ✅ | 14 tactics, live data from GitHub |
 | MBC Mapping | ❌ | ✅ | Malware Behavior Catalog v3.2 |
 | Micro-Behaviors | ❌ | ✅ | Granular behavior indicators |
@@ -140,7 +108,7 @@ docker run -p 8080:80 malframe
 | IOC Table | Indicators with type categorization |
 | Recommendations | Short-term and long-term remediation |
 | Attack Timeline | Chronological event documentation |
-| Evidence Artifacts | File management with metadata |
+| Evidence Artifacts | Drag & drop files for SHA256 hash generation |
 | Notes Log | Free-form notes with image support |
 
 ### MRE Dashboard (`/mre`)
@@ -150,21 +118,21 @@ docker run -p 8080:80 malframe
 | Section | Description |
 |---------|-------------|
 | Background | File metadata and analyst context |
-| Static Analysis | Hashes, PE structure, packing, OSINT |
-| Runtime Behavior | Anti-analysis, execution patterns, technical groups |
-| Code Analysis | Static/dynamic code, cryptography |
-| Deep Dive | Unpacking layers, execution stages, crypto entries |
-| Detection | MBC mapping, YARA, IOCs, conclusion |
+| Static Analysis | Hashes, PE structure, packing detection, OSINT |
+| Runtime Behavior | Anti-analysis, execution patterns, network |
+| Code Analysis | Static/dynamic code review, cryptography |
+| Deep Dive | Unpacking layers, execution stages, MBC mapping |
+| Detection | YARA rules, IOCs, conclusion |
 
 ### Tools (`/tools`)
 
-FLARE-VM analysis tools reference: **33 categories, 240+ tools**, searchable, with GitHub links.
+FLARE-VM analysis tools reference: **33 categories, 240+ tools**, searchable, with GitHub/project links.
 
 ### Settings (`/settings`)
 
 | Setting | Description |
 |---------|-------------|
-| User Profile | Analyst name and GitHub URL (used in exports) |
+| User Profile | Analyst name (used in exports and auto-fill) |
 | Language | English / Tiếng Việt |
 | Theme | Dark (cyber) / Light |
 | Display Scale | 75% – 200% interface scaling |
@@ -172,22 +140,13 @@ FLARE-VM analysis tools reference: **33 categories, 240+ tools**, searchable, wi
 
 ---
 
-## Keyboard Shortcuts
+## Multi-Case Management
 
-### Dropdowns
-| Key | Action |
-|-----|--------|
-| `Enter` / `Space` | Open / select |
-| `↑` / `↓` | Navigate options |
-| `Home` / `End` | First / last option |
-| `Escape` | Close |
-| `A–Z` | Type-to-search |
+Both dashboards support multiple independent cases stored concurrently. A tab bar at the top of each dashboard lets you switch, rename, create, and delete cases.
 
-### Forms
-| Key | Action |
-|-----|--------|
-| `Ctrl+V` | Paste image into textarea |
-| `Tab` / `Shift+Tab` | Next / previous field |
+- Each case is stored separately in IndexedDB (`mia-case-{id}`, `mre-case-{id}`)
+- Switching cases auto-saves the current case and loads the selected one
+- Case names can be edited inline
 
 ---
 
@@ -195,25 +154,30 @@ FLARE-VM analysis tools reference: **33 categories, 240+ tools**, searchable, wi
 
 ### Auto-Save
 
-All data saves automatically to localStorage with **500ms debounce**. No manual save required.
+All data saves automatically to **IndexedDB** with a short debounce. No manual save required.
 
-### Storage Keys
+### Storage Layout
 
-| Key | Content |
-|-----|---------|
-| `dfir-dashboard-data` | MIA Dashboard |
-| `re-dashboard-data` | MRE Dashboard |
-| `cyber-analyst-theme` | Theme preference |
-| `cyber-analyst-language` | Language setting |
-| `cyber-analyst-user-profile` | User profile |
-| `mitre-attack-cache` | Cached MITRE data (~200 KB, 24h TTL) |
-| `cyber-analyst-images` | Image registry |
+| What | Storage | Key |
+|------|---------|-----|
+| MIA case registry | IndexedDB | `mia-cases` |
+| MIA case data | IndexedDB | `mia-case-{id}` |
+| MRE case registry | IndexedDB | `mre-cases` |
+| MRE case data | IndexedDB | `mre-case-{id}` |
+| Theme preference | localStorage | `cyber-analyst-theme` |
+| Language setting | localStorage | `cyber-analyst-language` |
+| User profile | localStorage | `cyber-analyst-user-profile` |
+| MITRE ATT&CK cache | localStorage | `mitre-attack-cache` (24h TTL) |
+| Active MIA case | localStorage | `mia-active-case` |
+| Active MRE case | localStorage | `mre-active-case` |
+
+> Images are embedded as **base64 strings** directly in the case JSON — no separate image storage needed. This makes each JSON export fully self-contained.
 
 ### Privacy
 
 - **100% Local** — all data stays in your browser
 - **No server** — no cloud, no telemetry, no tracking
-- **No analytics** — zero external requests except MITRE ATT&CK data
+- **No analytics** — zero external requests except MITRE ATT&CK live data
 
 ---
 
@@ -221,7 +185,7 @@ All data saves automatically to localStorage with **500ms debounce**. No manual 
 
 | Format | Best For |
 |--------|----------|
-| **JSON** | Backup, reimport, automation |
+| **JSON** | Backup, reimport, sharing between analysts |
 | **PDF** | Formal reports, printing |
 | **Word (.docx)** | Editable reports |
 
@@ -237,15 +201,15 @@ Examples:
 
 ### Import
 
-Drag & drop a JSON file onto the dashboard, or click **Import JSON**. Backward compatible with older export versions.
+Click **Import JSON** on the dashboard header. The imported data is validated against the current schema and backward-compatible with older export versions.
 
 ---
 
-## 📜 Development Scripts
+## Development Scripts
 
 | Script | Description |
 |--------|-------------|
-| `npm run dev` | Start dev server (port 8080) |
+| `npm run dev` | Start dev server at `https://localhost:8088` |
 | `npm run build` | Production build to `dist/` |
 | `npm run preview` | Preview production build locally |
 | `npm run lint` | Run ESLint |
@@ -263,23 +227,17 @@ Drag & drop a JSON file onto the dashboard, or click **Import JSON**. Backward c
 | [TypeScript](https://www.typescriptlang.org/) | 5.x | Type safety |
 | [Vite](https://vitejs.dev/) | 7.x | Build tool + dev server |
 | [React Router](https://reactrouter.com/) | 7.x | Client-side routing |
+| [Zod](https://zod.dev/) | 4.x | Schema validation on import |
 
 ### UI & Styling
 
 | Technology | Purpose |
 |------------|---------|
 | [Tailwind CSS](https://tailwindcss.com/) | Utility-first styling |
-| [Shadcn/ui](https://ui.shadcn.com/) | Component library |
 | [Radix UI](https://www.radix-ui.com/) | Accessible primitives |
 | [Lucide React](https://lucide.dev/) | Icons |
 | [Sonner](https://sonner.emilkowal.ski/) | Toast notifications |
-
-### Data & State
-
-| Technology | Purpose |
-|------------|---------|
-| [TanStack Virtual](https://tanstack.com/virtual) | Virtual scrolling for large lists |
-| [Zod](https://zod.dev/) | Schema validation on import |
+| [TanStack Virtual](https://tanstack.com/virtual) | Virtual scrolling for IOC table |
 
 ### Export
 
@@ -292,8 +250,9 @@ Drag & drop a JSON file onto the dashboard, or click **Import JSON**. Backward c
 
 | Technology | Purpose |
 |------------|---------|
-| [vite-plugin-compression](https://github.com/vbenjs/vite-plugin-compression) | Gzip/Brotli compression |
-| [rollup-plugin-visualizer](https://github.com/btd/rollup-plugin-visualizer) | Bundle analysis |
+| [@vitejs/plugin-basic-ssl](https://github.com/vitejs/vite-plugin-basic-ssl) | Self-signed HTTPS for dev |
+| [vite-plugin-compression](https://github.com/vbenjs/vite-plugin-compression) | Gzip/Brotli compression (production) |
+| [rollup-plugin-visualizer](https://github.com/btd/rollup-plugin-visualizer) | Bundle analysis (`dist/stats.html`) |
 
 ---
 
@@ -302,98 +261,89 @@ Drag & drop a JSON file onto the dashboard, or click **Import JSON**. Backward c
 ```
 MalFrame/
 ├── public/
-│   ├── fonts/                       # Roboto fonts for PDF export
-│   └── sample-mia-data.json         # Sample MIA data
+│   └── fonts/                       # Roboto fonts for PDF export
 │
 ├── scripts/
 │   └── bundle-size-report.js        # Bundle size analysis
 │
 ├── src/
 │   ├── components/
-│   │   ├── ui/                      # Shadcn/Radix primitives
+│   │   ├── ui/                      # Radix-based design system components
 │   │   │   ├── button.tsx
-│   │   │   ├── button-variants.ts   # buttonVariants (CVA) — separate from Button
-│   │   │   ├── portal-dropdown.tsx
+│   │   │   ├── button-variants.ts   # CVA variants (separate from button.tsx)
 │   │   │   └── ...
-│   │   │
-│   │   ├── code-analysis/           # MRE: code analysis components
-│   │   ├── runtime-behavior/        # MRE: runtime behavior components
-│   │   │   ├── styles.ts            # inputStyles, textareaBaseStyles
-│   │   │   └── ...
-│   │   ├── mia/                     # MIA section components
-│   │   ├── mre/                     # MRE section components
-│   │   ├── dashboard/               # Shared dashboard components
-│   │   ├── header/                  # Header sub-components
-│   │   ├── lazy/                    # Lazy-load wrappers
-│   │   │
-│   │   ├── Header.tsx
-│   │   ├── FormField.tsx            # Input with image paste support
-│   │   ├── CollapsibleSection.tsx   # Expandable sections
-│   │   ├── IOCTable.tsx
-│   │   ├── MitreAttackMapping.tsx
-│   │   ├── MBCMapping.tsx
-│   │   ├── TimelineTable.tsx
-│   │   └── ...
+│   │   ├── dashboard/               # DashboardHeader
+│   │   ├── header/                  # ActivityBadge, EasterEgg
+│   │   └── lazy/                    # Lazy wrapper components (LazyXxx.tsx)
+│   │       └── index.ts
 │   │
-│   ├── contexts/                    # React Context providers (no hooks exported)
-│   │   ├── LanguageContext.tsx      # LanguageProvider
-│   │   ├── ThemeContext.tsx         # ThemeProvider
-│   │   └── UserContext.tsx          # UserProvider
+│   ├── features/
+│   │   ├── mia/                     # ALL MIA domain code
+│   │   │   ├── components/          # Section components (BackgroundSection, IOCTable, etc.)
+│   │   │   ├── hooks/
+│   │   │   │   └── useArtifactFileDrop.ts
+│   │   │   ├── services/            # constants.ts, migrate.ts, transform.ts
+│   │   │   └── types.ts             # DFIRData and all MIA sub-types
+│   │   │
+│   │   └── mre/                     # ALL MRE domain code
+│   │       ├── components/          # Section components + StaticAnalysisCards,
+│   │       │   ├── runtime-behavior/    # AntiAnalysisGroup, ExecutionBehaviorGroup, etc.
+│   │       │   └── code-analysis/       # StaticCodeAnalysis, DynamicCodeAnalysis, etc.
+│   │       ├── hooks/
+│   │       │   └── useMBCData.ts
+│   │       ├── services/            # constants.ts, migrate.ts, transform.ts, codeAnalysisDefaults.ts
+│   │       └── types.ts             # REData and all MRE sub-types
 │   │
-│   ├── hooks/                       # Custom React hooks (one hook per file)
-│   │   ├── useLanguage.ts           # i18n hook
-│   │   ├── useTheme.ts              # Theme hook
-│   │   ├── useUser.ts               # User profile hook
-│   │   ├── useDashboardData.ts      # Dashboard state + auto-save
-│   │   ├── useDashboardExport.ts    # Export dialog management
-│   │   ├── useImportJSON.ts         # JSON import with validation
-│   │   ├── useDragReorder.ts        # Drag-and-drop reordering
-│   │   ├── useMBCData.ts            # Lazy-load MBC data
-│   │   ├── useToolsData.ts          # Lazy-load tools data
-│   │   ├── useTypingAnimation.ts    # Typing effect animation
-│   │   ├── useSEO.ts                # Meta tag management
-│   │   └── useArtifactFileDrop.ts   # File drop handling
+│   ├── contexts/                    # React Context providers (no hooks exported here)
+│   │   ├── LanguageContext.tsx
+│   │   ├── ThemeContext.tsx
+│   │   └── UserContext.tsx
+│   │
+│   ├── hooks/                       # Custom React hooks
+│   │   ├── useLanguage.ts
+│   │   ├── useTheme.ts
+│   │   ├── useUser.ts
+│   │   ├── useDashboardData.ts      # IndexedDB load/save + auto-save
+│   │   ├── useDashboardExport.ts    # Export dialog state machine
+│   │   ├── useImportJSON.ts         # JSON import with Zod validation
+│   │   ├── useCaseManager.ts        # Multi-case CRUD
+│   │   ├── useDragReorder.ts        # Drag-to-reorder list items
+│   │   ├── useToolsData.ts          # Tools list with localStorage persistence
+│   │   ├── useSEO.ts                # Document title + meta tags
+│   │   └── useTypingAnimation.ts    # Typing animation for landing page
 │   │
 │   ├── lib/
-│   │   ├── export/                  # Export generators
+│   │   ├── export/                  # PDF + Word export (lazy-loaded)
 │   │   │   ├── pdf-mia.ts
 │   │   │   ├── pdf-mre.ts
 │   │   │   ├── word-mia.ts
 │   │   │   ├── word-mre.ts
 │   │   │   ├── json.ts
 │   │   │   └── helpers.ts
-│   │   │
-│   │   ├── mia/                     # MIA constants + migration
-│   │   │   ├── constants.ts
-│   │   │   └── migrate.ts
-│   │   │
-│   │   ├── mre/                     # MRE constants + migration
-│   │   │   ├── constants.ts
-│   │   │   ├── migrate.ts
-│   │   │   ├── transform.ts
-│   │   │   └── codeAnalysisDefaults.ts  # createInitialCodeAnalysisData/DeepDiveData
-│   │   │
 │   │   ├── translations/
 │   │   │   ├── en.ts
 │   │   │   ├── vn.ts
 │   │   │   └── index.ts
-│   │   │
-│   │   ├── preloadRoutes.ts         # Lazy page components + preload functions
-│   │   ├── navigation.ts            # getSavedDashboard()
-│   │   ├── sectionState.ts          # clearAllSectionStates()
-│   │   ├── mitreUtils.ts
+│   │   ├── db.ts                    # IndexedDB async wrapper
+│   │   ├── storageKeys.ts           # All localStorage key strings
+│   │   ├── mitreUtils.ts            # MITRE ATT&CK fetch + cache
 │   │   ├── mbcData.ts               # MBC v3.2 static dataset
-│   │   ├── toolsData.ts             # FLARE-VM tools v2026.03.28
-│   │   ├── storageKeys.ts
-│   │   ├── validationSchemas.ts
-│   │   ├── imageStorage.ts
-│   │   ├── imageUtils.ts
-│   │   ├── lazyExport.ts
-│   │   ├── fileNameUtils.ts
-│   │   └── utils.ts
+│   │   ├── toolsData.ts             # FLARE-VM tools reference data
+│   │   ├── validationSchemas.ts     # Zod schemas for import
+│   │   ├── lazyExport.ts            # Dynamic import wrappers for export
+│   │   ├── fileNameUtils.ts         # Export filename generation
+│   │   ├── imageUtils.ts            # Base64 image helpers
+│   │   ├── imageStorage.ts          # Image registry clear utilities
+│   │   ├── sectionState.ts          # Section open/close state helpers
+│   │   ├── navigation.ts            # getSavedDashboard()
+│   │   ├── preloadRoutes.ts         # Lazy page components + preload
+│   │   ├── semanticColors.ts        # Risk level → color mapping
+│   │   ├── activityUtils.ts         # Activity tracking helpers
+│   │   ├── debugLogger.ts           # debugLog/debugWarn/debugError (dev only)
+│   │   └── utils.ts                 # cn(), generateId(), formatFileSize()
 │   │
 │   ├── pages/
-│   │   ├── Index.tsx
+│   │   ├── Index.tsx                # Landing page
 │   │   ├── MIADashboard.tsx
 │   │   ├── MREDashboard.tsx
 │   │   ├── Tools.tsx
@@ -401,22 +351,21 @@ MalFrame/
 │   │   └── NotFound.tsx
 │   │
 │   ├── types/
-│   │   ├── dashboard.ts             # Shared types (IOC, Timeline, etc.)
-│   │   ├── mia.ts
-│   │   └── mre.ts
+│   │   ├── cases.ts                 # CaseMeta (multi-case management)
+│   │   └── dashboard.ts             # Shared types (Artifact, IOC, LogEntry, etc.)
 │   │
-│   ├── App.tsx                      # Root with providers + router
+│   ├── App.tsx                      # Root: providers + router
 │   ├── main.tsx
 │   └── index.css                    # Design tokens & global styles
 │
 ├── .github/
-│   ├── workflows/ci.yml
+│   ├── workflows/
 │   ├── ISSUE_TEMPLATE/
 │   └── PULL_REQUEST_TEMPLATE.md
 │
 ├── index.html
 ├── tailwind.config.ts
-├── vite.config.ts                   # Vite + Vitest config
+├── vite.config.ts
 ├── tsconfig.json
 ├── tsconfig.app.json
 ├── eslint.config.js
@@ -430,10 +379,13 @@ MalFrame/
 ### Port Already in Use
 
 ```bash
-npx kill-port 8080
-# or
-npm run dev -- --port 3000
+npx kill-port 8088
+# or change port in vite.config.ts
 ```
+
+### HTTPS Certificate Warning
+
+The dev server uses a self-signed certificate. Click **Advanced → Proceed to localhost** (or the IP address) in your browser. This is a one-time step per browser.
 
 ### Dependencies Installation Failed
 
@@ -444,23 +396,27 @@ npm install
 
 ### Data Not Saving
 
-1. Check localStorage is enabled (not in private/incognito mode)
-2. DevTools → Application → Storage — check quota
-3. Clear old data: `localStorage.clear()`
+1. Check the browser is not in private/incognito mode (IndexedDB is disabled)
+2. DevTools → Application → IndexedDB → check the `dashboard` store
+3. Clear all data via **Clear Data** button on the dashboard
 
 ### MITRE ATT&CK Not Loading
 
-1. Check internet connection (fetches live from GitHub)
-2. Clear cache: `localStorage.removeItem('mitre-attack-cache')`
-3. Refresh page and check console for network errors
+1. Check internet connection (fetches live from GitHub on first load)
+2. DevTools → Application → localStorage → delete `mitre-attack-cache`
+3. Refresh page
 
 ### Export Not Working
 
-1. Check browser allows file downloads
-2. Try JSON export first (simplest format)
-3. Check DevTools console for errors
+1. Ensure the browser allows downloads from this origin
+2. If on a network IP, make sure you're using `https://` not `http://`
+3. Try JSON export first (lightest format), then PDF/Word
 
 ### Images Not Pasting
+
+1. Click inside the textarea first to give it focus
+2. Use `Ctrl+V` — only clipboard images are supported (not file paste)
+3. Check DevTools console for errors
 
 ---
 
@@ -483,7 +439,7 @@ npm install
 |------|-------|
 | JetBrains Mono | Code, terminal text, form values |
 | Share Tech Mono | Display headings, hero text |
-| Inter | Body text in exported documents |
+| Roboto | Body text in exported PDF/Word documents |
 
 ---
 
@@ -525,15 +481,15 @@ GitHub: [@MWE-HaTN](https://github.com/MWE-HaTN) · LinkedIn: [ha-tran-mwesioe](
 
 ## Acknowledgments
 
-- [MITRE ATT&CK](https://attack.mitre.org/) - Threat framework
-- [MBC (Malware Behavior Catalog)](https://github.com/MBCProject/mbc-markdown) - Behavior mapping
-- [FLARE-VM](https://github.com/mandiant/flare-vm) - Analysis tools reference
+- [MITRE ATT&CK](https://attack.mitre.org/) — Threat framework
+- [MBC (Malware Behavior Catalog)](https://github.com/MBCProject/mbc-markdown) — Behavior mapping
+- [FLARE-VM](https://github.com/mandiant/flare-vm) — Analysis tools reference
 
 ---
 
 <div align="center">
 
-*Built for the cybersecurity community* 💚
+*Built for the cybersecurity community*
 
 **[Report Bug](https://github.com/MWE-HaTN/MalFrame/issues)** · **[Request Feature](https://github.com/MWE-HaTN/MalFrame/issues)**
 

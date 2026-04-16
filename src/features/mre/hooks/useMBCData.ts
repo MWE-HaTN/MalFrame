@@ -31,10 +31,16 @@ export function useMBCData() {
 
   useEffect(() => {
     if (!mbcDataCache) {
-      loadMBCData().then(loaded => {
-        setData(loaded);
-        setIsLoading(false);
-      });
+      loadMBCData()
+        .then(loaded => {
+          setData(loaded);
+        })
+        .catch(() => {
+          // Data unavailable — component renders without MBC data
+        })
+        .finally(() => {
+          setIsLoading(false);
+        });
     }
   }, []);
 

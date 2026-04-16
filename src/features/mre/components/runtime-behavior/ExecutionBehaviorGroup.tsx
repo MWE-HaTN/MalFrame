@@ -1,6 +1,6 @@
 import { Workflow, FolderCog, Lock } from "lucide-react";
 import { cn, generateId } from "@/lib/utils";
-import { RuntimeBehaviorData, RuntimeEntry } from "./types";
+import { RuntimeBehaviorData } from "./types";
 import { ARTIFACT_TYPES, PERSISTENCE_TYPES } from "./constants";
 import {
   GroupHeader,
@@ -20,13 +20,6 @@ interface ExecutionBehaviorGroupProps {
   onToggleGroup: () => void;
   expandedSubItems: Record<string, boolean>;
   onToggleSubItem: (key: string) => void;
-  onSubItemToggle: (
-    enabledKey: keyof RuntimeBehaviorData,
-    dataKey: keyof RuntimeBehaviorData,
-    defaultEntry: RuntimeEntry,
-    enabled: boolean,
-    subItemKey: string
-  ) => void;
   update: <K extends keyof RuntimeBehaviorData>(key: K, value: RuntimeBehaviorData[K]) => void;
   updateMany: (patch: Partial<RuntimeBehaviorData>) => void;
 }
@@ -37,7 +30,6 @@ export function ExecutionBehaviorGroup({
   onToggleGroup,
   expandedSubItems,
   onToggleSubItem,
-  onSubItemToggle,
   update,
   updateMany,
 }: ExecutionBehaviorGroupProps) {
@@ -79,8 +71,6 @@ export function ExecutionBehaviorGroup({
         <SubItemRow
           title={t("runtime.execution.executionFlow")}
           icon={<Workflow className="w-4 h-4" />}
-          enabled={data.executionFlowEnabled}
-          onToggle={(v) => onSubItemToggle("executionFlowEnabled", "executionFlow", { id: generateId(), stepName: "", description: "", images: [] }, v, "executionFlow")}
           isExpanded={expandedSubItems["executionFlow"]}
           onExpandToggle={() => onToggleSubItem("executionFlow")}
           count={data.executionFlow.length}
@@ -134,8 +124,6 @@ export function ExecutionBehaviorGroup({
         <SubItemRow
           title={t("runtime.execution.systemArtifacts")}
           icon={<FolderCog className="w-4 h-4" />}
-          enabled={data.systemArtifactsEnabled}
-          onToggle={(v) => onSubItemToggle("systemArtifactsEnabled", "systemArtifacts", { id: generateId(), typeTags: [], path: "", notes: "", images: [] }, v, "systemArtifacts")}
           isExpanded={expandedSubItems["systemArtifacts"]}
           onExpandToggle={() => onToggleSubItem("systemArtifacts")}
           count={data.systemArtifacts.length}
@@ -197,8 +185,6 @@ export function ExecutionBehaviorGroup({
         <SubItemRow
           title={t("runtime.execution.persistence")}
           icon={<Lock className="w-4 h-4" />}
-          enabled={data.persistenceEnabled}
-          onToggle={(v) => onSubItemToggle("persistenceEnabled", "persistence", { id: generateId(), typeTags: [], path: "", notes: "", images: [] }, v, "persistence")}
           isExpanded={expandedSubItems["persistence"]}
           onExpandToggle={() => onToggleSubItem("persistence")}
           count={data.persistence.length}

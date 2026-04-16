@@ -4,7 +4,6 @@ import { Calendar, Flame } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
-  TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import {
@@ -56,9 +55,8 @@ export const ActivityBadge = memo(function ActivityBadge({
   const currentMonth = new Date().toLocaleString("en-US", { month: "short" });
 
   return (
-    <TooltipProvider>
-      <Tooltip delayDuration={200}>
-        <TooltipTrigger asChild>
+    <Tooltip delayDuration={200}>
+      <TooltipTrigger asChild>
           <Link
             to="/settings"
             className={cn(
@@ -95,7 +93,6 @@ export const ActivityBadge = memo(function ActivityBadge({
             )}
           </div>
         </TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
+    </Tooltip>
   );
 });

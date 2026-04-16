@@ -309,8 +309,6 @@ export function GroupHeader({ title, icon, isExpanded, onToggle }: GroupHeaderPr
 interface SubItemRowProps {
   title: string;
   icon: React.ReactNode;
-  enabled: boolean;
-  onToggle: (enabled: boolean) => void;
   isExpanded?: boolean;
   onExpandToggle?: () => void;
   count?: number;
@@ -573,17 +571,22 @@ export function AutoTextarea({
     const selectedFiles = selectEvent.target.files;
     if (!selectedFiles) return;
 
-    Array.from(selectedFiles).forEach((imageFile) => {
-      if (imageFile.type.startsWith("image/")) {
-        const fileReader = new FileReader();
-        fileReader.onload = (loadEvent) => {
-          const base64Data = loadEvent.target?.result as string;
-          onImagesChange([...images, base64Data]);
-        };
-        fileReader.readAsDataURL(imageFile);
-      }
+    const imageFiles = Array.from(selectedFiles).filter((f) => f.type.startsWith("image/"));
+    if (imageFiles.length === 0) return;
+
+    const reads = imageFiles.map(
+      (imageFile) =>
+        new Promise<string>((resolve) => {
+          const fileReader = new FileReader();
+          fileReader.onload = (loadEvent) => resolve(loadEvent.target?.result as string);
+          fileReader.readAsDataURL(imageFile);
+        })
+    );
+
+    Promise.all(reads).then((base64s) => {
+      onImagesChange([...images, ...base64s]);
     });
-    
+
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }

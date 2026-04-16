@@ -8,7 +8,6 @@ import { FormField } from "@/components/FormField";
 import { CollapsibleSection } from "@/components/CollapsibleSection";
 import { useLanguage } from "@/hooks/useLanguage";
 import type { SummaryData } from "@/features/mre/types";
-import { defaultSummary } from "@/features/mre/services/constants";
 
 interface SummarySectionProps {
   data: SummaryData;
@@ -27,7 +26,7 @@ export const SummarySection = memo(function SummarySection({
     field: K,
     value: SummaryData[K]
   ) => {
-    onChange({ ...defaultSummary, ...data, [field]: value });
+    onChange({ ...data, [field]: value });
   };
 
   return (

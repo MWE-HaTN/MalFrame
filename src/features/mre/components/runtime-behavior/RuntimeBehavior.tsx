@@ -64,33 +64,6 @@ export function RuntimeBehavior({ data, onChange }: RuntimeBehaviorProps) {
     onChange({ ...data, ...patch });
   };
 
-  const handleSubItemToggle = <T,>(
-    enabledKey: keyof RuntimeBehaviorData,
-    dataKey: keyof RuntimeBehaviorData,
-    defaultEntry: T,
-    enabled: boolean,
-    subItemKey: string
-  ) => {
-    const updates: Partial<RuntimeBehaviorData> = {
-      [enabledKey]: enabled,
-    };
-    
-    const dataArray = data[dataKey];
-    if (enabled && Array.isArray(dataArray) && dataArray.length === 0) {
-      (updates as Record<string, unknown>)[dataKey] = [defaultEntry];
-    }
-    
-    if (enabled) {
-      setExpandedSubItems(prev => {
-        const updated = { ...prev, [subItemKey]: true };
-        saveExpandedSubItems(updated);
-        return updated;
-      });
-    }
-    
-    onChange({ ...data, ...updates });
-  };
-
   return (
     <div className="space-y-3">
       {/* GROUP 1: ANTI-ANALYSIS & EVASION */}
@@ -100,7 +73,6 @@ export function RuntimeBehavior({ data, onChange }: RuntimeBehaviorProps) {
         onToggleGroup={() => toggleGroup(1)}
         expandedSubItems={expandedSubItems}
         onToggleSubItem={toggleSubItem}
-        onSubItemToggle={handleSubItemToggle}
         update={update}
         updateMany={updateMany}
       />
@@ -112,7 +84,6 @@ export function RuntimeBehavior({ data, onChange }: RuntimeBehaviorProps) {
         onToggleGroup={() => toggleGroup(2)}
         expandedSubItems={expandedSubItems}
         onToggleSubItem={toggleSubItem}
-        onSubItemToggle={handleSubItemToggle}
         update={update}
         updateMany={updateMany}
       />
@@ -124,7 +95,6 @@ export function RuntimeBehavior({ data, onChange }: RuntimeBehaviorProps) {
         onToggleGroup={() => toggleGroup(3)}
         expandedSubItems={expandedSubItems}
         onToggleSubItem={toggleSubItem}
-        onSubItemToggle={handleSubItemToggle}
         update={update}
         updateMany={updateMany}
       />

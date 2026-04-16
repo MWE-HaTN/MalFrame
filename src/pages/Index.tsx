@@ -10,6 +10,9 @@ import { useTypingAnimation } from "@/hooks/useTypingAnimation";
 // Lazy load MITRE utils to reduce initial bundle (~15KB saved)
 const loadMitreData = () => import("@/lib/mitreUtils").then(m => m.loadMitreData());
 
+// Tracks whether the user explicitly navigated to index this session (survives F5, clears on tab close)
+const INDEX_EXPLICIT_SESSION_KEY = "index-explicit-visit";
+
 type IndexLocationState = {
   skipDashboardRedirect?: boolean;
   triggerTyping?: boolean;
@@ -26,17 +29,24 @@ export default function Index() {
     // Title is managed by useSEO hook
 
     const state = location.state as IndexLocationState | null;
-    
+
     // Trigger typing animation when coming from logo click
     if (state?.triggerTyping) {
       setTypingTrigger(prev => prev + 1);
       // Clear state to prevent re-triggering on refresh
       window.history.replaceState({}, document.title);
     }
-    
-    if (state?.skipDashboardRedirect) return;
 
-    // Auto-redirect to saved dashboard if exists
+    // User explicitly navigated here (e.g. logo click) — mark session so F5 won't redirect
+    if (state?.skipDashboardRedirect) {
+      sessionStorage.setItem(INDEX_EXPLICIT_SESSION_KEY, "true");
+      return;
+    }
+
+    // User already visited index intentionally this session (handles F5 after logo click)
+    if (sessionStorage.getItem(INDEX_EXPLICIT_SESSION_KEY)) return;
+
+    // Fresh session: auto-redirect to last used dashboard
     const savedDashboard = getSavedDashboard();
     if (savedDashboard && savedDashboard !== "/mia") {
       navigate(savedDashboard, { replace: true });
@@ -50,7 +60,7 @@ export default function Index() {
       .catch(() => setTacticCount(14));
   }, []);
 
-  const { displayedText, isComplete } = useTypingAnimation("MALWARE ANALYST", 120, typingTrigger);
+  const { displayedText } = useTypingAnimation("MALWARE ANALYST", 120, typingTrigger);
 
   return (
     <div className="min-h-screen bg-background cyber-grid flex flex-col">
@@ -62,7 +72,7 @@ export default function Index() {
           <h1 className="text-5xl md:text-6xl lg:text-7xl font-terminal font-bold text-primary mb-4 tracking-wider">
             <span className="text-primary">&gt;</span>{" "}
             <span>{displayedText}</span>
-            <span className={`animate-blink ${isComplete ? '' : 'text-primary'}`}>_</span>
+            <span className="animate-blink text-primary">_</span>
           </h1>
           
           <h2 className="text-lg md:text-xl lg:text-2xl font-terminal font-medium mb-6 tracking-wide text-gradient-cyber">

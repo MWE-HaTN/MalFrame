@@ -1,6 +1,6 @@
 import { Shield, TriangleAlert, Bug, Monitor } from "lucide-react";
 import { generateId } from "@/lib/utils";
-import { RuntimeBehaviorData, RuntimeEntry } from "./types";
+import { RuntimeBehaviorData } from "./types";
 import { ANTI_DEBUG_CATEGORIES, ANTI_DEBUG_APIS, ANTI_VM_METHODS } from "./constants";
 import {
   GroupHeader,
@@ -20,13 +20,6 @@ interface AntiAnalysisGroupProps {
   onToggleGroup: () => void;
   expandedSubItems: Record<string, boolean>;
   onToggleSubItem: (key: string) => void;
-  onSubItemToggle: (
-    enabledKey: keyof RuntimeBehaviorData,
-    dataKey: keyof RuntimeBehaviorData,
-    defaultEntry: RuntimeEntry,
-    enabled: boolean,
-    subItemKey: string
-  ) => void;
   update: <K extends keyof RuntimeBehaviorData>(key: K, value: RuntimeBehaviorData[K]) => void;
   updateMany: (patch: Partial<RuntimeBehaviorData>) => void;
 }
@@ -37,7 +30,6 @@ export function AntiAnalysisGroup({
   onToggleGroup,
   expandedSubItems,
   onToggleSubItem,
-  onSubItemToggle,
   update,
   updateMany,
 }: AntiAnalysisGroupProps) {
@@ -79,8 +71,6 @@ export function AntiAnalysisGroup({
         <SubItemRow
           title={t("runtime.antiAnalysis.triggers")}
           icon={<TriangleAlert className="w-4 h-4" />}
-          enabled={data.triggersEnabled}
-          onToggle={(v) => onSubItemToggle("triggersEnabled", "triggers", { id: generateId(), name: "", description: "", images: [] }, v, "triggers")}
           isExpanded={expandedSubItems["triggers"]}
           onExpandToggle={() => onToggleSubItem("triggers")}
           count={data.triggers.length}
@@ -127,8 +117,6 @@ export function AntiAnalysisGroup({
         <SubItemRow
           title={t("runtime.antiAnalysis.antiDebugging")}
           icon={<Bug className="w-4 h-4" />}
-          enabled={data.antiDebugEnabled}
-          onToggle={(v) => onSubItemToggle("antiDebugEnabled", "antiDebug", { id: generateId(), categoryTags: [], apis: [], effect: "", notes: "", images: [] }, v, "antiDebug")}
           isExpanded={expandedSubItems["antiDebug"]}
           onExpandToggle={() => onToggleSubItem("antiDebug")}
           count={data.antiDebug.length}
@@ -202,8 +190,6 @@ export function AntiAnalysisGroup({
         <SubItemRow
           title={t("runtime.antiAnalysis.antiVM")}
           icon={<Monitor className="w-4 h-4" />}
-          enabled={data.antiVMEnabled}
-          onToggle={(v) => onSubItemToggle("antiVMEnabled", "antiVM", { id: generateId(), methodTags: [], indicator: "", effect: "", notes: "", images: [] }, v, "antiVM")}
           isExpanded={expandedSubItems["antiVM"]}
           onExpandToggle={() => onToggleSubItem("antiVM")}
           count={data.antiVM.length}

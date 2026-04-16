@@ -739,4 +739,8 @@ export const en: Record<string, string> = {
   "cases.new": "New Case",
   "cases.rename": "Rename case",
   "cases.delete": "Delete case",
+  "cases.deleteConfirmTitle": "Delete case?",
+  "cases.deleteConfirmDesc": "All data in \"{name}\" will be permanently deleted. This cannot be undone.",
+  "cases.deleteConfirm": "Delete",
+  "cases.deleteCancel": "Cancel",
 };

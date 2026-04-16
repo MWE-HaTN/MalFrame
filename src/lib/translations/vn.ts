@@ -155,7 +155,7 @@ export const vn: Record<string, string> = {
   "mia.longTerm": "Dài hạn (Khắc phục)",
   
   // MRE Dashboard
-  "mre.title": "Bảng điều khiển Phân tích Mã độc Ngược",
+  "mre.title": "Bảng điều khiển Phân tích Ngược Mã độc",
   "mre.subtitle": "Phân tích nhị phân nâng cao và kỹ thuật đảo ngược mã.",
   "mre.background": "Thông tin cơ bản",
   "mre.staticAnalysis": "Phân tích Tĩnh",
@@ -331,7 +331,7 @@ export const vn: Record<string, string> = {
   "home.description": "Tối ưu quy trình Phân tích Sự cố Mã độc (MIA) và Phân tích Mã độc Ngược (MRE) với dashboard chuyên nghiệp.",
   "home.miaCard": "Bảng điều khiển Phân tích Sự cố Mã độc",
   "home.miaCardDesc": "Điều tra mã độc theo sự cố với dòng thời gian, tương quan IOC và ánh xạ MITRE ATT&CK cho phản hồi có cấu trúc.",
-  "home.mreCard": "Bảng điều khiển Phân tích Mã độc Ngược",
+  "home.mreCard": "Bảng điều khiển Phân tích Ngược Mã độc",
   "home.mreCardDesc": "Phân tích mã độc ngược với phân tích tĩnh/động, ghi chú unpacking và chữ ký YARA.",
   "home.localStorage": "Lưu trữ cục bộ",
   "home.localStorageDesc": "Dữ liệu được lưu cục bộ trong trình duyệt. Không cần server, dữ liệu riêng tư.",
@@ -739,4 +739,8 @@ export const vn: Record<string, string> = {
   "cases.new": "Case mới",
   "cases.rename": "Đổi tên",
   "cases.delete": "Xóa case",
+  "cases.deleteConfirmTitle": "Xóa case?",
+  "cases.deleteConfirmDesc": "Toàn bộ dữ liệu trong \"{name}\" sẽ bị xóa vĩnh viễn. Không thể hoàn tác.",
+  "cases.deleteConfirm": "Xóa",
+  "cases.deleteCancel": "Hủy",
 };

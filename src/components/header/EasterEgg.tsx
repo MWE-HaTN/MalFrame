@@ -7,6 +7,7 @@ import { LinkedinIcon } from "lucide-react";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -157,6 +158,7 @@ export const EasterEggDialog = memo(function EasterEggDialog({
             <span className="animate-glitch">whoami</span>
             <span className="animate-blink">_</span>
           </DialogTitle>
+          <DialogDescription className="sr-only">Developer profile information</DialogDescription>
         </DialogHeader>
         <div className="space-y-3 font-mono text-sm min-h-[140px]">
           {lines.map((line, idx) => renderLine(idx, line))}

@@ -18,6 +18,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEYS.LANGUAGE, language);
+    document.documentElement.lang = language === "vn" ? "vi" : "en";
   }, [language]);
 
   const setLanguage = useCallback((lang: Language) => {

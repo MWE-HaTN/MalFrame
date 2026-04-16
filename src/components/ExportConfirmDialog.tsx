@@ -47,14 +47,15 @@ export function ExportConfirmDialog({
   const isDarkMode = theme === "dark";
   const isDocumentExport = exportType === "pdf" || exportType === "word";
 
-  // Reset step when dialog opens
+  // Reset step when dialog opens — pick correct initial step immediately to avoid
+  // a render with no DialogTitle (Radix accessibility requirement)
   useEffect(() => {
     if (open) {
-      setStep("theme-check");
+      setStep(isDocumentExport && isDarkMode ? "theme-check" : "confirm-export");
       setSaveImages(true);
       setProgress(0);
     }
-  }, [open]);
+  }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Cleanup interval on unmount
   useEffect(() => {
@@ -64,10 +65,6 @@ export function ExportConfirmDialog({
       }
     };
   }, []);
-
-  const handleOpenChange = (newOpen: boolean) => {
-    onOpenChange(newOpen);
-  };
 
   const handleKeepAndContinue = () => {
     setStep("confirm-export");
@@ -121,21 +118,9 @@ export function ExportConfirmDialog({
     onOpenChange(false);
   };
 
-  // For JSON export or light mode, go straight to confirm (runs after reset)
-  useEffect(() => {
-    if (open && step === "theme-check") {
-      // Small delay to ensure reset effect runs first
-      const timer = setTimeout(() => {
-        if (!isDocumentExport || !isDarkMode) {
-          setStep("confirm-export");
-        }
-      }, 10);
-      return () => clearTimeout(timer);
-    }
-  }, [open, step, isDocumentExport, isDarkMode]);
 
   return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md border-primary/30 bg-background">
         {step === "theme-check" && isDarkMode && isDocumentExport && (
           <>

@@ -43,7 +43,7 @@ Thank you for your interest in contributing. MalFrame is built for the malware a
 # Install dependencies
 npm install
 
-# Start dev server (http://localhost:8080)
+# Start dev server (https://localhost:8088)
 npm run dev
 
 # Verify build works

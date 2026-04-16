@@ -28,9 +28,6 @@ export const NotesLog = memo(function NotesLog({ entries, onEntriesChange, place
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hideAddButton]);
 
-  // Use entries directly - if empty with hideAddButton, the effect above handles initialization
-  const effectiveEntries = entries;
-
   const addEntry = () => {
     const newEntry: LogEntry = {
       id: generateId("entry"),
@@ -97,15 +94,20 @@ export const NotesLog = memo(function NotesLog({ entries, onEntriesChange, place
     const targetEntry = entries.find((entry) => entry.id === entryId);
     if (!targetEntry) return;
 
-    Array.from(selectedFiles).forEach((imageFile) => {
-      if (imageFile.type.startsWith("image/")) {
-        const fileReader = new FileReader();
-        fileReader.onload = (loadEvent) => {
-          const base64Data = loadEvent.target?.result as string;
-          updateEntry(entryId, { images: [...targetEntry.images, base64Data] });
-        };
-        fileReader.readAsDataURL(imageFile);
-      }
+    const imageFiles = Array.from(selectedFiles).filter((f) => f.type.startsWith("image/"));
+    if (imageFiles.length === 0) return;
+
+    const reads = imageFiles.map(
+      (imageFile) =>
+        new Promise<string>((resolve) => {
+          const fileReader = new FileReader();
+          fileReader.onload = (loadEvent) => resolve(loadEvent.target?.result as string);
+          fileReader.readAsDataURL(imageFile);
+        })
+    );
+
+    Promise.all(reads).then((base64s) => {
+      updateEntry(entryId, { images: [...targetEntry.images, ...base64s] });
     });
 
     // Reset input
@@ -134,7 +136,7 @@ export const NotesLog = memo(function NotesLog({ entries, onEntriesChange, place
     <div className={cn("space-y-3", className)}>
       {/* Entry list */}
       <div className={getGridClass()}>
-        {effectiveEntries.map((entry, index) => (
+        {entries.map((entry, index) => (
           <div
             key={entry.id}
             className="border border-border rounded-sm bg-card/30 overflow-hidden"
@@ -167,7 +169,7 @@ export const NotesLog = memo(function NotesLog({ entries, onEntriesChange, place
                 <button
                   type="button"
                   onClick={() => moveEntry(entry.id, "down")}
-                  disabled={index === effectiveEntries.length - 1}
+                  disabled={index === entries.length - 1}
                   className="p-0.5 text-muted-foreground hover:text-primary disabled:opacity-30 transition-colors"
                 >
                   <ChevronDown className="w-3.5 h-3.5" />
@@ -221,11 +223,10 @@ export const NotesLog = memo(function NotesLog({ entries, onEntriesChange, place
               />
 
               {/* Images */}
-              <ImageGrid 
+              <ImageGrid
                 images={entry.images}
                 onRemove={(imgIndex) => removeImage(entry.id, imgIndex)}
                 imageHeight="h-32"
-                clickToOpen
               />
             </div>
           </div>

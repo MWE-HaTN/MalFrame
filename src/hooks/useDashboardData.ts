@@ -72,7 +72,13 @@ export function useDashboardData<T extends { background: { analyst: string; date
         }
 
         if (!cancelled && loaded != null) {
-          setData(loaded as T);
+          const loadedData = loaded as T;
+          // Auto-populate analyst field from profile if empty
+          if (!loadedData.background.analyst && profile.name) {
+            setData({ ...loadedData, background: { ...loadedData.background, analyst: profile.name } });
+          } else {
+            setData(loadedData);
+          }
         }
       } catch (e) {
         debugError("useDashboardData: failed to load from IDB", e);
@@ -90,15 +96,6 @@ export function useDashboardData<T extends { background: { analyst: string; date
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Only on mount — storageKey is stable per component instance (key prop controls remount)
 
-  // Auto-populate analyst field from user profile
-  useEffect(() => {
-    if (!data.background.analyst && profile.name) {
-      setData((prev) => ({
-        ...prev,
-        background: { ...prev.background, analyst: profile.name },
-      }));
-    }
-  }, [profile.name, data.background.analyst]);
 
   // Debounced persist to IndexedDB — skips until initial load is done
   useEffect(() => {
@@ -123,12 +120,17 @@ export function useDashboardData<T extends { background: { analyst: string; date
 
   // Flush pending save immediately on unmount (e.g., when user switches cases)
   useEffect(() => {
+    // Capture refs at effect time so cleanup sees stable values
+    const storageKey = storageKeyRef.current;
+    const saveTimeout = saveTimeoutRef;
+    const isLoaded = isLoadedRef;
+    const dataSnap = dataRef;
     return () => {
-      if (saveTimeoutRef.current) {
-        clearTimeout(saveTimeoutRef.current);
+      if (saveTimeout.current) {
+        clearTimeout(saveTimeout.current);
       }
-      if (isLoadedRef.current) {
-        dbSet("dashboard", storageKeyRef.current, dataRef.current).catch(() => {});
+      if (isLoaded.current) {
+        dbSet("dashboard", storageKey, dataSnap.current).catch(() => {});
       }
     };
   }, []); // Mount only — uses refs to avoid stale closures
