@@ -34,8 +34,6 @@ Report privately via one of the following:
 1. **GitHub Private Advisory** (preferred):
    [https://github.com/MWE-HaTN/MalFrame/security/advisories/new](https://github.com/MWE-HaTN/MalFrame/security/advisories/new)
 
-2. **Email**: Contact the author via LinkedIn at [ha-tran-mwesioe](https://www.linkedin.com/in/ha-tran-mwesioe)
-
 ### What to Include
 
 - Description of the vulnerability and its potential impact
