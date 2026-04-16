@@ -475,7 +475,7 @@ MIT License — see [LICENSE](LICENSE) for details.
 
 **MWE HaTN**
 Malware Analysis · DFIR · Reverse Engineering
-GitHub: [@MWE-HaTN](https://github.com/MWE-HaTN) · LinkedIn: [ha-tran-mwesioe](https://www.linkedin.com/in/ha-tran-mwesioe)
+GitHub: [@MWE-HaTN](https://github.com/MWE-HaTN).
 
 ---
 
