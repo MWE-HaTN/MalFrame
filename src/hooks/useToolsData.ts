@@ -49,6 +49,6 @@ export function useToolsData() {
 /**
  * Get cached Tools data synchronously (returns null if not loaded yet).
  */
-export function getCachedToolsData(): { data: ToolCategory[]; version: string } | null {
+function _getCachedToolsData(): { data: ToolCategory[]; version: string } | null {
   return toolsDataCache;
 }

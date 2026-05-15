@@ -4,7 +4,6 @@ import { Header } from "@/components/Header";
 import { useLanguage } from "@/hooks/useLanguage";
 import { useState, useEffect, memo } from "react";
 import { preloadRoutes } from "@/lib/preloadRoutes";
-import { getSavedDashboard } from "@/lib/navigation";
 import { useTypingAnimation } from "@/hooks/useTypingAnimation";
 
 // Lazy load MITRE utils to reduce initial bundle (~15KB saved)
@@ -26,7 +25,7 @@ export default function Index() {
   const [typingTrigger, setTypingTrigger] = useState(0);
 
   useEffect(() => {
-    // Title is managed by useSEO hook
+    document.title = "MalFrame";
 
     const state = location.state as IndexLocationState | null;
 
@@ -47,7 +46,7 @@ export default function Index() {
     if (sessionStorage.getItem(INDEX_EXPLICIT_SESSION_KEY)) return;
 
     // Fresh session: auto-redirect to last used dashboard
-    const savedDashboard = getSavedDashboard();
+    const savedDashboard = localStorage.getItem("preferred-dashboard") || "/mia";
     if (savedDashboard && savedDashboard !== "/mia") {
       navigate(savedDashboard, { replace: true });
     }

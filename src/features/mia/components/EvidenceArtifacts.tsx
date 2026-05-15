@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, memo } from "react";
 import { Trash2, FileIcon, Copy, GripVertical, ArrowUpDown, X, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { cn, parseSizeToBytes, copyToClipboard } from "@/lib/utils";
@@ -52,7 +52,7 @@ type SortDirection = "asc" | "desc";
 
 
 
-export function EvidenceArtifacts({ artifacts, onArtifactsChange, onSampleSelected, onSampleCleared }: EvidenceArtifactsProps) {
+export const EvidenceArtifacts = memo(function EvidenceArtifacts({ artifacts, onArtifactsChange, onSampleSelected, onSampleCleared }: EvidenceArtifactsProps) {
   const [hoveredRow, setHoveredRow] = useState<string | null>(null);
   const [removedArtifact, setRemovedArtifact] = useState<Artifact | null>(null);
   const [draggedId, setDraggedId] = useState<string | null>(null);
@@ -296,6 +296,7 @@ export function EvidenceArtifacts({ artifacts, onArtifactsChange, onSampleSelect
                       <button
                         onClick={() => copyToClipboard(artifact.name, "Name")}
                         className="p-0.5 hover:bg-muted rounded opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
+                        aria-label="Copy name"
                         title="Copy name"
                       >
                         <Copy className="w-3 h-3 text-muted-foreground" />
@@ -332,6 +333,7 @@ export function EvidenceArtifacts({ artifacts, onArtifactsChange, onSampleSelect
                         <button
                           onClick={() => copyToClipboard(artifact.sha256, "SHA256")}
                           className="p-0.5 hover:bg-muted rounded opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
+                          aria-label="Copy SHA256"
                           title="Copy SHA256"
                         >
                           <Copy className="w-3 h-3 text-muted-foreground" />
@@ -361,6 +363,7 @@ export function EvidenceArtifacts({ artifacts, onArtifactsChange, onSampleSelect
                               onArtifactsChange(updatedArtifacts);
                             }}
                             className="hover:text-destructive transition-colors ml-0.5"
+                            aria-label={`Remove tag ${tag}`}
                           >
                             <X className="w-3 h-3" />
                           </button>
@@ -412,6 +415,7 @@ export function EvidenceArtifacts({ artifacts, onArtifactsChange, onSampleSelect
                           ? "opacity-100"
                           : "opacity-0 pointer-events-none"
                       )}
+                      aria-label="Delete from case"
                       title="Delete from case"
                     >
                       <Trash2 className="w-4 h-4 text-destructive" />
@@ -433,4 +437,4 @@ export function EvidenceArtifacts({ artifacts, onArtifactsChange, onSampleSelect
       )}
     </div>
   );
-}
+});

@@ -51,10 +51,9 @@ function migratePeSections(saved: Record<string, unknown>): PESectionData[] {
       entropy: "",
       permissions: "",
       sectionHash: "",
-      comments: (entry.text as string) || "",
       images: (entry.images as string[]) || [],
       timestamp: (entry.timestamp as string) || new Date().toISOString(),
-    })) as unknown as PESectionData[];
+    }));
   }
   return [];
 }

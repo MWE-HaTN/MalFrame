@@ -1,12 +1,24 @@
-import { useState, useMemo, useEffect, memo, useCallback } from "react";
-import { ChevronDown, ChevronRight, Search, Download, RefreshCw, X, Loader2 } from "lucide-react";
+import { useState, useMemo, useEffect, memo, useCallback, useDeferredValue } from "react";
+import { ChevronDown, ChevronRight, Search, Download, RefreshCw, X, Loader2, Sparkles, Check, ExternalLink } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getMBCItemTypeClass } from "@/lib/semanticColors";
 import { downloadBlob } from "@/lib/export/helpers";
 import { toast } from "sonner";
 import { useMBCData } from "@/features/mre/hooks/useMBCData";
 import { useLanguage } from "@/hooks/useLanguage";
+import { suggestMBCBehaviors, checkMBCVersion, type MBCSuggestion } from "@/lib/mbcSuggestion";
 import type { MBCBehavior, MBCObjective } from "@/lib/mbc";
+
+// Minimal interface for MRE runtime behavior
+interface MreRuntimeLike {
+  antiDebug: { categoryTags: string[]; apis: string[] }[];
+  antiVM: { methodTags: string[] }[];
+  persistence: { typeTags: string[] }[];
+  network: { behaviorTags: string[] }[];
+  memory: { eventTags: string[] }[];
+  processInjection: { techniqueTags: string[] }[];
+  systemArtifacts: { typeTags: string[] }[];
+}
 
 interface SelectedBehavior {
   id: string;
@@ -20,18 +32,40 @@ interface MBCMappingProps {
   mapping?: SelectedBehavior[];
   onMappingChange?: (mapping: SelectedBehavior[]) => void;
   readOnly?: boolean;
+  runtimeBehavior?: MreRuntimeLike;
 }
 
-export function MBCMapping({ 
-  mapping = [], 
+export const MBCMapping = memo(function MBCMapping({
+  mapping = [],
   onMappingChange,
-  readOnly = false 
+  readOnly = false,
+  runtimeBehavior,
 }: MBCMappingProps) {
   const { t } = useLanguage();
   const { mbcData, isLoading } = useMBCData();
   const [searchQuery, setSearchQuery] = useState("");
   const [expandedObjectives, setExpandedObjectives] = useState<Set<string>>(new Set());
   const [expandedBehaviors, setExpandedBehaviors] = useState<Set<string>>(new Set());
+  const [suggestionsExpanded, setSuggestionsExpanded] = useState(true);
+  const [dismissedSuggestions, setDismissedSuggestions] = useState<Set<string>>(new Set());
+  const [isCheckingVersion, setIsCheckingVersion] = useState(false);
+  const [remoteVersion, setRemoteVersion] = useState<string | null>(null);
+
+  // Deferred runtime behavior for suggestion computation
+  const deferredRuntime = useDeferredValue(runtimeBehavior);
+
+  // Compute MBC suggestions from runtime behavior
+  const suggestions = useMemo(() => {
+    if (!deferredRuntime) return [];
+    return suggestMBCBehaviors(deferredRuntime).filter(
+      (s) => !dismissedSuggestions.has(s.behaviorId),
+    );
+  }, [deferredRuntime, dismissedSuggestions]);
+
+  // Filter out suggestions already in the mapping
+  const actionableSuggestions = useMemo(() => {
+    return suggestions.filter((s) => !mapping.some((m) => m.id === s.behaviorId));
+  }, [suggestions, mapping]);
 
   // Filter behaviors based on search
   const filteredObjectives = useMemo(() => {
@@ -145,15 +179,53 @@ export function MBCMapping({
     toast.success(t("mbc.exportSuccess"));
   };
 
-  const handleUpdate = () => {
-    toast.success(t("mbc.upToDate"));
+  const handleUpdate = async () => {
+    setIsCheckingVersion(true);
+    try {
+      const result = await checkMBCVersion();
+      if (result.newer && result.remote) {
+        setRemoteVersion(result.remote);
+        toast.info(t("mbc.versionCheck.newAvailable").replace("{version}", result.remote));
+      } else {
+        toast.success(t("mbc.versionCheck.upToDate"));
+      }
+    } catch {
+      toast.error(t("mbc.versionCheck.error"));
+    } finally {
+      setIsCheckingVersion(false);
+    }
   };
+
+  // Accept a suggestion — add it to the mapping
+  const acceptSuggestion = useCallback(
+    (suggestion: MBCSuggestion) => {
+      if (readOnly) return;
+      const exists = mapping.some((m) => m.id === suggestion.behaviorId);
+      if (exists) return;
+      onMappingChange?.([
+        ...mapping,
+        {
+          id: suggestion.behaviorId,
+          name: suggestion.behaviorName,
+          objectiveId: suggestion.objectiveId,
+          objectiveName: suggestion.objectiveName,
+          type: "behavior",
+        },
+      ]);
+    },
+    [mapping, onMappingChange, readOnly],
+  );
+
+  // Dismiss a suggestion
+  const dismissSuggestion = useCallback((behaviorId: string) => {
+    setDismissedSuggestions((prev) => new Set(prev).add(behaviorId));
+  }, []);
 
   // Loading state
   if (isLoading || !mbcData) {
     return (
-      <div className="flex items-center justify-center py-12 gap-3">
-        <Loader2 className="w-5 h-5 animate-spin text-primary" />
+      <div className="flex items-center justify-center py-12 gap-3" role="status" aria-live="polite">
+        <Loader2 className="w-5 h-5 animate-spin text-primary" aria-hidden="true" />
         <span className="text-sm text-muted-foreground font-mono">{t("mbc.loading")}</span>
       </div>
     );
@@ -168,12 +240,28 @@ export function MBCMapping({
         </p>
         <div className="flex items-center gap-2">
           <span className="text-xs text-muted-foreground font-mono">{mbcData.version}</span>
+          {remoteVersion && remoteVersion !== mbcData.version && (
+            <a
+              href="https://github.com/MBCProject/mbc-markdown/releases"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1 text-[10px] font-mono text-accent hover:text-accent/80 transition-colors"
+            >
+              <ExternalLink className="w-2.5 h-2.5" />
+              {t("mbc.versionCheck.newAvailable").replace("{version}", remoteVersion)}
+            </a>
+          )}
           <button
             onClick={handleUpdate}
-            className="flex items-center gap-1 px-2 py-1 text-xs font-mono text-muted-foreground hover:text-primary border border-border/50 rounded-sm hover:bg-primary/10 transition-all"
+            disabled={isCheckingVersion}
+            className="flex items-center gap-1 px-2 py-1 text-xs font-mono text-muted-foreground hover:text-primary border border-border/50 rounded-sm hover:bg-primary/10 transition-all disabled:opacity-50"
             title="Check for updates"
           >
-            <RefreshCw className="w-3 h-3" />
+            {isCheckingVersion ? (
+              <Loader2 className="w-3 h-3 animate-spin" />
+            ) : (
+              <RefreshCw className="w-3 h-3" />
+            )}
             <span>{t("mbc.update")}</span>
           </button>
           {mapping.length > 0 && (
@@ -206,12 +294,89 @@ export function MBCMapping({
           <button
             onClick={() => setSearchQuery("")}
             className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+            aria-label="Clear search"
             title="Clear search"
           >
             <X className="w-4 h-4" />
           </button>
         )}
       </div>
+
+      {/* Auto-Suggested Behaviors */}
+      {actionableSuggestions.length > 0 && (
+        <div className="border border-dashed border-accent/30 rounded-sm overflow-hidden">
+          <button
+            onClick={() => setSuggestionsExpanded(!suggestionsExpanded)}
+            className="w-full flex items-center gap-2 px-3 py-2 bg-accent/5 hover:bg-accent/10 transition-colors text-left"
+          >
+            <Sparkles className="w-3.5 h-3.5 text-accent" />
+            <span className="text-xs font-mono text-accent font-medium">
+              {t("mbc.suggestions")}
+            </span>
+            <span className="text-[10px] font-mono text-accent/70 bg-accent/10 px-1.5 py-0.5 rounded">
+              {t("mbc.suggestionsCount").replace("{count}", String(actionableSuggestions.length))}
+            </span>
+            {suggestionsExpanded ? (
+              <ChevronDown className="w-3 h-3 text-accent/60 ml-auto" />
+            ) : (
+              <ChevronRight className="w-3 h-3 text-accent/60 ml-auto" />
+            )}
+          </button>
+          {suggestionsExpanded && (
+            <div className="px-3 py-2 space-y-1.5">
+              {actionableSuggestions.map((s) => (
+                <div
+                  key={s.behaviorId}
+                  className="flex items-center gap-2 px-2 py-1.5 rounded-sm bg-accent/5 border border-accent/10 hover:border-accent/20 transition-colors group"
+                >
+                  <span
+                    className={cn(
+                      "w-2 h-2 rounded-full shrink-0",
+                      s.confidence === "high"
+                        ? "bg-green-500"
+                        : s.confidence === "medium"
+                          ? "bg-amber-500"
+                          : "bg-gray-500",
+                    )}
+                    title={t(`mbc.confidence.${s.confidence}`)}
+                  />
+                  <span className="text-xs font-mono text-accent font-medium shrink-0">
+                    {s.behaviorId}
+                  </span>
+                  <span className="text-xs text-muted-foreground truncate flex-1">
+                    {s.behaviorName}
+                  </span>
+                  <span className="text-[10px] font-mono text-muted-foreground/60 shrink-0">
+                    {t(`mbc.source.${s.source}`)}
+                  </span>
+                  <button
+                    onClick={() => acceptSuggestion(s)}
+                    className="p-1 hover:bg-green-500/20 rounded transition-colors opacity-0 group-hover:opacity-100"
+                    aria-label={t("mbc.accept")}
+                    title={t("mbc.accept")}
+                  >
+                    <Check className="w-3 h-3 text-green-500" />
+                  </button>
+                  <button
+                    onClick={() => dismissSuggestion(s.behaviorId)}
+                    className="p-1 hover:bg-destructive/20 rounded transition-colors opacity-0 group-hover:opacity-100"
+                    aria-label={t("mbc.dismiss")}
+                    title={t("mbc.dismiss")}
+                  >
+                    <X className="w-3 h-3 text-destructive" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {runtimeBehavior && actionableSuggestions.length === 0 && suggestions.length === 0 && (
+        <div className="text-[11px] text-muted-foreground/50 font-mono text-center py-1">
+          {t("mbc.noSuggestions")}
+        </div>
+      )}
 
       {/* Content */}
       <div className="grid grid-cols-3 gap-2 max-h-[500px] overflow-y-auto">
@@ -259,7 +424,7 @@ export function MBCMapping({
       )}
     </div>
   );
-}
+});
 
 interface ObjectiveColumnProps {
   objective: MBCObjective;
@@ -442,6 +607,7 @@ const BehaviorRow = memo(
             <button
               onClick={() => onToggleBehavior(behavior.id)}
               className="p-0.5 text-muted-foreground hover:text-primary shrink-0"
+              aria-label={`${behavior.methods!.length} methods`}
               title={`${behavior.methods!.length} methods`}
             >
               {isExpanded ? (

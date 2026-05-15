@@ -1,5 +1,7 @@
 import { z } from "zod";
 import { debugWarn, debugError } from "@/lib/debugLogger";
+import type { DFIRData } from "@/features/mia/types";
+import type { REData } from "@/features/mre/types";
 
 // Maximum file size for imports (5MB)
 const MAX_IMPORT_SIZE = 5 * 1024 * 1024;
@@ -18,7 +20,7 @@ const ALLOWED_IMAGE_TYPES = ['image/png', 'image/jpeg', 'image/gif', 'image/webp
  * Validate a base64 data URI for images
  * Checks format, MIME type, and approximate size
  */
-export function validateBase64Image(dataUri: string): { valid: boolean; error?: string } {
+function validateBase64Image(dataUri: string): { valid: boolean; error?: string } {
   if (!dataUri || typeof dataUri !== 'string') {
     return { valid: false, error: 'Invalid data URI' };
   }
@@ -285,6 +287,8 @@ export const REDataSchema = z.object({
   codeAnalysis: z.record(z.string(), z.unknown()).optional(),
   deepDive: z.record(z.string(), z.unknown()).optional().default({}),
   // Detection section - allow various field names
+  // z.any() is intentional: array item shapes vary by user input and app version;
+  // migrateData normalizes them after validation.
   detection: z.object({
     mbcMapping: z.array(z.any()).optional().default([]),
     yaraSignature: z.string().optional().default(""),
@@ -340,12 +344,14 @@ export const DFIRDataSchema = z.object({
   // Allow any structure for behaviorAnalysis  
   behaviorAnalysis: z.record(z.string(), z.unknown()).optional().default({}),
   // Allow both mitreMapping and mitreAttackMapping
+  // z.any() is intentional: technique objects vary by format version; migrateData normalizes.
   mitreMapping: z.record(z.string(), z.array(z.any())).optional(),
   mitreAttackMapping: z.record(z.string(), z.array(z.any())).optional(),
   // Allow both impact and impactAssessment
   impact: z.record(z.string(), z.unknown()).optional(),
   impactAssessment: z.record(z.string(), z.unknown()).optional(),
   // Allow both iocs and iocTable
+  // z.any() is intentional: item shapes vary by user input; migrateData normalizes.
   iocs: z.array(z.any()).optional().default([]),
   iocTable: z.array(z.any()).optional(),
   recommendations: z.object({
@@ -353,9 +359,11 @@ export const DFIRDataSchema = z.object({
     longTerm: z.string().optional().default(""),
   }).optional().default({ shortTerm: "", longTerm: "" }),
   // Allow both timeline and attackTimeline
+  // z.any() is intentional: item shapes vary by user input; migrateData normalizes.
   timeline: z.array(z.any()).optional().default([]),
   attackTimeline: z.array(z.any()).optional(),
   // Allow both artifacts and evidenceArtifacts
+  // z.any() is intentional: item shapes vary by user input; migrateData normalizes.
   artifacts: z.array(z.any()).optional().default([]),
   evidenceArtifacts: z.array(z.any()).optional(),
 }).passthrough();
@@ -405,6 +413,25 @@ export type MitreStixBundle = z.infer<typeof MitreStixBundleSchema>;
 // ============================================
 
 /**
+ * Format Zod validation issues into a human-readable error message.
+ * Shows up to 5 specific field errors with their paths.
+ */
+export function formatZodErrors(issues: z.ZodIssue[]): string {
+  if (issues.length === 0) return "Unknown validation error";
+
+  const formatted = issues.slice(0, 5).map((issue) => {
+    const path = issue.path.length > 0 ? issue.path.join(".") : "root";
+    return `${path}: ${issue.message}`;
+  });
+
+  const summary = issues.length > 5
+    ? ` (${issues.length} total issues)`
+    : "";
+
+  return `Validation failed${summary}:\n${formatted.join("\n")}`;
+}
+
+/**
  * Check if data structure matches MRE format
  * MRE has: staticAnalysis with sha256/impHash, codeBehavior/runtimeBehavior, detection
  */
@@ -451,7 +478,7 @@ function isMIAStructure(data: Record<string, unknown>): boolean {
  * Uses relaxed schema - dashboard's migrateData handles normalization
  * Also validates that the data structure matches MRE format
  */
-export function validateREData(jsonString: string): { success: true; data: z.infer<typeof REDataSchema> } | { success: false; error: string } {
+export function validateREData(jsonString: string): { success: true; data: REData } | { success: false; error: string } {
   try {
     if (!validateFileSize(jsonString)) {
       return { success: false, error: "File too large (max 5MB)" };
@@ -470,13 +497,13 @@ export function validateREData(jsonString: string): { success: true; data: z.inf
     }
     
     const result = REDataSchema.safeParse(parsed);
-    
+
     if (!result.success) {
       debugError("RE validation errors:", result.error.issues);
-      return { success: false, error: "Invalid MRE data format. Please check the file structure." };
+      return { success: false, error: formatZodErrors(result.error.issues) };
     }
-    
-    return { success: true, data: result.data };
+
+    return { success: true, data: result.data as unknown as REData };
   } catch (e) {
     debugError("JSON parse error:", e);
     return { success: false, error: "Invalid JSON file" };
@@ -488,7 +515,7 @@ export function validateREData(jsonString: string): { success: true; data: z.inf
  * Uses relaxed schema - dashboard's internal logic handles normalization
  * Also validates that the data structure matches MIA format
  */
-export function validateDFIRData(jsonString: string): { success: true; data: z.infer<typeof DFIRDataSchema> } | { success: false; error: string } {
+export function validateDFIRData(jsonString: string): { success: true; data: DFIRData } | { success: false; error: string } {
   try {
     if (!validateFileSize(jsonString)) {
       return { success: false, error: "File too large (max 5MB)" };
@@ -507,13 +534,13 @@ export function validateDFIRData(jsonString: string): { success: true; data: z.i
     }
     
     const result = DFIRDataSchema.safeParse(parsed);
-    
+
     if (!result.success) {
       debugError("DFIR validation errors:", result.error.issues);
-      return { success: false, error: "Invalid MIA data format. Please check the file structure." };
+      return { success: false, error: formatZodErrors(result.error.issues) };
     }
-    
-    return { success: true, data: result.data };
+
+    return { success: true, data: result.data as unknown as DFIRData };
   } catch (e) {
     debugError("JSON parse error:", e);
     return { success: false, error: "Invalid JSON file" };

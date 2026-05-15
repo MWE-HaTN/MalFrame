@@ -1,5 +1,7 @@
 // Export Helper Functions
 import type { LogEntry, UnpackLayer } from "@/types/dashboard";
+import { STORAGE_KEYS } from "@/lib/storageKeys";
+import { generateId } from "@/lib/utils";
 
 // ============================================
 // SEMANTIC COLORS - Shared across PDF/Word exports
@@ -121,10 +123,7 @@ export function extractLogText(value: LogEntry[] | string | unknown, separator =
 export function toLogEntries(value: unknown): LogEntry[] {
   if (Array.isArray(value)) return value;
   if (typeof value === "string" && value.trim()) {
-    const id = typeof crypto !== 'undefined' && crypto.randomUUID 
-      ? crypto.randomUUID() 
-      : `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    return [{ id, text: value, images: [], timestamp: new Date().toISOString() }];
+    return [{ id: generateId(), text: value, images: [], timestamp: new Date().toISOString() }];
   }
   return [];
 }
@@ -132,7 +131,7 @@ export function toLogEntries(value: unknown): LogEntry[] {
 export function extractUnpackLayers(layers: UnpackLayer[] | undefined): string {
   if (!layers || layers.length === 0) return "";
   return layers.map(layer => {
-    const details = [];
+    const details: string[] = [];
     if (layer.packerType) details.push(`Packer: ${layer.packerType}`);
     if (layer.unpackingMethod) details.push(`Method: ${layer.unpackingMethod}`);
     if (layer.oep) details.push(`OEP: ${layer.oep}`);
@@ -235,4 +234,27 @@ export function downloadBlob(blob: Blob, filename: string): void {
   link.click();
   document.body.removeChild(link);
   URL.revokeObjectURL(url);
+}
+
+// ============================================
+// EXPORT REMINDER
+// ============================================
+
+/** Record the current time as the last export time for a case */
+export function recordExportTime(storageKey: string): void {
+  try {
+    localStorage.setItem(`${STORAGE_KEYS.LAST_EXPORT_PREFIX}${storageKey}`, String(Date.now()));
+  } catch {
+    // Ignore storage errors
+  }
+}
+
+/** Get the last export timestamp for a case, or 0 if never exported */
+export function getLastExportTime(storageKey: string): number {
+  try {
+    const raw = localStorage.getItem(`${STORAGE_KEYS.LAST_EXPORT_PREFIX}${storageKey}`);
+    return raw ? Number(raw) : 0;
+  } catch {
+    return 0;
+  }
 }

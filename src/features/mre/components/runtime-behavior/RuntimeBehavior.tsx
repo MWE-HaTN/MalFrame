@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, memo } from "react";
 import { RuntimeBehaviorData } from "./types";
 import { STORAGE_KEYS } from "@/lib/storageKeys";
 import { AntiAnalysisGroup } from "./AntiAnalysisGroup";
@@ -36,7 +36,7 @@ interface RuntimeBehaviorProps {
   onChange: (data: RuntimeBehaviorData) => void;
 }
 
-export function RuntimeBehavior({ data, onChange }: RuntimeBehaviorProps) {
+export const RuntimeBehavior = memo(function RuntimeBehavior({ data, onChange }: RuntimeBehaviorProps) {
   const [expandedGroups, setExpandedGroups] = useState<Record<number, boolean>>(loadExpandedGroups);
   const [expandedSubItems, setExpandedSubItems] = useState<Record<string, boolean>>(loadExpandedSubItems);
   
@@ -100,4 +100,4 @@ export function RuntimeBehavior({ data, onChange }: RuntimeBehaviorProps) {
       />
     </div>
   );
-}
+});

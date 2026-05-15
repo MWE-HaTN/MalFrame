@@ -25,7 +25,9 @@ export default function Settings() {
     return saved ? parseInt(saved, 10) : 100;
   });
 
-  // Title is managed by useSEO hook
+  useEffect(() => {
+    document.title = "Settings - MalFrame";
+  }, []);
 
   useEffect(() => {
     document.documentElement.style.fontSize = `${scale}%`;

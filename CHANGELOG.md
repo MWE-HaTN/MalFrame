@@ -8,7 +8,114 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versio
 
 ## [Unreleased]
 
-*Changes not yet released will be listed here.*
+### Added
+
+#### Auto MITRE Suggestion
+- Scans MIA behavior fields (process tree, file system, registry, network, memory, system changes) and suggests relevant MITRE ATT&CK techniques
+- Keyword-to-technique mapping engine with ~60 rules covering all 14 tactics
+- Confidence levels (high/medium/low) with color-coded indicators
+- Collapsible suggestion section in MITRE ATT&CK Mapping with Accept/Dismiss buttons
+- Filters out techniques already in the mapping
+- Uses React 19 `useDeferredValue` for non-blocking computation during typing
+
+#### Auto MBC Suggestion
+- Scans MRE runtime behavior tags (anti-debug, anti-VM, persistence, network, memory, injection, artifacts) and suggests relevant MBC behaviors
+- Tag-to-behavior mapping engine covering all MBC objectives
+- Collapsible suggestion section in MBC Mapping with Accept/Dismiss buttons
+- Deduplication by behavior ID with highest confidence kept
+
+#### MITRE Force Refresh
+- "Force Refresh" button in MITRE ATT&CK Mapping header to bypass all caches and fetch fresh data from GitHub
+- Displays last fetch time relative to now (e.g., "2h ago")
+- Clears in-memory, localStorage, and promise lock caches before refetching
+
+#### MBC Version Check
+- "Update" button now checks GitHub MBC repo for newer versions via GitHub API
+- Shows remote version with link to releases page when a newer version is available
+- 24h cache for version check results to avoid rate limiting
+
+#### Clipboard IOC Parser
+- Paste raw text from logs, sandbox reports, or threat intel feeds
+- Auto-detects and classifies: SHA256/SHA1/MD5, IPv4/IPv6, URLs, domains, emails, file paths, mutexes
+- False positive filtering for localhost, common domains, file extensions
+- One-click "Add All" to append parsed IOCs to the IOC table
+
+#### Timeline Visualization
+- Toggle between table and vertical timeline views for attack events
+- Severity-colored dots (info/warning/critical) with hover-reveal delete buttons
+- Shared add form between both views
+
+#### YARA Rule Editor (MRE)
+- CodeMirror 6 editor with custom YARA syntax highlighting
+- Cyber-themed colors: keywords, `$variables`, hex strings `{ }`, regex `/ /`, meta keys
+- Lazy-loaded (~90KB gzipped, separate chunk)
+
+#### Case Templates
+- Template dialog when creating new cases: Blank, Ransomware, Phishing, APT, Info-Stealer, Custom
+- Pre-fills relevant fields (risk level, MITRE techniques, recommendations, MBC mappings)
+- Available for both MIA and MRE dashboards
+
+#### IOC Cross-Reference (`Ctrl+Shift+I`)
+- Scans all MIA and MRE cases to find IOCs shared across multiple cases
+- Clickable case names navigate directly to the case
+- Accessible from IOC Table section (both dashboards), Command Palette, and keyboard shortcut
+
+#### Command Palette — New Actions
+- Switch language (EN/VN) — toggles between English and Vietnamese
+- Toggle dark/light theme
+- Change display scale — cycles through 75% → 100% → 125% → 150%
+- Track activity for today — manually record activity for the heatmap
+
+#### Graph Visualization (MIA)
+- Interactive ReactFlow graph for MITRE ATT&CK technique mappings
+- Tactic nodes with technique children, auto-layout
+- MiniMap, zoom controls, cyber-themed node styling
+- Lazy-loaded (~48KB gzipped, separate chunk)
+
+#### Cross-case Search (`Ctrl+Shift+X`)
+- Search across all MIA and MRE cases from a single dialog
+- Results grouped by case with expandable match lists
+- Matched text highlighting and field path formatting
+
+#### Command Palette (`Ctrl+K`)
+- Keyboard-driven navigation and actions via fuzzy search
+- Groups: Navigation, Search, Cases, Export, Tools, Help
+- Arrow key + Enter selection, Escape to close
+
+#### Export Reminder
+- Toast warning when case data hasn't been exported in 7+ days
+- Per-case tracking via `localStorage` timestamp
+- Only shown when case has meaningful content
+
+#### Keyboard Shortcut Hint Bar
+- Fixed icon buttons in bottom-left corner (Command Palette, Search, Shortcuts)
+- Click to expand, click again or use action to collapse back to single keyboard icon
+- Always visible as part of the page (no auto-hide)
+
+#### PWA Support
+- Installable as a Progressive Web App
+- Service worker with Workbox for offline caching
+- Update prompt via `ReloadPrompt` component
+
+### Changed
+
+#### Performance Optimization
+- **MIA Dashboard**: Wrapped `handleExportJSON`, `handleExportPDF`, `handleExportWord`, `countLogImages`, `getTotalImageCount`, `getReportName`, `downloadAllImages`, `handleConfirmExport` in `useCallback`; memoized `exportOptions` array with `useMemo`
+- **MRE Dashboard**: Wrapped `handleHashGenerated`, `handleExportJSON`, `handleExportPDF`, `handleExportWord`, `getReportName`, `handleConfirmExport` in `useCallback`; memoized `exportOptions` array with `useMemo`
+- **BehaviorAnalysisSection**: Extracted 6 inline `onImagesChange` callbacks into stable `useCallback` hooks; replaced `|| []` fallback with module-level `EMPTY_IMAGES` constant to preserve `FormField` memoization
+- **MitreAttackMapping**: Wrapped `allSelectedTechniques` computation in `useMemo` with `[mapping, mitreTactics]` dependencies
+
+#### Timeline Sort Order
+- Most recent events at top (descending time)
+- Same time → critical > warning > info severity priority
+- Same time + severity → alphabetical by content
+
+#### Code Quality — `useCallback` / `useMemo`
+- Wrapped all section `onChange` handlers in `useCallback` (both dashboards) to prevent unnecessary re-renders via `React.memo`
+- Added `useMemo` for `existingHashes` computation in MIA
+
+#### MRE Migration Fix
+- Fixed double-cast in `migrate.ts` line 57 — removed `comments` field not in `PESectionData` interface
 
 ---
 

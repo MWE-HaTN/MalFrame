@@ -1,7 +1,8 @@
-import { useRef, useEffect, useState } from "react";
-import { Download, Upload, ChevronDown, File, FileText } from "lucide-react";
+import { useRef, useEffect, useState, memo } from "react";
+import { Download, Upload, ChevronDown, File, FileText, Loader2, Check, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ClearDataDialog } from "@/components/ClearDataDialog";
+import type { SaveStatus } from "@/hooks/useDashboardData";
 
 export interface ExportOption {
   type: "json" | "pdf" | "word";
@@ -17,9 +18,10 @@ interface DashboardHeaderProps {
   exportOptions: ExportOption[];
   importLabel?: string;
   exportLabel?: string;
+  saveStatus?: SaveStatus;
 }
 
-export function DashboardHeader({
+export const DashboardHeader = memo(function DashboardHeader({
   title,
   subtitle,
   onImport,
@@ -27,6 +29,7 @@ export function DashboardHeader({
   exportOptions,
   importLabel = "Import JSON",
   exportLabel = "Export Data",
+  saveStatus,
 }: DashboardHeaderProps) {
   const [exportMenuOpen, setExportMenuOpen] = useState(false);
   const exportMenuRef = useRef<HTMLDivElement>(null);
@@ -58,7 +61,22 @@ export function DashboardHeader({
         <h1 className="text-2xl font-bold text-primary text-glow font-terminal tracking-wider flex items-center gap-2">
           <span className="text-accent">※</span> {title}
         </h1>
-        <p className="text-sm text-muted-foreground font-mono">{subtitle}</p>
+        <div className="flex items-center gap-2">
+          <p className="text-sm text-muted-foreground font-mono">{subtitle}</p>
+          {saveStatus && saveStatus !== "idle" && (
+            <span className={cn(
+              "inline-flex items-center gap-1 text-[10px] font-mono px-1.5 py-0.5 rounded",
+              saveStatus === "saving" && "text-yellow-500 bg-yellow-500/10",
+              saveStatus === "saved" && "text-green-500 bg-green-500/10",
+              saveStatus === "failed" && "text-destructive bg-destructive/10",
+            )}>
+              {saveStatus === "saving" && <Loader2 className="w-2.5 h-2.5 animate-spin" />}
+              {saveStatus === "saved" && <Check className="w-2.5 h-2.5" />}
+              {saveStatus === "failed" && <AlertCircle className="w-2.5 h-2.5" />}
+              {saveStatus === "saving" ? "Saving..." : saveStatus === "saved" ? "Saved" : "Save failed"}
+            </span>
+          )}
+        </div>
       </div>
       <div className="flex items-center gap-3">
         {/* Import Button */}
@@ -105,4 +123,4 @@ export function DashboardHeader({
       </div>
     </div>
   );
-}
+});

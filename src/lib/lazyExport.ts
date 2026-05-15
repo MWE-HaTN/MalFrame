@@ -9,7 +9,8 @@
 
 import type { ReportType } from "@/lib/fileNameUtils";
 
-// Use 'any' for export data to be compatible with various data structures
+// Export data shape varies by caller (MIA vs MRE) and migration state.
+// The actual export functions handle both formats internally.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type ExportData = any;
 

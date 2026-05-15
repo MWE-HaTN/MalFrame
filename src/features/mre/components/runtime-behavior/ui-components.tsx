@@ -148,10 +148,11 @@ export function TagList({ tags, availableTags, onChange, placeholder = "Add API.
               )}
             >
               <code>{tagName}</code>
-              <button 
-                type="button" 
+              <button
+                type="button"
                 onClick={() => onChange(tags.filter((existingTag) => existingTag !== tagName))}
                 className="hover:text-destructive hover:scale-125 transition-all duration-200 active:scale-90"
+                aria-label={`Remove ${tagName}`}
               >
                 <X className="w-3 h-3" />
               </button>
@@ -585,6 +586,8 @@ export function AutoTextarea({
 
     Promise.all(reads).then((base64s) => {
       onImagesChange([...images, ...base64s]);
+    }).catch(() => {
+      // Image read failed silently — partial results are acceptable
     });
 
     if (fileInputRef.current) {

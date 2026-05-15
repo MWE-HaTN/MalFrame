@@ -1,29 +1,28 @@
-import { useState, useEffect, useMemo, useCallback, memo } from "react";
-import { RefreshCw, Loader2, ChevronDown, ChevronRight, Download, Search, X } from "lucide-react";
+import { useState, useEffect, useMemo, useCallback, memo, useDeferredValue } from "react";
+import { RefreshCw, Loader2, ChevronDown, ChevronRight, Search, X, GitBranch, Sparkles, Check } from "lucide-react";
 import { cn, truncate } from "@/lib/utils";
-import { downloadBlob } from "@/lib/export/helpers";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
 import { debugError } from "@/lib/debugLogger";
 import { useLanguage } from "@/hooks/useLanguage";
 
-import { 
-  fetchMitreData, 
-  loadMitreData, 
+import {
+  loadMitreData,
+  forceRefreshMitreData,
   type MitreTactic,
 } from "@/lib/mitreUtils";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { suggestMitreTechniques, type MitreSuggestion } from "@/lib/mitreSuggestion";
+import type { BehaviorAnalysisData } from "@/features/mia/types";
 
 import { STORAGE_KEYS } from "@/lib/storageKeys";
+import { buildMitreGraph } from "@/lib/graphBuilders";
+import { LazyGraphView } from "@/components/lazy";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 // Note: These keys are NOT cleared when user clears report data
 // MITRE cache persists to avoid re-fetching data unnecessarily
@@ -91,21 +90,45 @@ interface MitreAttackMappingProps {
   mapping?: MitreMapping;
   onMappingChange?: (mapping: MitreMapping) => void;
   readOnly?: boolean;
+  behaviorData?: BehaviorAnalysisData;
 }
 
-export function MitreAttackMapping({ 
-  mapping = {}, 
+export const MitreAttackMapping = memo(function MitreAttackMapping({
+  mapping = {},
   onMappingChange,
-  readOnly = false 
+  readOnly = false,
+  behaviorData,
 }: MitreAttackMappingProps) {
   const { t } = useLanguage();
   const [isUpdating, setIsUpdating] = useState(false);
-  const [showUpdateConfirm, setShowUpdateConfirm] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [graphOpen, setGraphOpen] = useState(false);
   
   const [mitreVersion, setMitreVersion] = useState("unknown");
   const [mitreTactics, setMitreTactics] = useState<TacticDisplay[]>(DEFAULT_TACTICS);
   const [isLoading, setIsLoading] = useState(true);
+  const [suggestionsExpanded, setSuggestionsExpanded] = useState(true);
+  const [dismissedSuggestions, setDismissedSuggestions] = useState<Set<string>>(new Set());
+
+  // Deferred behavior data for suggestion computation (React 19)
+  const deferredBehaviorData = useDeferredValue(behaviorData);
+
+  // Compute MITRE suggestions from behavior data
+  const suggestions = useMemo(() => {
+    if (!deferredBehaviorData) return [];
+    return suggestMitreTechniques(deferredBehaviorData).filter(
+      (s) => !dismissedSuggestions.has(s.techniqueId),
+    );
+  }, [deferredBehaviorData, dismissedSuggestions]);
+
+  // Filter out suggestions already in the mapping
+  const actionableSuggestions = useMemo(() => {
+    return suggestions.filter((s) => {
+      return !Object.values(mapping).some((techniques) =>
+        techniques.some((t) => t.id === s.techniqueId),
+      );
+    });
+  }, [suggestions, mapping]);
 
   // Load MITRE data on mount (from cache or fetch from GitHub)
   useEffect(() => {
@@ -129,51 +152,28 @@ export function MitreAttackMapping({
       });
   }, []);
 
-  // Fetched data for export confirmation
-  const [pendingExportData, setPendingExportData] = useState<{ tactics: MitreTactic[]; version: string } | null>(null);
-
-  // Fetch MITRE data (without download)
+  // Fetch MITRE data (clear cache + fetch fresh)
   const updateMitreData = async () => {
     setIsUpdating(true);
     try {
-      const { tactics, version } = await fetchMitreData();
+      const { tactics, version } = await forceRefreshMitreData();
       const displayTactics = convertToDisplayFormat(tactics);
       setMitreTactics(displayTactics);
       const newVersion = version || DEFAULT_VERSION;
       setMitreVersion(newVersion);
       localStorage.setItem(STORAGE_KEYS.MITRE_VERSION, newVersion);
-      
-      // Store for export confirmation
-      setPendingExportData({ tactics, version: newVersion });
-      setShowUpdateConfirm(true);
-      
+
       const techCount = tactics.reduce((sum, t) => sum + t.techniques.length, 0);
-      const subTechCount = tactics.reduce((sum, t) => 
+      const subTechCount = tactics.reduce((sum, t) =>
         sum + t.techniques.reduce((s, tech) => s + tech.subtechniques.length, 0), 0);
       toast.success(t("mitre.updateSuccess").replace("{techCount}", String(techCount)).replace("{subTechCount}", String(subTechCount)));
     } catch (error) {
       debugError("Failed to update MITRE data:", error);
-      toast.error(t("mitre.updateFailed"));
+      const message = error instanceof Error ? error.message : t("mitre.updateFailed");
+      toast.error(message);
     } finally {
       setIsUpdating(false);
     }
-  };
-
-  const handleConfirmExport = () => {
-    if (pendingExportData) {
-      // Download JSON file
-      const jsonString = JSON.stringify(pendingExportData.tactics, null, 2);
-      const blob = new Blob([jsonString], { type: "application/json" });
-      downloadBlob(blob, "mitre_enterprise_attack.json");
-      toast.success("Exported MITRE data successfully!");
-    }
-    setShowUpdateConfirm(false);
-    setPendingExportData(null);
-  };
-
-  const handleCancelExport = () => {
-    setShowUpdateConfirm(false);
-    setPendingExportData(null);
   };
 
   // Memoized handlers to prevent unnecessary re-renders
@@ -216,6 +216,22 @@ export function MitreAttackMapping({
     }
   }, [isSelected, removeTechnique, addTechnique]);
 
+  // Accept a suggestion — add it to the mapping
+  const acceptSuggestion = useCallback(
+    (suggestion: MitreSuggestion) => {
+      addTechnique(suggestion.tacticId, {
+        id: suggestion.techniqueId,
+        name: suggestion.techniqueName,
+      });
+    },
+    [addTechnique],
+  );
+
+  // Dismiss a suggestion — hide it from the list
+  const dismissSuggestion = useCallback((techniqueId: string) => {
+    setDismissedSuggestions((prev) => new Set(prev).add(techniqueId));
+  }, []);
+
   // Filter tactics based on search
   const filteredTactics = useMemo(() => {
     if (!searchQuery) return mitreTactics;
@@ -244,41 +260,29 @@ export function MitreAttackMapping({
   }, [searchQuery, mitreTactics]);
 
   // Get all selected techniques across all tactics
-  const allSelectedTechniques: { tacticId: string; tacticName: string; technique: Technique }[] = [];
-  Object.entries(mapping).forEach(([tacticId, techniques]) => {
-    const tactic = mitreTactics.find(t => t.id === tacticId);
-    techniques.forEach(technique => {
-      allSelectedTechniques.push({
-        tacticId,
-        tacticName: tactic?.name || tacticId,
-        technique
+  const allSelectedTechniques = useMemo(() => {
+    const result: { tacticId: string; tacticName: string; technique: Technique }[] = [];
+    Object.entries(mapping).forEach(([tacticId, techniques]) => {
+      const tactic = mitreTactics.find(t => t.id === tacticId);
+      techniques.forEach(technique => {
+        result.push({
+          tacticId,
+          tacticName: tactic?.name || tacticId,
+          technique
+        });
       });
     });
-  });
+    return result;
+  }, [mapping, mitreTactics]);
+
+  // Build graph data for visualization
+  const graphData = useMemo(
+    () => buildMitreGraph(mapping, mitreTactics.map(t => ({ id: t.id, name: t.name, code: t.code }))),
+    [mapping, mitreTactics],
+  );
 
   return (
     <>
-      {/* Export Confirmation Dialog */}
-      <AlertDialog open={showUpdateConfirm} onOpenChange={setShowUpdateConfirm}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center gap-2">
-              <Download className="w-5 h-5 text-primary" />
-              {t("mitre.exportTitle")}
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              {t("mitre.exportDescription").replace("{version}", pendingExportData?.version || mitreVersion)}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={handleCancelExport}>{t("mitre.exportNo")}</AlertDialogCancel>
-            <AlertDialogAction onClick={handleConfirmExport}>
-              {t("mitre.exportYes")}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
       <div className="space-y-4">
       <div className="flex items-center justify-between">
           <p className="text-sm text-muted-foreground font-mono text-left">
@@ -287,19 +291,28 @@ export function MitreAttackMapping({
           <div className="flex items-center gap-2">
             <span className="text-xs text-muted-foreground font-mono flex items-center gap-1.5">
               {isLoading ? (
-                <>
-                  <Loader2 className="w-3 h-3 animate-spin text-primary" />
-                  <span>{t("mitre.loading")}</span>
-                </>
+                <span role="status" aria-live="polite">
+                  <Loader2 className="w-3 h-3 animate-spin text-primary inline mr-1.5" aria-hidden="true" />
+                  {t("mitre.loading")}
+                </span>
               ) : (
                 mitreVersion
               )}
             </span>
             <button
+              onClick={() => setGraphOpen(true)}
+              disabled={allSelectedTechniques.length === 0}
+              className="flex items-center gap-1 px-2 py-1 text-xs font-mono text-accent hover:text-accent/80 border border-accent/30 rounded-sm hover:bg-accent/10 transition-all disabled:opacity-50"
+              title={t("graph.visualize")}
+            >
+              <GitBranch className="w-3 h-3" />
+              <span>{t("graph.visualize")}</span>
+            </button>
+            <button
               onClick={updateMitreData}
               disabled={isUpdating || isLoading}
               className="flex items-center gap-1 px-2 py-1 text-xs font-mono text-primary hover:text-primary/80 border border-primary/30 rounded-sm hover:bg-primary/10 transition-all disabled:opacity-50"
-              title="Fetch latest from mitre-attack/attack-stix-data"
+              title={t("mitre.updateExport")}
             >
               {isUpdating ? (
                 <Loader2 className="w-3 h-3 animate-spin" />
@@ -328,12 +341,89 @@ export function MitreAttackMapping({
             <button
               onClick={() => setSearchQuery("")}
               className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+              aria-label="Clear search"
               title="Clear search"
             >
               <X className="w-4 h-4" />
             </button>
           )}
         </div>
+
+        {/* Auto-Suggested Techniques */}
+        {actionableSuggestions.length > 0 && (
+          <div className="border border-dashed border-accent/30 rounded-sm overflow-hidden">
+            <button
+              onClick={() => setSuggestionsExpanded(!suggestionsExpanded)}
+              className="w-full flex items-center gap-2 px-3 py-2 bg-accent/5 hover:bg-accent/10 transition-colors text-left"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-accent" />
+              <span className="text-xs font-mono text-accent font-medium">
+                {t("mitre.suggestions")}
+              </span>
+              <span className="text-[10px] font-mono text-accent/70 bg-accent/10 px-1.5 py-0.5 rounded">
+                {t("mitre.suggestionsCount").replace("{count}", String(actionableSuggestions.length))}
+              </span>
+              {suggestionsExpanded ? (
+                <ChevronDown className="w-3 h-3 text-accent/60 ml-auto" />
+              ) : (
+                <ChevronRight className="w-3 h-3 text-accent/60 ml-auto" />
+              )}
+            </button>
+            {suggestionsExpanded && (
+              <div className="px-3 py-2 space-y-1.5">
+                {actionableSuggestions.map((s) => (
+                  <div
+                    key={s.techniqueId}
+                    className="flex items-center gap-2 px-2 py-1.5 rounded-sm bg-accent/5 border border-accent/10 hover:border-accent/20 transition-colors group"
+                  >
+                    <span
+                      className={cn(
+                        "w-2 h-2 rounded-full shrink-0",
+                        s.confidence === "high"
+                          ? "bg-green-500"
+                          : s.confidence === "medium"
+                            ? "bg-amber-500"
+                            : "bg-gray-500",
+                      )}
+                      title={t(`mitre.confidence.${s.confidence}`)}
+                    />
+                    <span className="text-xs font-mono text-accent font-medium shrink-0">
+                      {s.techniqueId}
+                    </span>
+                    <span className="text-xs text-muted-foreground truncate flex-1">
+                      {s.techniqueName}
+                    </span>
+                    <span className="text-[10px] font-mono text-muted-foreground/60 shrink-0">
+                      {t(`mitre.source.${s.source}`)}
+                    </span>
+                    <button
+                      onClick={() => acceptSuggestion(s)}
+                      className="p-1 hover:bg-green-500/20 rounded transition-colors opacity-0 group-hover:opacity-100"
+                      aria-label={t("mitre.accept")}
+                      title={t("mitre.accept")}
+                    >
+                      <Check className="w-3 h-3 text-green-500" />
+                    </button>
+                    <button
+                      onClick={() => dismissSuggestion(s.techniqueId)}
+                      className="p-1 hover:bg-destructive/20 rounded transition-colors opacity-0 group-hover:opacity-100"
+                      aria-label={t("mitre.dismiss")}
+                      title={t("mitre.dismiss")}
+                    >
+                      <X className="w-3 h-3 text-destructive" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {behaviorData && actionableSuggestions.length === 0 && suggestions.length === 0 && (
+          <div className="text-[11px] text-muted-foreground/50 font-mono text-center py-1">
+            {t("mitre.noSuggestions")}
+          </div>
+        )}
 
       {/* Grid Layout - 3 columns per row */}
       {isLoading ? (
@@ -398,9 +488,24 @@ export function MitreAttackMapping({
         </div>
       )}
       </div>
+
+      {/* Graph Visualization Dialog */}
+      <Dialog open={graphOpen} onOpenChange={setGraphOpen}>
+        <DialogContent className="max-w-4xl h-[80vh] flex flex-col p-0">
+          <DialogHeader className="px-6 pt-6 pb-2">
+            <DialogTitle className="flex items-center gap-2 font-terminal tracking-wider">
+              <GitBranch className="w-4 h-4 text-primary" />
+              {t("graph.mitreTitle")}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="flex-1 min-h-0 px-6 pb-6">
+            <LazyGraphView data={graphData} className="h-full w-full border border-border rounded-md" />
+          </div>
+        </DialogContent>
+      </Dialog>
     </>
   );
-}
+});
 
 interface TacticColumnProps {
   tactic: TacticDisplay;
@@ -592,6 +697,7 @@ const TechniqueRow = memo(
             <button
               onClick={() => toggleTechExpand(technique.id)}
               className="p-0.5 text-muted-foreground hover:text-primary shrink-0"
+              aria-label={`${technique.subtechniques!.length} sub-techniques`}
               title={`${technique.subtechniques!.length} sub-techniques`}
             >
               {isSubExpanded ? (

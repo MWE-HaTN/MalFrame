@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { Package } from "lucide-react";
 import { cn, generateId } from "@/lib/utils";
 import { PortalDropdown, DropdownOption } from "@/components/ui/portal-dropdown";
@@ -17,7 +18,7 @@ const packedOptions: DropdownOption[] = [
   { value: "unknown", label: "Unknown", icon: <Package className="w-4 h-4 text-muted-foreground" /> },
 ];
 
-export function PackedDropdown({
+export const PackedDropdown = memo(function PackedDropdown({
   isPacked,
   onPackedChange,
   unpackLayers,
@@ -120,4 +121,4 @@ export function PackedDropdown({
       )}
     />
   );
-}
+});

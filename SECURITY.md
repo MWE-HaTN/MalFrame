@@ -11,7 +11,7 @@ Only the latest release receives security updates.
 
 ## Scope
 
-MalFrame is a **client-side only** web application — all data stays in your browser's localStorage. There is no backend server, no database, and no user accounts.
+MalFrame is a **client-side only** web application — all data stays in your browser (IndexedDB for case data, localStorage for settings and UI state). There is no backend server, no database, and no user accounts.
 
 **In scope:**
 - XSS vulnerabilities in the UI

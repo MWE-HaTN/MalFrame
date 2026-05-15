@@ -52,6 +52,12 @@ export const STORAGE_KEYS = {
   MITRE_CACHE: "mitre-attack-cache",
   MITRE_CACHE_EXPIRY: "mitre-attack-cache-expiry",
   MITRE_VERSION: "mitre-attack-version",
+
+  // ============================================
+  // MBC Version Check Cache
+  // ============================================
+  MBC_REMOTE_VERSION: "mbc-remote-version",
+  MBC_VERSION_CHECK_EXPIRY: "mbc-version-check-expiry",
   
   // ============================================
   // Collapsible Section States
@@ -79,6 +85,11 @@ export const STORAGE_KEYS = {
   // ============================================
   EXECUTION_STAGES: "execution-stages-expanded",
   UNPACKING_STAGES: "unpacking-stages-expanded",
+
+  // ============================================
+  // Export Reminder
+  // ============================================
+  LAST_EXPORT_PREFIX: "malframe:last-export:",
 } as const;
 
 // Type for storage keys

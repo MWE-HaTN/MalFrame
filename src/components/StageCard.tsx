@@ -58,6 +58,9 @@ export const StageCard = memo(function StageCard({
       <div
         className="flex items-center gap-2 px-3 py-2 cursor-pointer hover:bg-muted/30"
         onClick={onToggleExpand}
+        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onToggleExpand(); } }}
+        role="button"
+        tabIndex={0}
       >
         <div
           className="cursor-grab hover:text-primary"

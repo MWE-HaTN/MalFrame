@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, memo } from "react";
 import { Layers } from "lucide-react";
 import { FormField } from "@/components/FormField";
 import { AnimatedCollapse } from "@/components/ui/skeleton";
@@ -46,7 +46,7 @@ const createEmptyStage = (stageNumber: number): ExecutionStage => ({
   ioc: "",
 });
 
-export function ExecutionStages({ stages, onStagesChange }: ExecutionStagesProps) {
+export const ExecutionStages = memo(function ExecutionStages({ stages, onStagesChange }: ExecutionStagesProps) {
   const { t } = useLanguage();
   const { isExpanded, toggle, expand } = useExpandedState(STORAGE_KEYS.EXECUTION_STAGES);
   const [expandedStages, setExpandedStages] = useState<Set<string>>(new Set());
@@ -202,5 +202,5 @@ export function ExecutionStages({ stages, onStagesChange }: ExecutionStagesProps
       </AnimatedCollapse>
     </div>
   );
-}
+});
 

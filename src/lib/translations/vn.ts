@@ -1,9 +1,6 @@
 // Vietnamese translations
 export const vn: Record<string, string> = {
   // Header
-  "nav.home": "Trang chủ",
-  "nav.mia": "MIA Dashboard",
-  "nav.mre": "MRE Dashboard",
   "nav.tools": "Công cụ",
   "nav.settings": "Cài đặt",
   
@@ -15,10 +12,6 @@ export const vn: Record<string, string> = {
   "common.add": "Thêm",
   "common.delete": "Xóa",
   "common.select": "Chọn...",
-  "common.yes": "Có",
-  "common.no": "Không",
-  "common.unknown": "Không rõ",
-  "common.addEntry": "Thêm ghi chú",
   "common.notes": "Ghi chú",
   "common.cancel": "Hủy",
   
@@ -45,7 +38,6 @@ export const vn: Record<string, string> = {
   "export.confirmExport": "Xuất báo cáo",
   "export.saveImages": "Lưu ảnh vào máy",
   "export.saveImagesDesc": "Tải {count} ảnh về máy tính của bạn",
-  "export.imagesSaved": "Đã lưu ảnh thành công!",
   "export.clearDataTitle": "Xóa dữ liệu sau khi xuất?",
   "export.clearDataDescription": "Bạn có muốn xóa tất cả dữ liệu sau khi xuất? Điều này sẽ đặt lại dashboard cho trường hợp mới.",
   "export.yesClearData": "Có, Xóa tất cả",
@@ -59,7 +51,6 @@ export const vn: Record<string, string> = {
   
   // Import
   "import.success": "Nhập dữ liệu thành công!",
-  "import.error": "Tệp JSON không hợp lệ!",
   
   // Clear
   "clear.title": "Xóa tất cả dữ liệu",
@@ -161,8 +152,6 @@ export const vn: Record<string, string> = {
   "mre.staticAnalysis": "Phân tích Tĩnh",
   "mre.runtimeBehavior": "Hành vi Runtime",
   "mre.codeAnalysis": "Phân tích Mã",
-  "mre.deepDive": "Phân tích Sâu",
-  "mre.detection": "Phát hiện & Tổng kết",
   "mre.yaraSignature": "Chữ ký YARA",
   "mre.iocTable": "Bảng IOC",
   "mre.analyst": "Chuyên viên",
@@ -203,7 +192,6 @@ export const vn: Record<string, string> = {
   "mre.rootCause": "Nguyên nhân Gốc",
   "mre.attribution": "Quy kết",
   "mre.note": "Ghi chú",
-  "mre.yaraRule": "Quy tắc YARA",
   // MRE Placeholders
   "mre.placeholder.analyst": "Tên của bạn",
   "mre.placeholder.workstation": "VM Phân tích",
@@ -254,25 +242,18 @@ export const vn: Record<string, string> = {
   "mbc.selectedBehaviors": "Hành vi đã chọn",
   "mbc.clickToRemove": "Nhấn để xóa",
   "mbc.exportSuccess": "Đã xuất Ánh xạ Hành vi Mã độc thành công",
-  "mbc.upToDate": "Danh mục Hành vi Mã độc đã cập nhật",
-  "mbc.methods": "phương thức",
 
   // MITRE ATT&CK
   "mitre.description": "Click để chọn các kỹ thuật MITRE ATT&CK liên quan trong phân tích này.",
   "mitre.selected": "Kỹ thuật đã chọn:",
   "mitre.loading": "Đang tải dữ liệu MITRE...",
   "mitre.updating": "Đang cập nhật...",
-  "mitre.updateExport": "Cập nhật & Xuất",
+  "mitre.updateExport": "Cập nhật",
   "mitre.search": "Tìm kỹ thuật, ID...",
-  "mitre.exportTitle": "Xuất Dữ liệu MITRE ATT&CK",
-  "mitre.exportDescription": "Dữ liệu MITRE đã được cập nhật lên {version}. Bạn có muốn tải xuống dưới dạng JSON?",
-  "mitre.exportNo": "Không, cảm ơn",
-  "mitre.exportYes": "Tải JSON",
   "mitre.updateSuccess": "Đã cập nhật: {techCount} kỹ thuật, {subTechCount} sub-kỹ thuật",
   "mitre.updateFailed": "Không thể tải từ kho MITRE.",
   "mitre.alreadyExists": "{id} đã tồn tại",
   "mitre.clickToRemove": "Nhấn để xóa",
-  "mitre.viewOnMitre": "Xem {code} trên MITRE ATT&CK",
   
   // Timeline
   "timeline.time": "Thời gian",
@@ -290,7 +271,6 @@ export const vn: Record<string, string> = {
   "ioc.type": "Loại",
   "ioc.value": "Giá trị",
   "ioc.description": "Mô tả",
-  "ioc.add": "Thêm IOC",
   "ioc.empty": "Chưa có IOC. Thêm IOC đầu tiên ở trên.",
   "ioc.indicators": "chỉ báo",
   "ioc.copyAll": "Sao chép tất cả",
@@ -322,13 +302,8 @@ export const vn: Record<string, string> = {
   "settings.displayScaleDesc": "Điều chỉnh kích thước giao diện",
   "settings.restoreScale": "Khôi phục về 100%",
   "settings.about": "Giới thiệu",
-  "settings.aboutText": "Không gian làm việc local-first cho phân tích malware, kỹ thuật đảo ngược và phân loại. Không cloud. Không telemetry. Dữ liệu của bạn không rời khỏi hệ thống.",
   
   // Home
-  "home.badge": "Công cụ Phân tích Chuyên nghiệp",
-  "home.title": "MALWARE ANALYST",
-  "home.subtitle": "DASHBOARDS",
-  "home.description": "Tối ưu quy trình Phân tích Sự cố Mã độc (MIA) và Phân tích Mã độc Ngược (MRE) với dashboard chuyên nghiệp.",
   "home.miaCard": "Bảng điều khiển Phân tích Sự cố Mã độc",
   "home.miaCardDesc": "Điều tra mã độc theo sự cố với dòng thời gian, tương quan IOC và ánh xạ MITRE ATT&CK cho phản hồi có cấu trúc.",
   "home.mreCard": "Bảng điều khiển Phân tích Ngược Mã độc",
@@ -396,15 +371,6 @@ export const vn: Record<string, string> = {
   
   // Activity Tracker
   "activity.title": "Theo dõi Hoạt động",
-  "activity.today": "Hôm nay",
-  "activity.total": "Tổng cộng",
-  "activity.streak": "chuỗi ngày",
-  "activity.noActivity": "Chưa có hoạt động nào được ghi nhận",
-  "activity.startAnalyzing": "Bắt đầu phân tích để theo dõi tiến độ!",
-  "activity.resetConfirm": "Đặt lại Dữ liệu Hoạt động",
-  "activity.resetDesc": "Thao tác này sẽ xóa vĩnh viễn tất cả dữ liệu theo dõi hoạt động bao gồm thông tin chuỗi ngày. Không thể hoàn tác.",
-  "activity.resetButton": "Có, Đặt lại tất cả",
-  "activity.resetSuccess": "Đã đặt lại dữ liệu hoạt động!",
   "activity.export": "Xuất",
   "activity.import": "Nhập",
   "activity.exportSuccess": "Đã xuất dữ liệu hoạt động!",
@@ -438,103 +404,9 @@ export const vn: Record<string, string> = {
   "hint.mre.summary": "Cần có 4 phần: (1) Họ malware + độ tin cậy (vd. 'Likely AgentTesla — khớp với pattern exfil qua SMTP'). (2) Capability chính (stealer/loader/RAT/ransomware + nhắm vào gì). (3) Cơ chế persistence (registry run key / scheduled task / tên service). (4) Phương thức C2 (HTTP beacon interval, DNS tunneling, IP:port cứng trong code). Giữ dưới 200 từ.",
 
   // Notes
-  "notes.placeholder.name": "Tên...",
-  "notes.placeholder.write": "Viết ghi chú tại đây...",
-  "notes.placeholder.writeWithImages": "Viết ghi chú tại đây... (Ctrl+V để dán ảnh)",
   "notes.tooltip.addImage": "Thêm ảnh",
   "notes.tooltip.deleteEntry": "Xóa ghi chú",
-  "notes.emptyState": "Nhấn \"Thêm ghi chú\" để bắt đầu",
-  
-  // Runtime Behavior - Anti-Analysis
-  "runtime.antiAnalysis": "Chống Phân tích & Né tránh",
-  "runtime.antiAnalysis.timeBased": "Thực thi Dựa trên Thời gian",
-  "runtime.antiAnalysis.userActivity": "Kiểm tra Hoạt động Người dùng",
-  "runtime.antiAnalysis.antiDebugging": "Chống Gỡ lỗi",
-  "runtime.antiAnalysis.antiVM": "Chống VM",
-  "runtime.antiAnalysis.antiSandbox": "Chống Sandbox",
-  "runtime.antiAnalysis.antiEmulator": "Chống Trình giả lập",
-  "runtime.antiAnalysis.apiHammer": "API Hammering",
-  "runtime.antiAnalysis.note": "Ghi chú",
-  
-  // Runtime Behavior - Execution
-  "runtime.execution": "Hành vi Thực thi",
-  "runtime.execution.fileSystem": "Dấu vết Hệ thống File",
-  "runtime.execution.persistenceMethods": "Phương thức Persistence",
-  "runtime.execution.processCreation": "Tạo Tiến trình",
-  "runtime.execution.processInjection": "Injection Tiến trình",
-  "runtime.execution.selfDefense": "Tự vệ",
-  
-  // Runtime Behavior - Technical
-  "runtime.technical": "Runtime Kỹ thuật",
-  "runtime.technical.networkActivity": "Hoạt động Mạng",
-  "runtime.technical.memoryUsage": "Sử dụng Bộ nhớ",
-  "runtime.technical.synchronization": "Đồng bộ hóa",
-  
-  // Runtime Common
-  "runtime.detected": "Phát hiện",
-  "runtime.notDetected": "Không phát hiện",
-  "runtime.details": "Chi tiết",
-  "runtime.technique": "Kỹ thuật",
-  "runtime.description": "Mô tả",
-  "runtime.addEntry": "Thêm mục",
-  "runtime.noEntries": "Chưa có mục nào được thêm.",
-  
-  // Code Analysis - Static
-  "code.static": "Phân tích Mã Tĩnh",
-  "code.static.interestingFunctions": "Hàm Đáng chú ý",
-  "code.static.controlFlow": "Luồng Điều khiển",
-  "code.static.apiUsage": "Sử dụng API",
-  "code.static.obfuscation": "Làm rối",
-  "code.static.functionName": "Tên Hàm",
-  "code.static.address": "Địa chỉ",
-  "code.static.purpose": "Mục đích",
-  "code.static.flowType": "Loại Luồng",
-  "code.static.apiCall": "Lệnh API",
-  "code.static.context": "Ngữ cảnh",
-  "code.static.obfuscationType": "Loại Làm rối",
-  
-  // Code Analysis - Dynamic
-  "code.dynamic": "Phân tích Mã Động (Gỡ lỗi)",
-  "code.dynamic.breakpointEvents": "Sự kiện Breakpoint",
-  "code.dynamic.memoryRegions": "Vùng Bộ nhớ",
-  "code.dynamic.runtimeApiTrace": "Trace API Runtime",
-  "code.dynamic.registerStack": "Register / Stack",
-  "code.dynamic.breakpointAddress": "Địa chỉ Breakpoint",
-  "code.dynamic.event": "Sự kiện",
-  "code.dynamic.regionAddress": "Địa chỉ Vùng",
-  "code.dynamic.protection": "Bảo vệ",
-  "code.dynamic.content": "Nội dung",
-  "code.dynamic.apiName": "Tên API",
-  "code.dynamic.parameters": "Tham số",
-  "code.dynamic.returnValue": "Giá trị Trả về",
-  "code.dynamic.registerName": "Tên Register",
-  "code.dynamic.value": "Giá trị",
-  "code.dynamic.significance": "Ý nghĩa",
-  
-  // Code Analysis - Cryptography
-  "code.crypto": "Phân tích Mã hóa",
-  "code.crypto.algorithm": "Thuật toán Sử dụng",
-  "code.crypto.keyIv": "Key / IV",
-  "code.crypto.keyDerivation": "Dẫn xuất Key",
-  "code.crypto.cryptoApis": "API Mã hóa",
-  "code.crypto.protectedData": "Dữ liệu được Bảo vệ",
-  "code.crypto.analystHypothesis": "Giả thuyết Phân tích (Tại sao kỹ thuật này?)",
-  "code.crypto.noEntries": "Chưa có mục mã hóa nào được thêm.",
-  
-  // Code Analysis - Execution Stages
-  "code.stages": "Các Giai đoạn Thực thi",
-  "code.stages.entryCondition": "Điều kiện Vào",
-  "code.stages.entryPoint": "Điểm Vào",
-  "code.stages.purpose": "Mục đích",
-  "code.stages.actions": "Hành động",
-  "code.stages.exitCondition": "Điều kiện Thoát",
-  "code.stages.failureBehavior": "Hành vi Thất bại / Hủy",
-  "code.stages.transitionMethod": "Phương thức Chuyển đổi",
-  "code.stages.apisUsed": "API Sử dụng",
-  "code.stages.artifacts": "Artifacts",
-  "code.stages.ioc": "IOC",
-  "code.stages.noStages": "Chưa có giai đoạn thực thi nào được thêm.",
-  
+
   // Code Analysis - Micro-Behaviors
   "code.microBehaviors": "Vi Hành vi",
   "code.microBehaviors.description": "Chọn các vi hành vi quan sát được trong phân tích. Vi hành vi ghi nhận các hành động chi tiết.",
@@ -542,8 +414,6 @@ export const vn: Record<string, string> = {
   "code.microBehaviors.loading": "Đang tải vi hành vi...",
   "code.microBehaviors.selected": "đã chọn",
   "code.microBehaviors.selectedCount": "Đã chọn",
-  "code.microBehaviors.clickToRemove": "Nhấn để xóa",
-  "code.microBehaviors.viewOnGithub": "Xem trên GitHub",
   
   // Code Analysis Groups Headers
   "code.groups.static": "Phân tích Mã Tĩnh",
@@ -743,4 +613,153 @@ export const vn: Record<string, string> = {
   "cases.deleteConfirmDesc": "Toàn bộ dữ liệu trong \"{name}\" sẽ bị xóa vĩnh viễn. Không thể hoàn tác.",
   "cases.deleteConfirm": "Xóa",
   "cases.deleteCancel": "Hủy",
+
+  // Keyboard shortcuts
+  "shortcuts.title": "Phím tắt",
+  "shortcuts.global": "Chung",
+  "shortcuts.dashboard": "Dashboard",
+  "shortcuts.goToMia": "Đến MIA Dashboard",
+  "shortcuts.goToMre": "Đến MRE Dashboard",
+  "shortcuts.goToTools": "Đến Công cụ",
+  "shortcuts.goToSettings": "Đến Cài đặt",
+  "shortcuts.undo": "Hoàn tác",
+  "shortcuts.redo": "Làm lại",
+  "shortcuts.export": "Mở hộp thoại xuất",
+  "shortcuts.newCase": "Case mới",
+  "shortcuts.prevCase": "Case trước",
+  "shortcuts.nextCase": "Case sau",
+  "shortcuts.nextSection": "Phần tiếp theo",
+  "shortcuts.prevSection": "Phần trước",
+  "shortcuts.toggleAllSections": "Mở/đóng tất cả",
+  "shortcuts.showHelp": "Xem trợ giúp",
+  "shortcuts.commandPalette": "Bảng lệnh",
+  "shortcuts.searchCases": "Tìm kiếm qua các case",
+  "shortcuts.hint.commandPalette": "Bảng lệnh",
+  "shortcuts.hint.search": "Tìm kiếm",
+  "shortcuts.hint.allShortcuts": "Tất cả phím tắt",
+
+  // Cross-case Search
+  "search.title": "Tìm kiếm qua các Case",
+  "search.placeholder": "Tìm trong tất cả case...",
+  "search.noResults": "Không tìm thấy kết quả",
+  "search.loading": "Đang tìm kiếm...",
+  "search.showLess": "Thu gọn",
+  "search.moreMatches": "+{count} nữa",
+
+  // Command Palette
+  "commandPalette.title": "Bảng lệnh",
+  "commandPalette.search": "Nhập lệnh...",
+  "commandPalette.noResults": "Không tìm thấy lệnh",
+  "commandPalette.group.navigation": "Điều hướng",
+  "commandPalette.group.search": "Tìm kiếm",
+  "commandPalette.group.cases": "Case",
+  "commandPalette.group.export": "Xuất",
+  "commandPalette.group.help": "Trợ giúp",
+  "commandPalette.group.settings": "Cài đặt",
+  "commandPalette.actions.goToMia": "Đến MIA Dashboard",
+  "commandPalette.actions.goToMre": "Đến MRE Dashboard",
+  "commandPalette.actions.goToTools": "Đến Công cụ",
+  "commandPalette.actions.goToSettings": "Đến Cài đặt",
+  "commandPalette.actions.searchCases": "Tìm kiếm qua các case",
+  "commandPalette.actions.newCase": "Case mới",
+  "commandPalette.actions.prevCase": "Case trước",
+  "commandPalette.actions.nextCase": "Case sau",
+  "commandPalette.actions.export": "Xuất dữ liệu",
+  "commandPalette.actions.showHelp": "Phím tắt",
+  "commandPalette.actions.toggleLanguage": "Đổi ngôn ngữ (EN/VN)",
+  "commandPalette.actions.toggleTheme": "Đổi giao diện sáng/tối",
+  "commandPalette.actions.cycleScale": "Đổi tỷ lệ hiển thị",
+  "commandPalette.actions.trackToday": "Ghi nhận hoạt động hôm nay",
+
+  // Timeline View Toggle
+  "timeline.tableView": "Bảng",
+  "timeline.visualView": "Dòng thời gian",
+
+  // Case Templates
+  "template.title": "Chọn mẫu Case",
+  "template.description": "Chọn mẫu để điền sẵn dữ liệu cho case",
+  "template.blank": "Trống",
+  "template.blankDesc": "Bắt đầu với case trống",
+  "template.ransomware": "Ransomware",
+  "template.ransomwareDesc": "Điền sẵn impact, timeline, và khuyến nghị cho sự cố ransomware",
+  "template.phishing": "Phishing",
+  "template.phishingDesc": "Điền sẵn infection vector, kỹ thuật MITRE, và IOC cho case phishing",
+  "template.apt": "APT",
+  "template.aptDesc": "Điền sẵn kỹ thuật MITRE và impact cho mối đe dọa bền bỉ",
+  "template.infoStealer": "Info-Stealer",
+  "template.infoStealerDesc": "Điền sẵn tóm tắt và MBC mappings cho phần mềm đánh cắp thông tin",
+  "template.custom": "Tùy chỉnh",
+  "template.customDesc": "Bắt đầu với case trống, tùy chỉnh sau",
+
+  // Clipboard IOC Parser
+  "ioc.pasteExtract": "Dán & Trích xuất",
+  "ioc.pasteTitle": "Dán & Trích xuất IOC",
+  "ioc.pasteDescription": "Dán văn bản từ log, báo cáo sandbox, hoặc nguồn threat intel. IOC sẽ được tự động phát hiện và phân loại.",
+  "ioc.pastePlaceholder": "Dán văn bản vào đây...",
+  "ioc.parse": "Phân tích",
+  "ioc.parsedCount": "Tìm thấy {count} IOC",
+  "ioc.addAll": "Thêm tất cả",
+  "ioc.noIOCsFound": "Không phát hiện IOC trong văn bản",
+  "ioc.crossRef": "Tham chiếu chéo",
+
+  // IOC Cross-Reference
+  "iocXref.title": "Tham chiếu chéo IOC",
+  "iocXref.description": "Quét tất cả case để tìm IOC xuất hiện trong nhiều case. Giúp xác định mối liên kết giữa các cuộc điều tra khác nhau.",
+  "iocXref.scan": "Quét tất cả Case",
+  "iocXref.scanning": "Đang quét...",
+  "iocXref.noResults": "Không tìm thấy IOC chung giữa các case.",
+  "iocXref.foundIn": "Tìm thấy trong {count} case",
+
+  // Command Palette — IOC XRef
+  "commandPalette.actions.iocCrossRef": "Tham chiếu chéo IOC",
+  "commandPalette.group.tools": "Công cụ",
+
+  // Shortcuts — IOC XRef
+  "shortcuts.iocCrossRef": "Tham chiếu chéo IOC",
+
+  // Graph Visualization
+  "graph.visualize": "Trực quan hóa",
+  "graph.mitreTitle": "Bản đồ MITRE ATT&CK — Xem đồ thị",
+  "graph.noData": "Không có dữ liệu để trực quan hóa. Hãy chọn kỹ thuật trước.",
+
+  // MITRE Auto-Suggestion
+  "mitre.suggestions": "Kỹ thuật gợi ý tự động",
+  "mitre.suggestionsCount": "{count} gợi ý",
+  "mitre.accept": "Chấp nhận",
+  "mitre.dismiss": "Bỏ qua",
+  "mitre.source.processTree": "Cây tiến trình",
+  "mitre.source.fileSystem": "Hệ thống tệp",
+  "mitre.source.registry": "Registry",
+  "mitre.source.network": "Mạng",
+  "mitre.source.memory": "Bộ nhớ",
+  "mitre.source.system": "Hệ thống",
+  "mitre.source.antiDebug": "Anti-Debug",
+  "mitre.source.antiVM": "Anti-VM",
+  "mitre.source.persistence": "Persistence",
+  "mitre.source.injection": "Injection",
+  "mitre.source.artifacts": "Artifacts",
+  "mitre.confidence.high": "Cao",
+  "mitre.confidence.medium": "Trung bình",
+  "mitre.confidence.low": "Thấp",
+  "mitre.noSuggestions": "Không có gợi ý dựa trên dữ liệu hành vi hiện tại.",
+
+  // MBC Auto-Suggestion
+  "mbc.suggestions": "Hành vi gợi ý tự động",
+  "mbc.suggestionsCount": "{count} gợi ý",
+  "mbc.accept": "Chấp nhận",
+  "mbc.dismiss": "Bỏ qua",
+  "mbc.source.antiDebug": "Anti-Debug",
+  "mbc.source.antiVM": "Anti-VM",
+  "mbc.source.persistence": "Persistence",
+  "mbc.source.network": "Mạng",
+  "mbc.source.memory": "Bộ nhớ",
+  "mbc.source.injection": "Injection",
+  "mbc.source.artifacts": "Artifacts",
+  "mbc.confidence.high": "Cao",
+  "mbc.confidence.medium": "Trung bình",
+  "mbc.confidence.low": "Thấp",
+  "mbc.versionCheck.newAvailable": "Có phiên bản mới: {version}",
+  "mbc.versionCheck.upToDate": "MBC đã là phiên bản mới nhất",
+  "mbc.versionCheck.error": "Kiểm tra cập nhật thất bại",
+  "mbc.noSuggestions": "Không có gợi ý dựa trên dữ liệu hành vi runtime hiện tại.",
 };

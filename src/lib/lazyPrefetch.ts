@@ -39,5 +39,11 @@ export const prefetchStaticAnalysisCards = () =>
 export const prefetchSecurityPosture = () => 
   prefetchOnce('security', () => import("@/features/mre/components/SecurityPosture"));
 
-export const prefetchPESectionEntry = () => 
+export const prefetchPESectionEntry = () =>
   prefetchOnce('pe-section', () => import("@/features/mre/components/PESectionEntry"));
+
+export const prefetchYaraEditor = () =>
+  prefetchOnce('yara-editor', () => import("@/features/mre/components/YaraEditor"));
+
+export const prefetchGraphView = () =>
+  prefetchOnce('graph-view', () => import("@/components/GraphView"));

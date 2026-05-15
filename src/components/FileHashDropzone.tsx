@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, memo } from "react";
 import { Upload, Loader2 } from "lucide-react";
 import { cn, formatFileSize } from "@/lib/utils";
 import { toast } from "sonner";
@@ -77,7 +77,7 @@ interface FileHashDropzoneProps {
   className?: string;
 }
 
-export function FileHashDropzone({ onHashGenerated, onFileDropped, onMultipleFilesDropped, existingHashes = [], className }: FileHashDropzoneProps) {
+export const FileHashDropzone = memo(function FileHashDropzone({ onHashGenerated, onFileDropped, onMultipleFilesDropped, existingHashes = [], className }: FileHashDropzoneProps) {
   const { t } = useLanguage();
   const [isDragging, setIsDragging] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -273,5 +273,5 @@ export function FileHashDropzone({ onHashGenerated, onFileDropped, onMultipleFil
       </div>
     </div>
   );
-}
+});
 

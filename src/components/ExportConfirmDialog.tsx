@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, memo } from "react";
 import {
   Dialog,
   DialogContent,
@@ -28,7 +28,7 @@ interface ExportConfirmDialogProps {
 
 type DialogStep = "theme-check" | "confirm-export" | "clear-data" | "exporting";
 
-export function ExportConfirmDialog({
+export const ExportConfirmDialog = memo(function ExportConfirmDialog({
   open,
   onOpenChange,
   reportName,
@@ -367,6 +367,6 @@ export function ExportConfirmDialog({
       </DialogContent>
     </Dialog>
   );
-}
+});
 
 

@@ -118,6 +118,9 @@ export function Header() {
         {/* Logo - Easter Egg trigger */}
         <div
           onClick={handleLogoClick}
+          onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); navigate("/", { state: { skipDashboardRedirect: true, triggerTyping: true } }); } }}
+          role="button"
+          tabIndex={0}
           aria-label="Go to home"
           className="flex items-center gap-3 group cursor-pointer select-none"
         >

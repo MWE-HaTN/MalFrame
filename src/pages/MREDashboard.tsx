@@ -1,6 +1,8 @@
-import { useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { FileText, Cpu, Code, Activity, Database } from "lucide-react";
 import { Header } from "@/components/Header";
+import { formatExportError, hasData } from "@/lib/dashboardExportUtils";
+import { recordExportTime } from "@/lib/export/helpers";
 import {
   LazyMBCMapping,
   LazyIOCTable,
@@ -12,6 +14,7 @@ import {
   LazySecurityPosture,
   LazyPESectionEntry,
   LazyPackedDropdown,
+  LazyYaraEditor,
 } from "@/components/lazy";
 import { FormField } from "@/components/FormField";
 import { CollapsibleSection } from "@/components/CollapsibleSection";
@@ -23,9 +26,8 @@ import { BackgroundSection, SummarySection, OSINTLookupSection } from "@/feature
 
 import { useLanguage } from "@/hooks/useLanguage";
 import { useDashboardData } from "@/hooks/useDashboardData";
+import { useDashboardActions } from "@/hooks/useDashboardActions";
 import { useCaseManager } from "@/hooks/useCaseManager";
-import { useImportJSON } from "@/hooks/useImportJSON";
-import { useDashboardExport } from "@/hooks/useDashboardExport";
 import { lazyExportJSON, lazyExportREPDF, lazyExportREWord, preloadREPDF, preloadREWord } from "@/lib/lazyExport";
 import {
   prefetchMBCMapping,
@@ -37,7 +39,6 @@ import {
   prefetchPESectionEntry,
 } from "@/lib/lazyPrefetch";
 import { generateFileName } from "@/lib/fileNameUtils";
-import { clearAllSectionStates } from "@/lib/sectionState";
 import { toast } from "sonner";
 import { validateREData } from "@/lib/validationSchemas";
 
@@ -45,6 +46,8 @@ import type { REData } from "@/features/mre/types";
 import { MRE_STORAGE_KEY, initialREData, defaultSummary } from "@/features/mre/services/constants";
 import { transformForExport } from "@/features/mre/services/transform";
 import { migrateREData } from "@/features/mre/services/migrate";
+import { CaseTemplateDialog } from "@/components/CaseTemplateDialog";
+import { getTemplatesForType } from "@/lib/caseTemplates";
 
 // ─────────────────────────────────────────────
 // Outer shell: case manager + page chrome
@@ -52,6 +55,22 @@ import { migrateREData } from "@/features/mre/services/migrate";
 
 export default function MREDashboard() {
   const caseManager = useCaseManager("mre", MRE_STORAGE_KEY);
+
+  useEffect(() => { document.title = "MRE - MalFrame"; }, []);
+  const [templateDialogOpen, setTemplateDialogOpen] = useState(false);
+
+  const handleTemplateSelect = useCallback(
+    async (templateId: string) => {
+      await caseManager.createCase();
+      const template = getTemplatesForType("mre").find((t) => t.id === templateId);
+      if (template?.fillMRE) {
+        const filled = template.fillMRE({ ...initialREData });
+        const { dbSet } = await import("@/lib/db");
+        await dbSet("dashboard", caseManager.activeStorageKey, filled);
+      }
+    },
+    [caseManager],
+  );
 
   return (
     <div className="min-h-screen bg-background cyber-grid flex flex-col">
@@ -65,6 +84,7 @@ export default function MREDashboard() {
           switchCase={caseManager.switchCase}
           deleteCase={caseManager.deleteCase}
           renameCase={caseManager.renameCase}
+          onNewCaseClick={() => setTemplateDialogOpen(true)}
         />
         {caseManager.activeCaseId && (
           <MREDashboardBody
@@ -73,6 +93,13 @@ export default function MREDashboard() {
           />
         )}
       </main>
+
+      <CaseTemplateDialog
+        open={templateDialogOpen}
+        onOpenChange={setTemplateDialogOpen}
+        caseType="mre"
+        onSelect={handleTemplateSelect}
+      />
     </div>
   );
 }
@@ -88,14 +115,14 @@ interface MREDashboardBodyProps {
 
 function MREDashboardBody({ storageKey }: MREDashboardBodyProps) {
   const { t } = useLanguage();
-  const { data, setData, clearData, forceCloseCounter } = useDashboardData<REData>({
+  const { data, setData, clearData, undo, redo, forceCloseCounter, saveStatus } = useDashboardData<REData>({
     storageKey,
     initialData: initialREData,
     migrateData: migrateREData,
     clearSuccessMessage: t("clear.success"),
   });
 
-  const handleHashGenerated = (hash: string, fileName: string, fileSize: number) => {
+  const handleHashGenerated = useCallback((hash: string, fileName: string, fileSize: number) => {
     setData((prev) => ({
       ...prev,
       background: { ...prev.background, fileName },
@@ -105,24 +132,11 @@ function MREDashboardBody({ storageKey }: MREDashboardBodyProps) {
         fileSize: `${(fileSize / 1024).toFixed(2)} KB`,
       },
     }));
-  };
+  }, [setData]);
 
-  const formatExportError = (err: unknown) => {
-    if (err instanceof Error) return err.message;
-    return String(err);
-  };
-
-  const hasData = <T extends object>(obj: T, excludeKeys = ['id', 'timestamp', 'images']): boolean =>
-    Object.entries(obj).some(([key, value]) => {
-      if (excludeKeys.includes(key)) return false;
-      if (Array.isArray(value)) return value.length > 0;
-      if (typeof value === 'boolean') return false;
-      return Boolean(value);
-    });
-
-  const handleExportJSON = async () => {
+  // MRE-specific export handlers
+  const handleExportJSON = useCallback(async () => {
     try {
-
       const cleanedData: REData = {
         ...data,
         staticAnalysis: {
@@ -176,76 +190,75 @@ function MREDashboardBody({ storageKey }: MREDashboardBodyProps) {
           summary: data.detection?.summary || defaultSummary,
         },
       };
-
       const exportData = transformForExport(cleanedData);
       await lazyExportJSON(exportData, data.background.analyst, data.background.fileName, data.staticAnalysis.sha256, "MRE");
       toast.success(t("export.success.json"));
+      recordExportTime(storageKey);
     } catch (err) {
       toast.error(`${t("export.error")}: ${formatExportError(err)}`);
     }
-  };
+  }, [data, storageKey, t]);
 
-  const handleExportPDF = async () => {
+  const handleExportPDF = useCallback(async () => {
     try {
       await lazyExportREPDF(data, data.background.analyst, data.background.fileName, data.staticAnalysis.sha256);
       toast.success(t("export.success.pdf"));
+      recordExportTime(storageKey);
     } catch (err) {
       toast.error(`${t("export.error")}: ${formatExportError(err)}`);
     }
-  };
+  }, [data, storageKey, t]);
 
-  const handleExportWord = async () => {
+  const handleExportWord = useCallback(async () => {
     try {
       await lazyExportREWord(data, data.background.analyst, data.background.fileName, data.staticAnalysis.sha256);
       toast.success(t("export.success.word"));
+      recordExportTime(storageKey);
     } catch (err) {
       toast.error(`${t("export.error")}: ${formatExportError(err)}`);
     }
-  };
+  }, [data, storageKey, t]);
 
-  const { importJSON } = useImportJSON({
-    validate: validateREData,
-    onSuccess: (importedData) => {
-      clearAllSectionStates();
-      const normalizedData = migrateREData(importedData as Record<string, unknown>);
-      setData(normalizedData);
-    },
-    successMessage: t("import.success"),
-  });
-
+  // Shared dashboard actions (export dialog, import, undo/redo shortcuts, section nav)
   const {
+    importJSON,
     exportDialogOpen,
     setExportDialogOpen,
     pendingExportType,
-    handleExportJSONClick,
-    handleExportPDFClick,
-    handleExportWordClick,
-  } = useDashboardExport({
-    jsonNeedsDialog: false,
-    onExportJSONDirect: handleExportJSON,
+    handleConfirmExport,
+    exportOptions,
+    reportName,
+  } = useDashboardActions({
+    data, setData, clearData, undo, redo,
+    exportJSON: handleExportJSON,
+    exportPDF: handleExportPDF,
+    exportWord: handleExportWord,
+    validateImport: validateREData,
+    migrateImport: migrateREData,
+    preloadPDF: preloadREPDF,
+    preloadWord: preloadREWord,
+    generateReportName: (ext) => generateFileName(data.background.analyst, data.background.fileName, data.staticAnalysis.sha256, ext),
   });
 
-  useEffect(() => {
-    if (!exportDialogOpen) return;
-    if (pendingExportType === "pdf") preloadREPDF();
-    if (pendingExportType === "word") preloadREWord();
-  }, [exportDialogOpen, pendingExportType]);
-
-  const getReportName = () => {
-    const ext = pendingExportType === "pdf" ? "pdf" : pendingExportType === "word" ? "docx" : "json";
-    return generateFileName(data.background.analyst, data.background.fileName, data.staticAnalysis.sha256, ext);
-  };
-
-  const handleConfirmExport = async (_: boolean, clearDataAfter: boolean) => {
-    if (pendingExportType === "pdf") {
-      await handleExportPDF();
-    } else {
-      await handleExportWord();
-    }
-    if (clearDataAfter) {
-      clearData();
-    }
-  };
+  // Memoized onChange handlers for section components
+  const handleBackgroundChange = useCallback((background: REData["background"]) => setData((p) => ({ ...p, background })), [setData]);
+  const handleStaticAnalysisPatch = useCallback((patch: Partial<REData["staticAnalysis"]>) => setData((p) => ({ ...p, staticAnalysis: { ...p.staticAnalysis, ...patch } })), [setData]);
+  const handleSignatureChange = useCallback((value: string) => setData((p) => ({ ...p, staticAnalysis: { ...p.staticAnalysis, signatureStatus: value } })), [setData]);
+  const handleMitigationsChange = useCallback((mitigations: string[]) => setData((p) => ({ ...p, staticAnalysis: { ...p.staticAnalysis, dllMitigations: mitigations } })), [setData]);
+  const handlePESectionsChange = useCallback((entries: REData["staticAnalysis"]["peSections"]) => setData((p) => ({ ...p, staticAnalysis: { ...p.staticAnalysis, peSections: entries } })), [setData]);
+  const handlePackedChange = useCallback((v: string) => setData((p) => ({ ...p, staticAnalysis: { ...p.staticAnalysis, isPacked: v } })), [setData]);
+  const handleUnpackLayersChange = useCallback((layers: REData["staticAnalysis"]["unpackLayers"]) => setData((p) => ({ ...p, staticAnalysis: { ...p.staticAnalysis, unpackLayers: layers } })), [setData]);
+  const handlePackerSuspectedChange = useCallback((v: string) => setData((p) => ({ ...p, staticAnalysis: { ...p.staticAnalysis, packerSuspected: v } })), [setData]);
+  const handleStringsDetectionChange = useCallback((v: string) => setData((p) => ({ ...p, staticAnalysis: { ...p.staticAnalysis, stringsDetection: v } })), [setData]);
+  const handleImportsExportsChange = useCallback((v: string) => setData((p) => ({ ...p, staticAnalysis: { ...p.staticAnalysis, importsExports: v } })), [setData]);
+  const handleRuntimeBehaviorChange = useCallback((runtimeBehavior: REData["codeBehavior"]["runtimeBehavior"]) => setData((p) => ({ ...p, codeBehavior: { ...p.codeBehavior, runtimeBehavior } })), [setData]);
+  const handleCodeAnalysisChange = useCallback((codeAnalysis: REData["codeBehavior"]["codeAnalysis"]) => setData((p) => ({ ...p, codeBehavior: { ...p.codeBehavior, codeAnalysis } })), [setData]);
+  const handleDeepDiveChange = useCallback((deepDive: REData["deepDive"]) => setData((p) => ({ ...p, deepDive })), [setData]);
+  const handleClearPacked = useCallback(() => setData((p) => ({ ...p, staticAnalysis: { ...p.staticAnalysis, isPacked: "" } })), [setData]);
+  const handleMBCMappingChange = useCallback((mapping: REData["detection"]["mbcMapping"]) => setData((p) => ({ ...p, detection: { ...p.detection, mbcMapping: mapping } })), [setData]);
+  const handleYaraChange = useCallback((v: string) => setData((p) => ({ ...p, detection: { ...p.detection, yaraSignature: v } })), [setData]);
+  const handleIOCsChange = useCallback((iocs: REData["detection"]["iocs"]) => setData((p) => ({ ...p, detection: { ...p.detection, iocs } })), [setData]);
+  const handleSummaryChange = useCallback((summary: REData["detection"]["summary"]) => setData((p) => ({ ...p, detection: { ...p.detection, summary } })), [setData]);
 
   return (
     <>
@@ -257,11 +270,8 @@ function MREDashboardBody({ storageKey }: MREDashboardBodyProps) {
         onClear={clearData}
         importLabel={t("common.import")}
         exportLabel={t("common.export")}
-        exportOptions={[
-          { type: "json", label: t("export.json"), onClick: handleExportJSONClick },
-          { type: "pdf", label: t("export.pdf"), onClick: handleExportPDFClick },
-          { type: "word", label: t("export.word"), onClick: handleExportWordClick },
-        ]}
+        exportOptions={exportOptions}
+        saveStatus={saveStatus}
       />
 
       {/* File Drop Zone */}
@@ -270,7 +280,7 @@ function MREDashboardBody({ storageKey }: MREDashboardBodyProps) {
       {/* Background Section */}
       <BackgroundSection
         data={data.background}
-        onChange={(background) => setData((p) => ({ ...p, background }))}
+        onChange={handleBackgroundChange}
         forceCloseCounter={forceCloseCounter}
       />
 
@@ -298,7 +308,7 @@ function MREDashboardBody({ storageKey }: MREDashboardBodyProps) {
             anyRun: data.staticAnalysis.anyRun,
             tiNotes: data.staticAnalysis.tiNotes,
           }}
-          onChange={(patch) => setData((p) => ({ ...p, staticAnalysis: { ...p.staticAnalysis, ...patch } }))}
+          onChange={handleStaticAnalysisPatch}
         />
 
         <LazyStaticAnalysisCards
@@ -316,35 +326,35 @@ function MREDashboardBody({ storageKey }: MREDashboardBodyProps) {
             characteristics: data.staticAnalysis.characteristics,
             subsystem: data.staticAnalysis.subsystem,
           }}
-          onChange={(patch) => setData((p) => ({ ...p, staticAnalysis: { ...p.staticAnalysis, ...patch } }))}
+          onChange={handleStaticAnalysisPatch}
         />
 
         <LazySecurityPosture
           signatureStatus={data.staticAnalysis.signatureStatus}
           dllMitigations={data.staticAnalysis.dllMitigations}
-          onSignatureChange={(value) => setData((p) => ({ ...p, staticAnalysis: { ...p.staticAnalysis, signatureStatus: value } }))}
-          onMitigationsChange={(mitigations) => setData((p) => ({ ...p, staticAnalysis: { ...p.staticAnalysis, dllMitigations: mitigations } }))}
+          onSignatureChange={handleSignatureChange}
+          onMitigationsChange={handleMitigationsChange}
         />
 
         <div className="space-y-2 mb-4">
           <label className="label-cyber block">{t("mre.peSections")}</label>
           <LazyPESectionEntry
             entries={data.staticAnalysis.peSections || []}
-            onEntriesChange={(entries) => setData((p) => ({ ...p, staticAnalysis: { ...p.staticAnalysis, peSections: entries } }))}
+            onEntriesChange={handlePESectionsChange}
           />
         </div>
 
         <div className={`grid grid-cols-1 ${data.staticAnalysis.isPacked === "yes" ? "lg:grid-cols-2" : ""} gap-4 mb-4`}>
           <LazyPackedDropdown
             isPacked={data.staticAnalysis.isPacked}
-            onPackedChange={(v) => setData((p) => ({ ...p, staticAnalysis: { ...p.staticAnalysis, isPacked: v } }))}
+            onPackedChange={handlePackedChange}
             unpackLayers={data.staticAnalysis.unpackLayers}
-            onUnpackLayersChange={(layers) => setData((p) => ({ ...p, staticAnalysis: { ...p.staticAnalysis, unpackLayers: layers } }))}
+            onUnpackLayersChange={handleUnpackLayersChange}
           />
           {data.staticAnalysis.isPacked === "yes" && (
             <PackerSuspectedDropdown
               value={data.staticAnalysis.packerSuspected}
-              onChange={(v) => setData((p) => ({ ...p, staticAnalysis: { ...p.staticAnalysis, packerSuspected: v } }))}
+              onChange={handlePackerSuspectedChange}
             />
           )}
         </div>
@@ -355,7 +365,7 @@ function MREDashboardBody({ storageKey }: MREDashboardBodyProps) {
             type="textarea"
             rows={3}
             value={data.staticAnalysis.stringsDetection}
-            onChange={(v) => setData((p) => ({ ...p, staticAnalysis: { ...p.staticAnalysis, stringsDetection: v } }))}
+            onChange={handleStringsDetectionChange}
             placeholder={t("mre.placeholder.stringsDetection")}
           />
           <FormField
@@ -363,7 +373,7 @@ function MREDashboardBody({ storageKey }: MREDashboardBodyProps) {
             type="textarea"
             rows={3}
             value={data.staticAnalysis.importsExports}
-            onChange={(v) => setData((p) => ({ ...p, staticAnalysis: { ...p.staticAnalysis, importsExports: v } }))}
+            onChange={handleImportsExportsChange}
             placeholder={t("mre.placeholder.importsExports")}
           />
         </div>
@@ -383,7 +393,7 @@ function MREDashboardBody({ storageKey }: MREDashboardBodyProps) {
       >
         <LazyRuntimeBehavior
           data={data.codeBehavior.runtimeBehavior}
-          onChange={(runtimeBehavior) => setData((p) => ({ ...p, codeBehavior: { ...p.codeBehavior, runtimeBehavior } }))}
+          onChange={handleRuntimeBehaviorChange}
         />
       </CollapsibleSection>
 
@@ -401,16 +411,13 @@ function MREDashboardBody({ storageKey }: MREDashboardBodyProps) {
       >
         <LazyCodeAnalysisGroups
           codeData={data.codeBehavior.codeAnalysis}
-          onCodeDataChange={(codeAnalysis) => setData((p) => ({
-            ...p,
-            codeBehavior: { ...p.codeBehavior, codeAnalysis }
-          }))}
+          onCodeDataChange={handleCodeAnalysisChange}
           deepDiveData={data.deepDive}
-          onDeepDiveDataChange={(deepDive) => setData((p) => ({ ...p, deepDive }))}
+          onDeepDiveDataChange={handleDeepDiveChange}
           isPacked={data.staticAnalysis.isPacked}
           unpackLayers={data.staticAnalysis.unpackLayers}
-          onUnpackLayersChange={(layers) => setData((p) => ({ ...p, staticAnalysis: { ...p.staticAnalysis, unpackLayers: layers } }))}
-          onClearPacked={() => setData((p) => ({ ...p, staticAnalysis: { ...p.staticAnalysis, isPacked: "" } }))}
+          onUnpackLayersChange={handleUnpackLayersChange}
+          onClearPacked={handleClearPacked}
         />
       </CollapsibleSection>
 
@@ -428,7 +435,8 @@ function MREDashboardBody({ storageKey }: MREDashboardBodyProps) {
       >
         <LazyMBCMapping
           mapping={data.detection?.mbcMapping ?? []}
-          onMappingChange={(mapping) => setData((p) => ({ ...p, detection: { ...p.detection, mbcMapping: mapping } }))}
+          onMappingChange={handleMBCMappingChange}
+          runtimeBehavior={data.codeBehavior?.runtimeBehavior}
         />
       </CollapsibleSection>
 
@@ -443,14 +451,9 @@ function MREDashboardBody({ storageKey }: MREDashboardBodyProps) {
         skeletonRows={4}
         hint={t("hint.mre.yara")}
       >
-        <FormField
-          label={t("mre.yaraRule")}
-          type="textarea"
-          rows={12}
+        <LazyYaraEditor
           value={data.detection?.yaraSignature || ""}
-          onChange={(v) => setData((p) => ({ ...p, detection: { ...p.detection, yaraSignature: v } }))}
-          placeholder={`rule MalwareName {\n    meta:\n        author = "Your name"\n        description = "Detection for..."\n    strings:\n        $s1 = "string1"\n        $s2 = { 00 11 22 33 }\n    condition:\n        any of them\n}`}
-          mono
+          onChange={handleYaraChange}
         />
       </CollapsibleSection>
 
@@ -468,14 +471,14 @@ function MREDashboardBody({ storageKey }: MREDashboardBodyProps) {
       >
         <LazyIOCTable
           iocs={data.detection?.iocs || []}
-          onIOCsChange={(iocs) => setData((p) => ({ ...p, detection: { ...p.detection, iocs } }))}
+          onIOCsChange={handleIOCsChange}
         />
       </CollapsibleSection>
 
       {/* Summary */}
       <SummarySection
         data={data.detection.summary}
-        onChange={(summary) => setData((p) => ({ ...p, detection: { ...p.detection, summary } }))}
+        onChange={handleSummaryChange}
         forceCloseCounter={forceCloseCounter}
       />
 
@@ -483,7 +486,7 @@ function MREDashboardBody({ storageKey }: MREDashboardBodyProps) {
       <LazyExportConfirmDialog
         open={exportDialogOpen}
         onOpenChange={setExportDialogOpen}
-        reportName={getReportName()}
+        reportName={reportName}
         exportType={pendingExportType}
         onConfirmExport={handleConfirmExport}
         hasImages={false}

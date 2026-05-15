@@ -23,3 +23,9 @@ export { LazyPackedDropdown } from "./LazyPackedDropdown";
 // Shared components
 export { LazyFileHashDropzone } from "./LazyFileHashDropzone";
 export { LazyExportConfirmDialog } from "./LazyExportConfirmDialog";
+
+// YARA Editor
+export { LazyYaraEditor } from "./LazyYaraEditor";
+
+// Graph Visualization
+export { LazyGraphView } from "./LazyGraphView";

@@ -170,6 +170,7 @@ export function UnpackingLayers({
                           removeLayer(layer.id);
                         }}
                         className="p-1.5 rounded-sm text-destructive/70 hover:text-destructive hover:bg-destructive/10 transition-colors"
+                        aria-label={t("code.unpacking.removeLayer")}
                         title={t("code.unpacking.removeLayer")}
                       >
                         <Trash2 className="w-4 h-4" />

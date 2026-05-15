@@ -20,7 +20,7 @@ export interface UseCaseManagerReturn {
   cases: CaseMeta[];
   activeCaseId: string;
   activeStorageKey: string;
-  createCase: () => Promise<void>;
+  createCase: (templateId?: string) => Promise<void>;
   switchCase: (id: string) => void;
   deleteCase: (id: string) => Promise<void>;
   renameCase: (id: string, name: string) => Promise<void>;

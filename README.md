@@ -17,9 +17,11 @@ A professional web application for **Malware Incident Analysis (MIA)** and **Mal
 - [Quick Start](#-quick-start)
 - [Features Overview](#-features-overview)
 - [Dashboard Usage](#-dashboard-usage)
+- [New Features](#-new-features)
 - [Multi-Case Management](#-multi-case-management)
 - [Data Management](#-data-management)
 - [Export Options](#-export-options)
+- [Keyboard Shortcuts](#-keyboard-shortcuts)
 - [Development Scripts](#-development-scripts)
 - [Tech Stack](#-tech-stack)
 - [Project Structure](#-project-structure)
@@ -88,6 +90,20 @@ npm run preview
 | Dark/Light Theme | ✅ | ✅ | Toggle between themes |
 | EN/VN Language | ✅ | ✅ | Bilingual support |
 | Activity Tracker | ✅ | ✅ | GitHub-style analysis heatmap |
+| PWA | ✅ | ✅ | Installable, service worker with update prompt |
+| Keyboard Shortcuts | ✅ | ✅ | `?` to view all shortcuts |
+| Command Palette | ✅ | ✅ | `Ctrl+K` — navigation, actions, settings, export |
+| Cross-case Search | ✅ | ✅ | `Ctrl+Shift+X` — search across all cases |
+| Clipboard IOC Parser | ✅ | ✅ | Paste raw text → auto-detect IOCs (hashes, IPs, URLs, domains) |
+| Timeline Visualization | ✅ | ❌ | Toggle table/timeline view for attack events |
+| YARA Rule Editor | ❌ | ✅ | CodeMirror 6 with YARA syntax highlighting |
+| Case Templates | ✅ | ✅ | Pre-fill cases: Ransomware, Phishing, APT, Info-Stealer |
+| IOC Cross-Reference | ✅ | ✅ | `Ctrl+Shift+I` — find shared IOCs across cases |
+| Graph Visualization | ✅ | ❌ | Interactive MITRE ATT&CK mapping graph (ReactFlow) |
+| Auto MITRE Suggestion | ✅ | ❌ | Behavior-based technique suggestions with confidence levels |
+| Auto MBC Suggestion | ❌ | ✅ | Runtime behavior-based MBC behavior suggestions |
+| Export Reminder | ✅ | ✅ | Toast warning when data not exported in 7+ days |
+| Shortcut Hint Bar | ✅ | ✅ | Fixed icon buttons in bottom-left corner |
 
 ---
 
@@ -140,6 +156,99 @@ FLARE-VM analysis tools reference: **33 categories, 240+ tools**, searchable, wi
 
 ---
 
+## New Features
+
+### Clipboard IOC Parser
+
+**Where**: IOC Table section (both MIA and MRE dashboards)
+
+1. Open the IOC Table section in any dashboard
+2. Click the **Paste & Extract** button (clipboard icon) next to "Copy All"
+3. Paste raw text from logs, sandbox reports, or threat intel feeds into the textarea
+4. Click **Parse** — IOCs are auto-detected and classified (SHA256/SHA1/MD5, IPv4/IPv6, URLs, domains, emails, file paths, mutexes)
+5. Review the parsed results in the preview table, remove any false positives
+6. Click **Add All** to append them to your IOC table
+
+### Timeline Visualization
+
+**Where**: Attack Timeline section (MIA dashboard only)
+
+1. Open the Attack Timeline section
+2. You'll see two toggle buttons in the header: **Table** (default) and **Timeline**
+3. Click **Timeline** to switch to the vertical timeline view
+4. Events are displayed as cards with severity-colored dots (info/warning/critical)
+5. Hover over an event to reveal the delete button
+6. The add form works in both views — switch freely between them
+
+### YARA Rule Editor
+
+**Where**: Detection > YARA section (MRE dashboard only)
+
+1. Open the MRE Dashboard and navigate to the Detection section
+2. The YARA editor replaces the plain textarea with a full code editor
+3. Syntax highlighting is automatic: keywords, `$variables`, hex strings `{ }`, regex `/ /`, meta keys, comments
+4. Write your YARA rules directly — the editor supports standard YARA syntax
+5. Data persists with your case on save
+
+### Case Templates
+
+**Where**: Both MIA and MRE dashboards
+
+1. Click the **+** (New Case) button in the case tab bar
+2. A template dialog appears with options:
+   - **Blank** — empty case
+   - **Ransomware** — pre-fills impact, timeline, recommendations (MIA)
+   - **Phishing** — pre-fills infection vector, MITRE T1566 (MIA)
+   - **APT** — pre-fills MITRE techniques T1071/T1059/T1055 (MIA)
+   - **Info-Stealer** — pre-fills summary and MBC mappings (MRE)
+   - **Custom** — blank case for manual setup
+3. Select a template — the case is created with pre-filled data
+4. Edit the pre-filled values as needed for your investigation
+
+### IOC Cross-Reference
+
+**Where**: IOC Table section (both dashboards), Command Palette, or keyboard shortcut
+
+1. **Via IOC Table**: Open the IOC Table section in MIA or MRE dashboard → click **Cross-Reference** button in the header
+2. **Via Command Palette**: Press `Ctrl+K` → type "ioc" → select "IOC Cross-Reference"
+3. **Via keyboard**: Press `Ctrl+Shift+I`
+4. Click **Scan All Cases** to analyze all MIA and MRE cases
+5. Results show IOCs that appear in 2+ cases — click any case name to navigate to it
+
+### Graph Visualization
+
+**Where**: MITRE ATT&CK section (MIA dashboard only)
+
+1. Open the MITRE ATT&CK Mapping section in the MIA dashboard
+2. Select techniques by clicking them in the tactic columns
+3. Once you have selected techniques, the **Visualize** button (git-branch icon) becomes active
+4. Click **Visualize** to open the interactive graph dialog
+5. The graph shows tactic nodes with their selected techniques as children
+6. Use mouse to pan/zoom, MiniMap for overview, and fit-view controls
+
+### Auto MITRE Suggestion
+
+**Where**: MITRE ATT&CK Mapping section (MIA dashboard)
+
+1. Enter behavior data in the Behavior Analysis section (process tree, file system, registry, network, memory, system changes)
+2. Open the MITRE ATT&CK Mapping section — suggested techniques appear automatically above the tactic grid
+3. Each suggestion shows technique ID, name, source field, and confidence level (green/amber/gray dot)
+4. Hover over a suggestion to reveal **Accept** (adds to mapping) and **Dismiss** (hides from list) buttons
+5. Suggestions already in your mapping are filtered out automatically
+6. **Force Refresh** button bypasses all caches and fetches fresh MITRE data from GitHub
+
+### Auto MBC Suggestion
+
+**Where**: MBC Mapping section (MRE dashboard)
+
+1. Add runtime behavior entries (anti-debug, anti-VM, persistence, network, memory, injection, artifacts)
+2. Open the MBC Mapping section — suggested behaviors appear automatically above the objectives grid
+3. Each suggestion shows behavior ID, name, objective, source, and confidence level
+4. Accept or dismiss suggestions as needed
+5. **Update** button checks GitHub for newer MBC versions and shows a link if available
+
+---
+
 ## Multi-Case Management
 
 Both dashboards support multiple independent cases stored concurrently. A tab bar at the top of each dashboard lets you switch, rename, create, and delete cases.
@@ -173,6 +282,10 @@ All data saves automatically to **IndexedDB** with a short debounce. No manual s
 
 > Images are embedded as **base64 strings** directly in the case JSON — no separate image storage needed. This makes each JSON export fully self-contained.
 
+### Offline Capability
+
+The app registers a service worker (via vite-plugin-pwa + Workbox) that caches all static assets. Once loaded, the app works without an internet connection — dashboards, export, import, search, tools reference are all available offline. The only exception is the initial MITRE ATT&CK data fetch, which requires one online load and is then cached for 24 hours in localStorage.
+
 ### Privacy
 
 - **100% Local** — all data stays in your browser
@@ -202,6 +315,28 @@ Examples:
 ### Import
 
 Click **Import JSON** on the dashboard header. The imported data is validated against the current schema and backward-compatible with older export versions.
+
+---
+
+## Keyboard Shortcuts
+
+Press `?` anywhere to view all shortcuts. Key bindings:
+
+| Shortcut | Action |
+|----------|--------|
+| `Ctrl+K` | Open command palette |
+| `Ctrl+Shift+X` | Search across all cases |
+| `Ctrl+Shift+I` | IOC Cross-Reference — find shared IOCs across cases |
+| `Ctrl+Shift+N` | New case |
+| `Ctrl+Shift+←` / `→` | Switch to previous / next case |
+| `Ctrl+Shift+E` | Export data |
+| `Ctrl+Shift+1` | Go to MIA dashboard |
+| `Ctrl+Shift+2` | Go to MRE dashboard |
+| `Ctrl+Shift+T` | Go to Tools |
+| `Ctrl+Shift+S` | Go to Settings |
+| `?` | Show keyboard shortcuts dialog |
+
+> Shortcuts are disabled while typing in text fields (except `Ctrl+K` which always works).
 
 ---
 
@@ -238,6 +373,8 @@ Click **Import JSON** on the dashboard header. The imported data is validated ag
 | [Lucide React](https://lucide.dev/) | Icons |
 | [Sonner](https://sonner.emilkowal.ski/) | Toast notifications |
 | [TanStack Virtual](https://tanstack.com/virtual) | Virtual scrolling for IOC table |
+| [CodeMirror 6](https://codemirror.net/) | YARA rule editor with syntax highlighting |
+| [React Flow](https://reactflow.dev/) | MITRE ATT&CK graph visualization |
 
 ### Export
 
@@ -252,6 +389,8 @@ Click **Import JSON** on the dashboard header. The imported data is validated ag
 |------------|---------|
 | [@vitejs/plugin-basic-ssl](https://github.com/vitejs/vite-plugin-basic-ssl) | Self-signed HTTPS for dev |
 | [vite-plugin-compression](https://github.com/vbenjs/vite-plugin-compression) | Gzip/Brotli compression (production) |
+| [vite-plugin-pwa](https://vite-pwa-org.netlify.app/) | PWA support + service worker (Workbox) |
+| [workbox-window](https://developer.chrome.com/docs/workbox/modules/workbox-window) | Service worker registration + update prompt |
 | [rollup-plugin-visualizer](https://github.com/btd/rollup-plugin-visualizer) | Bundle analysis (`dist/stats.html`) |
 
 ---
@@ -274,19 +413,28 @@ MalFrame/
 │   │   │   └── ...
 │   │   ├── dashboard/               # DashboardHeader
 │   │   ├── header/                  # ActivityBadge, EasterEgg
+│   │   ├── SearchDialog.tsx         # Cross-case search dialog
+│   │   ├── CommandPalette.tsx       # Command palette (Ctrl+K)
+│   │   ├── ShortcutsHintBar.tsx     # Fixed shortcut icon buttons
+│   │   ├── ReloadPrompt.tsx         # PWA update prompt
+│   │   ├── IOCPasteDialog.tsx       # Paste & extract IOCs from text
+│   │   ├── IOCCrossReferenceDialog.tsx  # Cross-case IOC analysis
+│   │   ├── CaseTemplateDialog.tsx   # New case template picker
+│   │   ├── GraphView.tsx            # ReactFlow MITRE graph visualization
 │   │   └── lazy/                    # Lazy wrapper components (LazyXxx.tsx)
-│   │       └── index.ts
+│   │       ├── index.ts
+│   │       └── LazyGraphView.tsx
 │   │
 │   ├── features/
 │   │   ├── mia/                     # ALL MIA domain code
-│   │   │   ├── components/          # Section components (BackgroundSection, IOCTable, etc.)
+│   │   │   ├── components/          # Section components (BackgroundSection, IOCTable, TimelineVisual, etc.)
 │   │   │   ├── hooks/
 │   │   │   │   └── useArtifactFileDrop.ts
 │   │   │   ├── services/            # constants.ts, migrate.ts, transform.ts
 │   │   │   └── types.ts             # DFIRData and all MIA sub-types
 │   │   │
 │   │   └── mre/                     # ALL MRE domain code
-│   │       ├── components/          # Section components + StaticAnalysisCards,
+│   │       ├── components/          # Section components + StaticAnalysisCards, YaraEditor,
 │   │       │   ├── runtime-behavior/    # AntiAnalysisGroup, ExecutionBehaviorGroup, etc.
 │   │       │   └── code-analysis/       # StaticCodeAnalysis, DynamicCodeAnalysis, etc.
 │   │       ├── hooks/
@@ -310,6 +458,7 @@ MalFrame/
 │   │   ├── useDragReorder.ts        # Drag-to-reorder list items
 │   │   ├── useToolsData.ts          # Tools list with localStorage persistence
 │   │   ├── useSEO.ts                # Document title + meta tags
+│   │   ├── useKeyboardShortcuts.ts  # Keyboard shortcut bindings
 │   │   └── useTypingAnimation.ts    # Typing animation for landing page
 │   │
 │   ├── lib/
@@ -326,8 +475,16 @@ MalFrame/
 │   │   │   └── index.ts
 │   │   ├── db.ts                    # IndexedDB async wrapper
 │   │   ├── storageKeys.ts           # All localStorage key strings
+│   │   ├── searchAcrossCases.ts     # Cross-case search logic
 │   │   ├── mitreUtils.ts            # MITRE ATT&CK fetch + cache
+│   │   ├── mitreSuggestion.ts       # MITRE keyword→technique suggestion engine
+│   │   ├── mbcSuggestion.ts         # MBC tag→behavior suggestion engine + version check
 │   │   ├── mbcData.ts               # MBC v3.2 static dataset
+│   │   ├── parseIOCs.ts             # Regex-based IOC extraction from text
+│   │   ├── crossReferenceIOCs.ts    # Find shared IOCs across cases
+│   │   ├── caseTemplates.ts         # Pre-built case templates
+│   │   ├── graphBuilders.ts         # ReactFlow node/edge builders
+│   │   ├── yaraLanguage.ts          # CodeMirror YARA syntax support
 │   │   ├── toolsData.ts             # FLARE-VM tools reference data
 │   │   ├── validationSchemas.ts     # Zod schemas for import
 │   │   ├── lazyExport.ts            # Dynamic import wrappers for export

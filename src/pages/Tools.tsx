@@ -30,6 +30,8 @@ const debugWarn = (message: string) =>
 
 export default function Tools() {
   const { t } = useLanguage();
+
+  useEffect(() => { document.title = "Tools - MalFrame"; }, []);
   const { toolsData: defaultData, version: latestVersion, isLoading: isLoadingDefault } = useToolsData();
 
   // Local tools data state - initialized from localStorage or default data
@@ -53,7 +55,7 @@ export default function Tools() {
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
   const [searchQuery, setSearchQuery] = useState("");
   const [updateDialogOpen, setUpdateDialogOpen] = useState(false);
-  const [storedVersion, setStoredVersion] = useState<string | null>(() => 
+  const [storedVersion, setStoredVersion] = useState<string | null>(() =>
     localStorage.getItem(STORAGE_KEYS.TOOLS_VERSION)
   );
 
@@ -192,6 +194,7 @@ export default function Tools() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder={t("tools.search")}
+              aria-label={t("tools.search")}
               className="w-full pl-10 pr-4 py-2 bg-input border border-border rounded-sm font-mono text-sm focus:border-primary focus:ring-1 focus:ring-primary/30 outline-none transition-all"
             />
           </div>

@@ -1,6 +1,8 @@
-import { useEffect } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { Target, Database, FolderOpen, Activity } from "lucide-react";
 import { Header } from "@/components/Header";
+import { formatExportError, hasData } from "@/lib/dashboardExportUtils";
+import { recordExportTime } from "@/lib/export/helpers";
 import {
   LazyMitreAttackMapping,
   LazyIOCTable,
@@ -26,10 +28,9 @@ import type { DFIRData } from "@/features/mia/types";
 
 import { useLanguage } from "@/hooks/useLanguage";
 import { useDashboardData } from "@/hooks/useDashboardData";
+import { useDashboardActions } from "@/hooks/useDashboardActions";
 import { useCaseManager } from "@/hooks/useCaseManager";
-import { useImportJSON } from "@/hooks/useImportJSON";
 import { useArtifactFileDrop } from "@/features/mia/hooks/useArtifactFileDrop";
-import { useDashboardExport } from "@/hooks/useDashboardExport";
 import { lazyExportJSON, lazyExportDFIRPDF, lazyExportDFIRWord, preloadDFIRPDF, preloadDFIRWord } from "@/lib/lazyExport";
 import {
   prefetchMitreMapping,
@@ -39,12 +40,13 @@ import {
 } from "@/lib/lazyPrefetch";
 import { generateFileName } from "@/lib/fileNameUtils";
 import { clearAllImages } from "@/lib/imageStorage";
-import { clearAllSectionStates } from "@/lib/sectionState";
 import { toast } from "sonner";
 import { validateDFIRData } from "@/lib/validationSchemas";
 import { MIA_STORAGE_KEY, initialDFIRData } from "@/features/mia/services/constants";
 import { transformForExport } from "@/features/mia/services/transform";
 import { migrateDFIRData } from "@/features/mia/services/migrate";
+import { CaseTemplateDialog } from "@/components/CaseTemplateDialog";
+import { getTemplatesForType } from "@/lib/caseTemplates";
 
 // ─────────────────────────────────────────────
 // Outer shell: case manager + page chrome
@@ -52,6 +54,23 @@ import { migrateDFIRData } from "@/features/mia/services/migrate";
 
 export default function MIADashboard() {
   const caseManager = useCaseManager("mia", MIA_STORAGE_KEY);
+
+  useEffect(() => { document.title = "MIA - MalFrame"; }, []);
+  const [templateDialogOpen, setTemplateDialogOpen] = useState(false);
+
+  const handleTemplateSelect = useCallback(
+    async (templateId: string) => {
+      await caseManager.createCase();
+      const template = getTemplatesForType("mia").find((t) => t.id === templateId);
+      if (template?.fillMIA) {
+        const filled = template.fillMIA({ ...initialDFIRData });
+        // Save template-filled data for the new case
+        const { dbSet } = await import("@/lib/db");
+        await dbSet("dashboard", caseManager.activeStorageKey, filled);
+      }
+    },
+    [caseManager],
+  );
 
   return (
     <div className="min-h-screen bg-background cyber-grid flex flex-col">
@@ -65,6 +84,7 @@ export default function MIADashboard() {
           switchCase={caseManager.switchCase}
           deleteCase={caseManager.deleteCase}
           renameCase={caseManager.renameCase}
+          onNewCaseClick={() => setTemplateDialogOpen(true)}
         />
         {caseManager.activeCaseId && (
           <MIADashboardBody
@@ -73,6 +93,13 @@ export default function MIADashboard() {
           />
         )}
       </main>
+
+      <CaseTemplateDialog
+        open={templateDialogOpen}
+        onOpenChange={setTemplateDialogOpen}
+        caseType="mia"
+        onSelect={handleTemplateSelect}
+      />
     </div>
   );
 }
@@ -88,7 +115,7 @@ interface MIADashboardBodyProps {
 
 function MIADashboardBody({ storageKey }: MIADashboardBodyProps) {
   const { t } = useLanguage();
-  const { data, setData, clearData, forceCloseCounter } = useDashboardData<DFIRData>({
+  const { data, setData, clearData, undo, redo, forceCloseCounter, saveStatus } = useDashboardData<DFIRData>({
     storageKey,
     initialData: initialDFIRData,
     migrateData: migrateDFIRData,
@@ -98,20 +125,8 @@ function MIADashboardBody({ storageKey }: MIADashboardBodyProps) {
 
   const { handleFileDropped, handleMultipleFilesDropped } = useArtifactFileDrop({ setData });
 
-  const formatExportError = (err: unknown) => {
-    if (err instanceof Error) return err.message;
-    return String(err);
-  };
-
-  const hasData = <T extends object>(obj: T, excludeKeys = ['id', 'timestamp', 'images']): boolean =>
-    Object.entries(obj).some(([key, value]) => {
-      if (excludeKeys.includes(key)) return false;
-      if (Array.isArray(value)) return value.length > 0;
-      if (typeof value === 'boolean') return false;
-      return Boolean(value);
-    });
-
-  const handleExportJSON = async () => {
+  // MIA-specific export handlers
+  const handleExportJSON = useCallback(async () => {
     try {
       const cleanedData = {
         ...data,
@@ -126,66 +141,37 @@ function MIADashboardBody({ storageKey }: MIADashboardBodyProps) {
       const exportData = transformForExport(cleanedData);
       await lazyExportJSON(exportData, data.background.analyst, data.sampleInfo.fileName, data.sampleInfo.sha256, "MIA");
       toast.success(t("export.success.json"));
+      recordExportTime(storageKey);
     } catch (err) {
       toast.error(`${t("export.error")}: ${formatExportError(err)}`);
     }
-  };
+  }, [data, storageKey, t]);
 
-  const handleExportPDF = async () => {
+  const handleExportPDF = useCallback(async () => {
     try {
       await lazyExportDFIRPDF(data, data.background.analyst, data.sampleInfo.fileName, data.sampleInfo.sha256);
       toast.success(t("export.success.pdf"));
+      recordExportTime(storageKey);
     } catch (err) {
       toast.error(`${t("export.error")}: ${formatExportError(err)}`);
     }
-  };
+  }, [data, storageKey, t]);
 
-  const handleExportWord = async () => {
+  const handleExportWord = useCallback(async () => {
     try {
       await lazyExportDFIRWord(data, data.background.analyst, data.sampleInfo.fileName, data.sampleInfo.sha256);
       toast.success(t("export.success.word"));
+      recordExportTime(storageKey);
     } catch (err) {
       toast.error(`${t("export.error")}: ${formatExportError(err)}`);
     }
-  };
+  }, [data, storageKey, t]);
 
-  const {
-    exportDialogOpen,
-    setExportDialogOpen,
-    pendingExportType,
-    handleExportJSONClick,
-    handleExportPDFClick,
-    handleExportWordClick,
-  } = useDashboardExport({
-    jsonNeedsDialog: false,
-    onExportJSONDirect: handleExportJSON,
-  });
-
-  const { importJSON } = useImportJSON({
-    validate: validateDFIRData,
-    onSuccess: (importedData) => {
-      clearAllSectionStates();
-      const normalizedData = migrateDFIRData(importedData as Record<string, unknown>);
-      setData(normalizedData);
-    },
-    successMessage: t("import.success"),
-  });
-
-  useEffect(() => {
-    if (!exportDialogOpen) return;
-    if (pendingExportType === "pdf") preloadDFIRPDF();
-    if (pendingExportType === "word") preloadDFIRWord();
-  }, [exportDialogOpen, pendingExportType]);
-
-  const countLogImages = (log: LogEntry[] | undefined): number => {
+  // MIA-specific image counting
+  const totalImageCount = useMemo(() => {
     let count = 0;
+    const log = data.staticAnalysis.peSectionsEntropyLog;
     log?.forEach(entry => { count += entry.images?.length || 0; });
-    return count;
-  };
-
-  const getTotalImageCount = (): number => {
-    let count = 0;
-    count += countLogImages(data.staticAnalysis.peSectionsEntropyLog);
     count += data.behaviorAnalysis.processTreeImages?.length || 0;
     count += data.behaviorAnalysis.fileSystemModsImages?.length || 0;
     count += data.behaviorAnalysis.registryPersistenceImages?.length || 0;
@@ -193,16 +179,11 @@ function MIADashboardBody({ storageKey }: MIADashboardBodyProps) {
     count += data.behaviorAnalysis.memoryArtifactsImages?.length || 0;
     count += data.behaviorAnalysis.systemChangesImages?.length || 0;
     return count;
-  };
+  }, [data]);
 
-  const getReportName = () => {
-    const ext = pendingExportType === "pdf" ? "pdf" : pendingExportType === "word" ? "docx" : "json";
-    return generateFileName(data.background.analyst, data.sampleInfo.fileName, data.sampleInfo.sha256, ext);
-  };
-
-  const downloadAllImages = () => {
+  // MIA-specific image download
+  const downloadAllImages = useCallback(() => {
     const hash = data.sampleInfo.sha256?.slice(0, 8) || "nohash";
-
     const downloadLogImages = (log: LogEntry[] | undefined, fieldPrefix: string) => {
       log?.forEach((entry, entryIndex) => {
         entry.images?.forEach((img, imgIndex) => {
@@ -214,7 +195,6 @@ function MIADashboardBody({ storageKey }: MIADashboardBodyProps) {
         });
       });
     };
-
     const downloadFieldImages = (images: string[] | undefined, fieldName: string) => {
       images?.forEach((img, imgIndex) => {
         const link = document.createElement("a");
@@ -224,7 +204,6 @@ function MIADashboardBody({ storageKey }: MIADashboardBodyProps) {
         link.click();
       });
     };
-
     downloadLogImages(data.staticAnalysis.peSectionsEntropyLog, "peSectionsEntropy");
     downloadFieldImages(data.behaviorAnalysis.processTreeImages, "processTree");
     downloadFieldImages(data.behaviorAnalysis.fileSystemModsImages, "fileSystemMods");
@@ -232,23 +211,58 @@ function MIADashboardBody({ storageKey }: MIADashboardBodyProps) {
     downloadFieldImages(data.behaviorAnalysis.networkActivityImages, "networkActivity");
     downloadFieldImages(data.behaviorAnalysis.memoryArtifactsImages, "memoryArtifacts");
     downloadFieldImages(data.behaviorAnalysis.systemChangesImages, "systemChanges");
-
     toast.success(`Downloaded images!`);
-  };
+  }, [data]);
 
-  const handleConfirmExport = async (_shouldSaveImages: boolean, clearDataAfter: boolean) => {
-    if (pendingExportType === "pdf") {
-      await handleExportPDF();
-    } else {
-      await handleExportWord();
-    }
-    if (_shouldSaveImages && getTotalImageCount() > 0) {
-      downloadAllImages();
-    }
-    if (clearDataAfter) {
-      clearData();
-    }
-  };
+  // Shared dashboard actions (export dialog, import, undo/redo shortcuts, section nav)
+  const {
+    importJSON,
+    exportDialogOpen,
+    setExportDialogOpen,
+    pendingExportType,
+    handleConfirmExport,
+    exportOptions,
+    reportName,
+  } = useDashboardActions({
+    data, setData, clearData, undo, redo,
+    exportJSON: handleExportJSON,
+    exportPDF: handleExportPDF,
+    exportWord: handleExportWord,
+    validateImport: validateDFIRData,
+    migrateImport: migrateDFIRData,
+    preloadPDF: preloadDFIRPDF,
+    preloadWord: preloadDFIRWord,
+    generateReportName: (ext) => generateFileName(data.background.analyst, data.sampleInfo.fileName, data.sampleInfo.sha256, ext),
+    totalImageCount,
+    downloadAllImages,
+  });
+
+  // Memoized onChange handlers for section components
+  const handleBackgroundChange = useCallback((background: DFIRData["background"]) => setData((p) => ({ ...p, background })), [setData]);
+  const handleSampleInfoChange = useCallback((sampleInfo: DFIRData["sampleInfo"]) => setData((p) => ({ ...p, sampleInfo })), [setData]);
+  const handleArtifactsChange = useCallback((artifacts: DFIRData["artifacts"]) => setData((p) => ({ ...p, artifacts })), [setData]);
+  const handleSampleSelected = useCallback((artifact: { name: string; size: string; sha256: string }) => {
+    setData((p) => ({
+      ...p,
+      sampleInfo: { ...p.sampleInfo, fileName: artifact.name, fileSize: artifact.size, sha256: artifact.sha256 },
+    }));
+  }, [setData]);
+  const handleSampleCleared = useCallback(() => {
+    setData((p) => ({
+      ...p,
+      sampleInfo: { ...p.sampleInfo, fileName: "", fileSize: "", sha256: "" },
+    }));
+  }, [setData]);
+  const handleStaticAnalysisChange = useCallback((staticAnalysis: DFIRData["staticAnalysis"]) => setData((p) => ({ ...p, staticAnalysis })), [setData]);
+  const handleBehaviorAnalysisChange = useCallback((behaviorAnalysis: DFIRData["behaviorAnalysis"]) => setData((p) => ({ ...p, behaviorAnalysis })), [setData]);
+  const handleMitreMappingChange = useCallback((mitreMapping: DFIRData["mitreMapping"]) => setData((p) => ({ ...p, mitreMapping })), [setData]);
+  const handleImpactChange = useCallback((impact: DFIRData["impact"]) => setData((p) => ({ ...p, impact })), [setData]);
+  const handleIOCsChange = useCallback((iocs: DFIRData["iocs"]) => setData((p) => ({ ...p, iocs })), [setData]);
+  const handleRecommendationsChange = useCallback((recommendations: DFIRData["recommendations"]) => setData((p) => ({ ...p, recommendations })), [setData]);
+  const handleTimelineChange = useCallback((timeline: DFIRData["timeline"]) => setData((p) => ({ ...p, timeline })), [setData]);
+
+  // Memoized computed values
+  const existingHashes = useMemo(() => data.artifacts.map(a => a.sha256).filter(Boolean), [data.artifacts]);
 
   return (
     <>
@@ -260,31 +274,28 @@ function MIADashboardBody({ storageKey }: MIADashboardBodyProps) {
         onClear={clearData}
         importLabel={t("common.import")}
         exportLabel={t("common.export")}
-        exportOptions={[
-          { type: "json", label: t("export.json"), onClick: handleExportJSONClick },
-          { type: "pdf", label: t("export.pdf"), onClick: handleExportPDFClick },
-          { type: "word", label: t("export.word"), onClick: handleExportWordClick },
-        ]}
+        exportOptions={exportOptions}
+        saveStatus={saveStatus}
       />
 
       {/* File Drop Zone */}
       <LazyFileHashDropzone
         onFileDropped={handleFileDropped}
         onMultipleFilesDropped={handleMultipleFilesDropped}
-        existingHashes={data.artifacts.map(a => a.sha256).filter(Boolean)}
+        existingHashes={existingHashes}
       />
 
       {/* Background Section */}
       <BackgroundSection
         data={data.background}
-        onChange={(background) => setData((p) => ({ ...p, background }))}
+        onChange={handleBackgroundChange}
         forceCloseCounter={forceCloseCounter}
       />
 
       {/* Sample Information */}
       <SampleInfoSection
         data={data.sampleInfo}
-        onChange={(sampleInfo) => setData((p) => ({ ...p, sampleInfo }))}
+        onChange={handleSampleInfoChange}
         forceCloseCounter={forceCloseCounter}
       />
 
@@ -299,43 +310,23 @@ function MIADashboardBody({ storageKey }: MIADashboardBodyProps) {
       >
         <LazyEvidenceArtifacts
           artifacts={data.artifacts}
-          onArtifactsChange={(artifacts) => setData((p) => ({ ...p, artifacts }))}
-          onSampleSelected={(artifact) => {
-            setData((p) => ({
-              ...p,
-              sampleInfo: {
-                ...p.sampleInfo,
-                fileName: artifact.name,
-                fileSize: artifact.size,
-                sha256: artifact.sha256,
-              },
-            }));
-          }}
-          onSampleCleared={() => {
-            setData((p) => ({
-              ...p,
-              sampleInfo: {
-                ...p.sampleInfo,
-                fileName: "",
-                fileSize: "",
-                sha256: "",
-              },
-            }));
-          }}
+          onArtifactsChange={handleArtifactsChange}
+          onSampleSelected={handleSampleSelected}
+          onSampleCleared={handleSampleCleared}
         />
       </CollapsibleSection>
 
       {/* Static Analysis */}
       <StaticAnalysisSection
         data={data.staticAnalysis}
-        onChange={(staticAnalysis) => setData((p) => ({ ...p, staticAnalysis }))}
+        onChange={handleStaticAnalysisChange}
         forceCloseCounter={forceCloseCounter}
       />
 
       {/* Behavior Analysis */}
       <BehaviorAnalysisSection
         data={data.behaviorAnalysis}
-        onChange={(behaviorAnalysis) => setData((p) => ({ ...p, behaviorAnalysis }))}
+        onChange={handleBehaviorAnalysisChange}
         forceCloseCounter={forceCloseCounter}
       />
 
@@ -353,14 +344,15 @@ function MIADashboardBody({ storageKey }: MIADashboardBodyProps) {
       >
         <LazyMitreAttackMapping
           mapping={data.mitreMapping}
-          onMappingChange={(mapping) => setData((p) => ({ ...p, mitreMapping: mapping }))}
+          onMappingChange={handleMitreMappingChange}
+          behaviorData={data.behaviorAnalysis}
         />
       </CollapsibleSection>
 
       {/* Impact Assessment */}
       <ImpactSection
         data={data.impact}
-        onChange={(impact) => setData((p) => ({ ...p, impact }))}
+        onChange={handleImpactChange}
         forceCloseCounter={forceCloseCounter}
       />
 
@@ -378,14 +370,14 @@ function MIADashboardBody({ storageKey }: MIADashboardBodyProps) {
       >
         <LazyIOCTable
           iocs={data.iocs}
-          onIOCsChange={(iocs) => setData((p) => ({ ...p, iocs }))}
+          onIOCsChange={handleIOCsChange}
         />
       </CollapsibleSection>
 
       {/* Recommendations */}
       <RecommendationsSection
         data={data.recommendations}
-        onChange={(recommendations) => setData((p) => ({ ...p, recommendations }))}
+        onChange={handleRecommendationsChange}
         forceCloseCounter={forceCloseCounter}
       />
 
@@ -403,7 +395,7 @@ function MIADashboardBody({ storageKey }: MIADashboardBodyProps) {
       >
         <LazyTimelineTable
           events={data.timeline}
-          onEventsChange={(events) => setData((p) => ({ ...p, timeline: events }))}
+          onEventsChange={handleTimelineChange}
         />
       </CollapsibleSection>
 
@@ -411,11 +403,11 @@ function MIADashboardBody({ storageKey }: MIADashboardBodyProps) {
       <LazyExportConfirmDialog
         open={exportDialogOpen}
         onOpenChange={setExportDialogOpen}
-        reportName={getReportName()}
+        reportName={reportName}
         exportType={pendingExportType}
         onConfirmExport={handleConfirmExport}
-        hasImages={getTotalImageCount() > 0}
-        imageCount={getTotalImageCount()}
+        hasImages={totalImageCount > 0}
+        imageCount={totalImageCount}
       />
     </>
   );

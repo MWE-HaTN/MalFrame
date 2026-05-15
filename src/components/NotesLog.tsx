@@ -108,6 +108,8 @@ export const NotesLog = memo(function NotesLog({ entries, onEntriesChange, place
 
     Promise.all(reads).then((base64s) => {
       updateEntry(entryId, { images: [...targetEntry.images, ...base64s] });
+    }).catch(() => {
+      // Image read failed silently — partial results are acceptable
     });
 
     // Reset input
@@ -154,6 +156,7 @@ export const NotesLog = memo(function NotesLog({ entries, onEntriesChange, place
                   value={entry.imageName || ""}
                   onChange={(e) => updateEntry(entry.id, { imageName: e.target.value })}
                   placeholder="Name..."
+                  aria-label="Entry name"
                   className="bg-transparent border-none text-sm text-muted-foreground font-mono placeholder:text-muted-foreground/50 focus:outline-none focus:text-foreground w-20 md:w-28"
                 />
               </div>
@@ -162,6 +165,7 @@ export const NotesLog = memo(function NotesLog({ entries, onEntriesChange, place
                   type="button"
                   onClick={() => moveEntry(entry.id, "up")}
                   disabled={index === 0}
+                  aria-label="Move entry up"
                   className="p-0.5 text-muted-foreground hover:text-primary disabled:opacity-30 transition-colors"
                 >
                   <ChevronUp className="w-3.5 h-3.5" />
@@ -170,6 +174,7 @@ export const NotesLog = memo(function NotesLog({ entries, onEntriesChange, place
                   type="button"
                   onClick={() => moveEntry(entry.id, "down")}
                   disabled={index === entries.length - 1}
+                  aria-label="Move entry down"
                   className="p-0.5 text-muted-foreground hover:text-primary disabled:opacity-30 transition-colors"
                 >
                   <ChevronDown className="w-3.5 h-3.5" />
@@ -179,6 +184,7 @@ export const NotesLog = memo(function NotesLog({ entries, onEntriesChange, place
                     type="button"
                     onClick={() => fileInputRefs.current.get(entry.id)?.click()}
                     className="p-0.5 text-muted-foreground hover:text-primary transition-colors"
+                    aria-label={t("notes.tooltip.addImage")}
                     title={t("notes.tooltip.addImage")}
                   >
                     <Image className="w-3.5 h-3.5" />
@@ -188,6 +194,7 @@ export const NotesLog = memo(function NotesLog({ entries, onEntriesChange, place
                   type="button"
                   onClick={() => deleteEntry(entry.id)}
                   className="p-0.5 text-muted-foreground hover:text-destructive transition-colors"
+                  aria-label={t("notes.tooltip.deleteEntry")}
                   title={t("notes.tooltip.deleteEntry")}
                 >
                   <Trash2 className="w-3.5 h-3.5" />

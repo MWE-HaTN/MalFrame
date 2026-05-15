@@ -1,9 +1,6 @@
 // English translations
 export const en: Record<string, string> = {
   // Header
-  "nav.home": "Home",
-  "nav.mia": "MIA Dashboard",
-  "nav.mre": "MRE Dashboard",
   "nav.tools": "Tools",
   "nav.settings": "Settings",
   
@@ -15,10 +12,6 @@ export const en: Record<string, string> = {
   "common.add": "Add",
   "common.delete": "Delete",
   "common.select": "Select...",
-  "common.yes": "Yes",
-  "common.no": "No",
-  "common.unknown": "Unknown",
-  "common.addEntry": "Add Entry",
   "common.notes": "Notes",
   "common.cancel": "Cancel",
   
@@ -45,7 +38,6 @@ export const en: Record<string, string> = {
   "export.confirmExport": "Export Report",
   "export.saveImages": "Save images to local",
   "export.saveImagesDesc": "Download {count} image(s) to your computer",
-  "export.imagesSaved": "Images saved successfully!",
   "export.clearDataTitle": "Clear Data After Export?",
   "export.clearDataDescription": "Would you like to clear all data after exporting? This will reset the dashboard for a new case.",
   "export.yesClearData": "Yes, Clear All Data",
@@ -59,7 +51,6 @@ export const en: Record<string, string> = {
   
   // Import
   "import.success": "Data imported successfully!",
-  "import.error": "Invalid JSON file!",
   
   // Clear
   "clear.title": "Clear All Data",
@@ -188,8 +179,6 @@ export const en: Record<string, string> = {
   "mre.staticAnalysis": "Static Analysis",
   "mre.runtimeBehavior": "Runtime Behavior",
   "mre.codeAnalysis": "Code Analysis",
-  "mre.deepDive": "Deep Dive",
-  "mre.detection": "Detection & Summary",
   "mre.yaraSignature": "YARA Signature",
   "mre.iocTable": "IOC Table",
   "mre.analyst": "Analyst",
@@ -230,7 +219,6 @@ export const en: Record<string, string> = {
   "mre.rootCause": "Root Cause",
   "mre.attribution": "Attribution",
   "mre.note": "Note",
-  "mre.yaraRule": "YARA Rule",
   // MRE Placeholders
   "mre.placeholder.analyst": "Your name",
   "mre.placeholder.workstation": "Analysis VM",
@@ -254,25 +242,18 @@ export const en: Record<string, string> = {
   "mbc.selectedBehaviors": "Selected Behaviors",
   "mbc.clickToRemove": "Click to remove",
   "mbc.exportSuccess": "Malware Behavior Mapping exported successfully",
-  "mbc.upToDate": "Malware Behavior Catalog is up to date",
-  "mbc.methods": "methods",
 
   // MITRE ATT&CK
   "mitre.description": "Click to select relevant MITRE ATT&CK techniques observed in this analysis.",
   "mitre.selected": "Selected Techniques:",
   "mitre.loading": "Loading MITRE data...",
   "mitre.updating": "Updating...",
-  "mitre.updateExport": "Update & Export",
+  "mitre.updateExport": "Update",
   "mitre.search": "Search techniques, IDs...",
-  "mitre.exportTitle": "Export MITRE ATT&CK Data",
-  "mitre.exportDescription": "MITRE data has been updated to {version}. Do you want to download it as a JSON file?",
-  "mitre.exportNo": "No, thanks",
-  "mitre.exportYes": "Download JSON",
   "mitre.updateSuccess": "Updated: {techCount} techniques, {subTechCount} sub-techniques",
   "mitre.updateFailed": "Failed to fetch from MITRE repository.",
   "mitre.alreadyExists": "{id} already exists",
   "mitre.clickToRemove": "Click to remove",
-  "mitre.viewOnMitre": "View {code} on MITRE ATT&CK",
   
   // Timeline
   "timeline.time": "Time",
@@ -290,7 +271,6 @@ export const en: Record<string, string> = {
   "ioc.type": "Type",
   "ioc.value": "Value",
   "ioc.description": "Description",
-  "ioc.add": "Add IOC",
   "ioc.empty": "No IOCs added yet. Add your first IOC above.",
   "ioc.indicators": "indicators",
   "ioc.copyAll": "Copy All",
@@ -303,7 +283,7 @@ export const en: Record<string, string> = {
   // Notes
   "notes.addEntry": "Add Entry",
   "notes.emptyClick": "Click \"Add Entry\" to start taking notes",
-  
+
   // Settings
   "settings.title": "Settings",
   "settings.subtitle": "Configure your dashboard preferences",
@@ -322,13 +302,8 @@ export const en: Record<string, string> = {
   "settings.displayScaleDesc": "Adjust interface size",
   "settings.restoreScale": "Restore to 100%",
   "settings.about": "About",
-  "settings.aboutText": "A local-first workspace for malware analysis, reverse engineering, and triage. No cloud. No telemetry. Your data never leaves your system.",
   
   // Home
-  "home.badge": "Professional Analysis Tools",
-  "home.title": "MALWARE ANALYST",
-  "home.subtitle": "DASHBOARDS",
-  "home.description": "Streamline your Malware Incident Analysis (MIA) and Malware Reverse Engineering (MRE) workflows with professional dashboards.",
   "home.miaCard": "Malware Incident Analysis Dashboard",
   "home.miaCardDesc": "Incident-driven malware investigation with timelines, IOC correlation, and MITRE ATT&CK mapping for structured response.",
   "home.mreCard": "Malware Reverse Engineering Dashboard",
@@ -396,15 +371,6 @@ export const en: Record<string, string> = {
   
   // Activity Tracker
   "activity.title": "Activity Tracker",
-  "activity.today": "Today",
-  "activity.total": "Total",
-  "activity.streak": "day streak",
-  "activity.noActivity": "No activity recorded yet",
-  "activity.startAnalyzing": "Start analyzing to track your progress!",
-  "activity.resetConfirm": "Reset Activity Data",
-  "activity.resetDesc": "This will permanently delete all activity tracking data including streak information. This action cannot be undone.",
-  "activity.resetButton": "Yes, Reset All",
-  "activity.resetSuccess": "Activity data has been reset!",
   "activity.export": "Export",
   "activity.import": "Import",
   "activity.exportSuccess": "Activity data exported!",
@@ -438,103 +404,9 @@ export const en: Record<string, string> = {
   "hint.mre.summary": "Cover 4 things: (1) Family + confidence (e.g. 'Likely AgentTesla — matches SMTP exfil pattern'). (2) Primary capability (stealer/loader/RAT/ransomware + what it targets). (3) Persistence method (registry run key / scheduled task / service name). (4) C2 method (HTTP beacon interval, DNS tunneling, hardcoded IP:port). Keep under 200 words.",
 
   // Notes
-  "notes.placeholder.name": "Name...",
-  "notes.placeholder.write": "Write notes here...",
-  "notes.placeholder.writeWithImages": "Write notes here... (Ctrl+V to paste images)",
   "notes.tooltip.addImage": "Add image",
   "notes.tooltip.deleteEntry": "Delete entry",
-  "notes.emptyState": "Click \"Add Entry\" to start taking notes",
-  
-  // Runtime Behavior - Anti-Analysis
-  "runtime.antiAnalysis": "Anti-Analysis & Evasion",
-  "runtime.antiAnalysis.timeBased": "Time-Based Execution",
-  "runtime.antiAnalysis.userActivity": "User Activity Checks",
-  "runtime.antiAnalysis.antiDebugging": "Anti-Debugging",
-  "runtime.antiAnalysis.antiVM": "Anti-VM",
-  "runtime.antiAnalysis.antiSandbox": "Anti-Sandbox",
-  "runtime.antiAnalysis.antiEmulator": "Anti-Emulator",
-  "runtime.antiAnalysis.apiHammer": "API Hammering",
-  "runtime.antiAnalysis.note": "Note",
-  
-  // Runtime Behavior - Execution
-  "runtime.execution": "Execution Behavior",
-  "runtime.execution.fileSystem": "File System Artifacts",
-  "runtime.execution.persistenceMethods": "Persistence Methods",
-  "runtime.execution.processCreation": "Process Creation",
-  "runtime.execution.processInjection": "Process Injection",
-  "runtime.execution.selfDefense": "Self-Defense",
-  
-  // Runtime Behavior - Technical
-  "runtime.technical": "Technical Runtime",
-  "runtime.technical.networkActivity": "Network Activity",
-  "runtime.technical.memoryUsage": "Memory Usage",
-  "runtime.technical.synchronization": "Synchronization",
-  
-  // Runtime Common
-  "runtime.detected": "Detected",
-  "runtime.notDetected": "Not Detected",
-  "runtime.details": "Details",
-  "runtime.technique": "Technique",
-  "runtime.description": "Description",
-  "runtime.addEntry": "Add Entry",
-  "runtime.noEntries": "No entries added yet.",
-  
-  // Code Analysis - Static
-  "code.static": "Static Code Analysis",
-  "code.static.interestingFunctions": "Interesting Functions",
-  "code.static.controlFlow": "Control Flow",
-  "code.static.apiUsage": "API Usage",
-  "code.static.obfuscation": "Obfuscation",
-  "code.static.functionName": "Function Name",
-  "code.static.address": "Address",
-  "code.static.purpose": "Purpose",
-  "code.static.flowType": "Flow Type",
-  "code.static.apiCall": "API Call",
-  "code.static.context": "Context",
-  "code.static.obfuscationType": "Obfuscation Type",
-  
-  // Code Analysis - Dynamic
-  "code.dynamic": "Dynamic Code Analysis (Debugging)",
-  "code.dynamic.breakpointEvents": "Breakpoint Events",
-  "code.dynamic.memoryRegions": "Memory Regions",
-  "code.dynamic.runtimeApiTrace": "Runtime API Trace",
-  "code.dynamic.registerStack": "Register / Stack",
-  "code.dynamic.breakpointAddress": "Breakpoint Address",
-  "code.dynamic.event": "Event",
-  "code.dynamic.regionAddress": "Region Address",
-  "code.dynamic.protection": "Protection",
-  "code.dynamic.content": "Content",
-  "code.dynamic.apiName": "API Name",
-  "code.dynamic.parameters": "Parameters",
-  "code.dynamic.returnValue": "Return Value",
-  "code.dynamic.registerName": "Register Name",
-  "code.dynamic.value": "Value",
-  "code.dynamic.significance": "Significance",
-  
-  // Code Analysis - Cryptography
-  "code.crypto": "Cryptography Analysis",
-  "code.crypto.algorithm": "Algorithms Used",
-  "code.crypto.keyIv": "Key / IV",
-  "code.crypto.keyDerivation": "Key Derivation",
-  "code.crypto.cryptoApis": "Crypto APIs",
-  "code.crypto.protectedData": "Protected Data",
-  "code.crypto.analystHypothesis": "Analyst Hypothesis (Why this technique?)",
-  "code.crypto.noEntries": "No crypto entries added yet.",
-  
-  // Code Analysis - Execution Stages
-  "code.stages": "Execution Stages",
-  "code.stages.entryCondition": "Entry Condition",
-  "code.stages.entryPoint": "Entry Point",
-  "code.stages.purpose": "Purpose",
-  "code.stages.actions": "Actions",
-  "code.stages.exitCondition": "Exit Condition",
-  "code.stages.failureBehavior": "Failure / Abort Behavior",
-  "code.stages.transitionMethod": "Transition Method",
-  "code.stages.apisUsed": "APIs Used",
-  "code.stages.artifacts": "Artifacts",
-  "code.stages.ioc": "IOC",
-  "code.stages.noStages": "No execution stages added yet.",
-  
+
   // Code Analysis - Micro-Behaviors
   "code.microBehaviors": "Micro-Behaviors",
   "code.microBehaviors.description": "Select micro-behaviors observed during analysis. Micro-behaviors capture fine-grained actions.",
@@ -542,8 +414,6 @@ export const en: Record<string, string> = {
   "code.microBehaviors.loading": "Loading micro-behaviors...",
   "code.microBehaviors.selected": "selected",
   "code.microBehaviors.selectedCount": "Selected",
-  "code.microBehaviors.clickToRemove": "Click to remove",
-  "code.microBehaviors.viewOnGithub": "View on GitHub",
   
   // Code Analysis Groups Headers
   "code.groups.static": "Static Code Analysis",
@@ -743,4 +613,153 @@ export const en: Record<string, string> = {
   "cases.deleteConfirmDesc": "All data in \"{name}\" will be permanently deleted. This cannot be undone.",
   "cases.deleteConfirm": "Delete",
   "cases.deleteCancel": "Cancel",
+
+  // Keyboard shortcuts
+  "shortcuts.title": "Keyboard Shortcuts",
+  "shortcuts.global": "Global",
+  "shortcuts.dashboard": "Dashboard",
+  "shortcuts.goToMia": "Go to MIA Dashboard",
+  "shortcuts.goToMre": "Go to MRE Dashboard",
+  "shortcuts.goToTools": "Go to Tools",
+  "shortcuts.goToSettings": "Go to Settings",
+  "shortcuts.undo": "Undo",
+  "shortcuts.redo": "Redo",
+  "shortcuts.export": "Open export dialog",
+  "shortcuts.newCase": "New case",
+  "shortcuts.prevCase": "Previous case",
+  "shortcuts.nextCase": "Next case",
+  "shortcuts.nextSection": "Next section",
+  "shortcuts.prevSection": "Previous section",
+  "shortcuts.toggleAllSections": "Expand/collapse all",
+  "shortcuts.showHelp": "Show this help",
+  "shortcuts.commandPalette": "Command palette",
+  "shortcuts.searchCases": "Search across cases",
+  "shortcuts.hint.commandPalette": "Command palette",
+  "shortcuts.hint.search": "Search cases",
+  "shortcuts.hint.allShortcuts": "All shortcuts",
+
+  // Cross-case Search
+  "search.title": "Search Across Cases",
+  "search.placeholder": "Search all cases...",
+  "search.noResults": "No results found",
+  "search.loading": "Searching...",
+  "search.showLess": "Show less",
+  "search.moreMatches": "+{count} more",
+
+  // Command Palette
+  "commandPalette.title": "Command Palette",
+  "commandPalette.search": "Type a command...",
+  "commandPalette.noResults": "No commands found",
+  "commandPalette.group.navigation": "Navigation",
+  "commandPalette.group.search": "Search",
+  "commandPalette.group.cases": "Cases",
+  "commandPalette.group.export": "Export",
+  "commandPalette.group.help": "Help",
+  "commandPalette.group.settings": "Settings",
+  "commandPalette.actions.goToMia": "Go to MIA Dashboard",
+  "commandPalette.actions.goToMre": "Go to MRE Dashboard",
+  "commandPalette.actions.goToTools": "Go to Tools",
+  "commandPalette.actions.goToSettings": "Go to Settings",
+  "commandPalette.actions.searchCases": "Search across cases",
+  "commandPalette.actions.newCase": "New case",
+  "commandPalette.actions.prevCase": "Previous case",
+  "commandPalette.actions.nextCase": "Next case",
+  "commandPalette.actions.export": "Export data",
+  "commandPalette.actions.showHelp": "Keyboard shortcuts",
+  "commandPalette.actions.toggleLanguage": "Switch language (EN/VN)",
+  "commandPalette.actions.toggleTheme": "Toggle dark/light theme",
+  "commandPalette.actions.cycleScale": "Change display scale",
+  "commandPalette.actions.trackToday": "Track activity for today",
+
+  // Timeline View Toggle
+  "timeline.tableView": "Table",
+  "timeline.visualView": "Timeline",
+
+  // Case Templates
+  "template.title": "Choose Case Template",
+  "template.description": "Select a template to pre-fill your case",
+  "template.blank": "Blank",
+  "template.blankDesc": "Start with an empty case",
+  "template.ransomware": "Ransomware",
+  "template.ransomwareDesc": "Pre-fills impact, timeline, and recommendations for ransomware incidents",
+  "template.phishing": "Phishing",
+  "template.phishingDesc": "Pre-fills infection vector, MITRE techniques, and IOCs for phishing cases",
+  "template.apt": "APT",
+  "template.aptDesc": "Pre-fills MITRE techniques and impact for advanced persistent threats",
+  "template.infoStealer": "Info-Stealer",
+  "template.infoStealerDesc": "Pre-fills summary and MBC mappings for credential stealers",
+  "template.custom": "Custom",
+  "template.customDesc": "Start with a blank case, customized later",
+
+  // Clipboard IOC Parser
+  "ioc.pasteExtract": "Paste & Extract",
+  "ioc.pasteTitle": "Paste & Extract IOCs",
+  "ioc.pasteDescription": "Paste raw text from logs, sandbox reports, or threat intel feeds. IOCs will be automatically detected and classified.",
+  "ioc.pastePlaceholder": "Paste your text here...",
+  "ioc.parse": "Parse",
+  "ioc.parsedCount": "{count} IOCs found",
+  "ioc.addAll": "Add All",
+  "ioc.noIOCsFound": "No IOCs detected in the pasted text",
+  "ioc.crossRef": "Cross-Reference",
+
+  // IOC Cross-Reference
+  "iocXref.title": "IOC Cross-Reference",
+  "iocXref.description": "Scan all cases to find IOCs that appear in multiple cases. Helps identify connections between different investigations.",
+  "iocXref.scan": "Scan All Cases",
+  "iocXref.scanning": "Scanning...",
+  "iocXref.noResults": "No shared IOCs found across cases.",
+  "iocXref.foundIn": "Found in {count} cases",
+
+  // Command Palette — IOC XRef
+  "commandPalette.actions.iocCrossRef": "IOC Cross-Reference",
+  "commandPalette.group.tools": "Tools",
+
+  // Shortcuts — IOC XRef
+  "shortcuts.iocCrossRef": "IOC Cross-Reference",
+
+  // Graph Visualization
+  "graph.visualize": "Visualize",
+  "graph.mitreTitle": "MITRE ATT&CK Mapping — Graph View",
+  "graph.noData": "No data to visualize. Select techniques first.",
+
+  // MITRE Auto-Suggestion
+  "mitre.suggestions": "Auto-Suggested Techniques",
+  "mitre.suggestionsCount": "{count} suggestions",
+  "mitre.accept": "Accept",
+  "mitre.dismiss": "Dismiss",
+  "mitre.source.processTree": "Process Tree",
+  "mitre.source.fileSystem": "File System",
+  "mitre.source.registry": "Registry",
+  "mitre.source.network": "Network",
+  "mitre.source.memory": "Memory",
+  "mitre.source.system": "System",
+  "mitre.source.antiDebug": "Anti-Debug",
+  "mitre.source.antiVM": "Anti-VM",
+  "mitre.source.persistence": "Persistence",
+  "mitre.source.injection": "Injection",
+  "mitre.source.artifacts": "Artifacts",
+  "mitre.confidence.high": "High",
+  "mitre.confidence.medium": "Medium",
+  "mitre.confidence.low": "Low",
+  "mitre.noSuggestions": "No suggestions based on current behavior data.",
+
+  // MBC Auto-Suggestion
+  "mbc.suggestions": "Auto-Suggested Behaviors",
+  "mbc.suggestionsCount": "{count} suggestions",
+  "mbc.accept": "Accept",
+  "mbc.dismiss": "Dismiss",
+  "mbc.source.antiDebug": "Anti-Debug",
+  "mbc.source.antiVM": "Anti-VM",
+  "mbc.source.persistence": "Persistence",
+  "mbc.source.network": "Network",
+  "mbc.source.memory": "Memory",
+  "mbc.source.injection": "Injection",
+  "mbc.source.artifacts": "Artifacts",
+  "mbc.confidence.high": "High",
+  "mbc.confidence.medium": "Medium",
+  "mbc.confidence.low": "Low",
+  "mbc.versionCheck.newAvailable": "New version available: {version}",
+  "mbc.versionCheck.upToDate": "MBC is up to date",
+  "mbc.versionCheck.error": "Failed to check for updates",
+  "mbc.noSuggestions": "No suggestions based on current runtime behavior data.",
 };

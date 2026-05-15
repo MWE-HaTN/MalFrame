@@ -96,10 +96,11 @@ const PESectionRow = memo(function PESectionRow({ entry, index, canDelete, onUpd
         onClick={() => onDelete(entry.id)}
         className={cn(
           "p-1 transition-colors",
-          !canDelete 
-            ? "text-muted-foreground/30 cursor-not-allowed" 
+          !canDelete
+            ? "text-muted-foreground/30 cursor-not-allowed"
             : "text-muted-foreground hover:text-destructive"
         )}
+        aria-label={!canDelete ? "Cannot delete last section" : "Delete section"}
         title={!canDelete ? "Cannot delete last section" : "Delete section"}
         disabled={!canDelete}
       >
@@ -109,7 +110,7 @@ const PESectionRow = memo(function PESectionRow({ entry, index, canDelete, onUpd
   );
 });
 
-export function PESectionEntry({ entries, onEntriesChange, className }: PESectionEntryProps) {
+export const PESectionEntry = memo(function PESectionEntry({ entries, onEntriesChange, className }: PESectionEntryProps) {
   const createId = () => generateId("pe");
 
   const addEntry = useCallback(() => {
@@ -188,4 +189,4 @@ export function PESectionEntry({ entries, onEntriesChange, className }: PESectio
       </button>
     </div>
   );
-}
+});

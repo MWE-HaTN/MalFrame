@@ -1,9 +1,11 @@
 import { useState, useRef, useMemo, useCallback, useEffect, memo } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { Plus, Copy, Trash2, Check, Database } from "lucide-react";
+import { Plus, Copy, Trash2, Check, Database, ClipboardPaste, Link } from "lucide-react";
 import { generateId } from "@/lib/utils";
 import { toast } from "sonner";
 import { useLanguage } from "@/hooks/useLanguage";
+import { IOCPasteDialog } from "@/components/IOCPasteDialog";
+import { IOCCrossReferenceDialog } from "@/components/IOCCrossReferenceDialog";
 import type { IOC } from "@/types/dashboard";
 
 interface IOCTableProps {
@@ -38,6 +40,7 @@ const IOCRow = memo(function IOCRow({ ioc, isCopied, onCopy, onRemove }: IOCRowP
         <div className="flex items-center justify-end gap-1">
           <button
             onClick={() => onCopy(ioc)}
+            aria-label={isCopied ? "Copied" : "Copy IOC"}
             className="p-1.5 hover:bg-secondary rounded transition-colors"
           >
             {isCopied ? (
@@ -48,6 +51,7 @@ const IOCRow = memo(function IOCRow({ ioc, isCopied, onCopy, onRemove }: IOCRowP
           </button>
           <button
             onClick={() => onRemove(ioc.id)}
+            aria-label="Remove IOC"
             className="p-1.5 hover:bg-destructive/20 rounded transition-colors"
           >
             <Trash2 className="w-4 h-4 text-destructive" />
@@ -84,6 +88,8 @@ const MAX_VISIBLE_ROWS = 10;
 export const IOCTable = memo(function IOCTable({ iocs, onIOCsChange }: IOCTableProps) {
   const { t } = useLanguage();
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [pasteDialogOpen, setPasteDialogOpen] = useState(false);
+  const [xrefOpen, setXrefOpen] = useState(false);
   const [newIOC, setNewIOC] = useState<Omit<IOC, "id">>({
     type: "File Hash (SHA256)",
     value: "",
@@ -140,6 +146,14 @@ export const IOCTable = memo(function IOCTable({ iocs, onIOCsChange }: IOCTableP
     toast.success(t("ioc.copiedAll"));
   }, [iocs, t]);
 
+  const handlePasteIOCs = useCallback(
+    (newIOCs: IOC[]) => {
+      onIOCsChange([...iocs, ...newIOCs]);
+      toast.success(t("ioc.parsedCount").replace("{count}", String(newIOCs.length)));
+    },
+    [iocs, onIOCsChange, t],
+  );
+
   const containerHeight = useMemo(() => {
     if (!shouldVirtualize) return "auto";
     return Math.min(iocs.length, MAX_VISIBLE_ROWS) * ROW_HEIGHT;
@@ -155,15 +169,31 @@ export const IOCTable = memo(function IOCTable({ iocs, onIOCsChange }: IOCTableP
             ({iocs.length} {t("ioc.indicators")})
           </span>
         </div>
-        {iocs.length > 0 && (
+        <div className="flex items-center gap-2">
           <button
-            onClick={copyAllIOCs}
+            onClick={() => setXrefOpen(true)}
             className="flex items-center gap-2 text-xs text-primary hover:text-primary/80 transition-colors"
           >
-            <Copy className="w-3 h-3" />
-            {t("ioc.copyAll")}
+            <Link className="w-3 h-3" />
+            {t("ioc.crossRef")}
           </button>
-        )}
+          <button
+            onClick={() => setPasteDialogOpen(true)}
+            className="flex items-center gap-2 text-xs text-primary hover:text-primary/80 transition-colors"
+          >
+            <ClipboardPaste className="w-3 h-3" />
+            {t("ioc.pasteExtract")}
+          </button>
+          {iocs.length > 0 && (
+            <button
+              onClick={copyAllIOCs}
+              className="flex items-center gap-2 text-xs text-primary hover:text-primary/80 transition-colors"
+            >
+              <Copy className="w-3 h-3" />
+              {t("ioc.copyAll")}
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Add new IOC */}
@@ -275,6 +305,7 @@ export const IOCTable = memo(function IOCTable({ iocs, onIOCsChange }: IOCTableP
                           <div className="flex items-center justify-end gap-1">
                             <button
                               onClick={() => copyIOC(ioc)}
+                              aria-label={copiedId === ioc.id ? "Copied" : "Copy IOC"}
                               className="p-1.5 hover:bg-secondary rounded transition-colors"
                             >
                               {copiedId === ioc.id ? (
@@ -285,6 +316,7 @@ export const IOCTable = memo(function IOCTable({ iocs, onIOCsChange }: IOCTableP
                             </button>
                             <button
                               onClick={() => removeIOC(ioc.id)}
+                              aria-label="Remove IOC"
                               className="p-1.5 hover:bg-destructive/20 rounded transition-colors"
                             >
                               <Trash2 className="w-4 h-4 text-destructive" />
@@ -320,6 +352,17 @@ export const IOCTable = memo(function IOCTable({ iocs, onIOCsChange }: IOCTableP
           {t("ioc.empty")}
         </div>
       )}
+
+      <IOCPasteDialog
+        open={pasteDialogOpen}
+        onOpenChange={setPasteDialogOpen}
+        onAddIOCs={handlePasteIOCs}
+      />
+
+      <IOCCrossReferenceDialog
+        open={xrefOpen}
+        onOpenChange={setXrefOpen}
+      />
     </div>
   );
 });

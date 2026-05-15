@@ -3,6 +3,7 @@ import { ChevronDown, Info, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { STORAGE_KEYS } from "@/lib/storageKeys";
 import { SectionSkeleton } from "@/components/ui/section-skeleton";
+import { SectionErrorBoundary } from "@/components/SectionErrorBoundary";
 
 interface CollapsibleSectionProps {
   title: string;
@@ -196,7 +197,7 @@ export const CollapsibleSection = memo(function CollapsibleSection({
   }, [onPrefetch, isOpen]);
 
   return (
-    <div ref={sectionRef} className={cn("section-collapsible", className)}>
+    <div ref={sectionRef} className={cn("section-collapsible", className)} data-section-key={key}>
       <button
         type="button"
         onClick={handleToggle}
@@ -212,7 +213,9 @@ export const CollapsibleSection = memo(function CollapsibleSection({
           {hint && (
             <div
               onClick={handleHintToggle}
+              onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.stopPropagation(); setHintOpen(prev => { const next = !prev; saveHintState(`hint-${key}`, next); return next; }); } }}
               role="button"
+              tabIndex={0}
               aria-label="Toggle guidance"
               className={cn(
                 "p-1 rounded transition-colors duration-150",
@@ -265,7 +268,9 @@ export const CollapsibleSection = memo(function CollapsibleSection({
             {showSkeleton ? (
               <SectionSkeleton variant={skeletonVariant} rows={skeletonRows} />
             ) : shouldRenderContent ? (
-              children
+              <SectionErrorBoundary>
+                {children}
+              </SectionErrorBoundary>
             ) : null}
           </div>
         </div>

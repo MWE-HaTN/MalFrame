@@ -1,8 +1,9 @@
 import { useState, useId, useRef, useMemo, useCallback, memo } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { Plus, Trash2, Clock, TriangleAlert, Info } from "lucide-react";
+import { Plus, Trash2, Clock, TriangleAlert, Info, Table, GitBranch } from "lucide-react";
 import { cn, generateId } from "@/lib/utils";
 import { useLanguage } from "@/hooks/useLanguage";
+import { TimelineVisual } from "./TimelineVisual";
 import type { TimelineEvent } from "@/types/dashboard";
 
 interface TimelineTableProps {
@@ -60,6 +61,7 @@ const TimelineRow = memo(function TimelineRow({ event, severityOption, onRemove,
         <button
           onClick={() => onRemove(event.id)}
           className="p-1.5 rounded-sm text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+          aria-label={deleteLabel}
           title={deleteLabel}
         >
           <Trash2 className="w-4 h-4" />
@@ -75,6 +77,7 @@ const MAX_VISIBLE_ROWS = 10;
 export const TimelineTable = memo(function TimelineTable({ events, onEventsChange }: TimelineTableProps) {
   const { t } = useLanguage();
   const formId = useId();
+  const [viewMode, setViewMode] = useState<"table" | "visual">("table");
   const [newEvent, setNewEvent] = useState<Omit<TimelineEvent, "id">>({
     time: "",
     content: "",
@@ -179,7 +182,44 @@ export const TimelineTable = memo(function TimelineTable({ events, onEventsChang
       </div>
 
       {/* Events table */}
+      {events.length > 0 && (
+        <div className="flex items-center gap-1 mb-2">
+          <button
+            onClick={() => setViewMode("table")}
+            className={cn(
+              "flex items-center gap-1.5 px-2.5 py-1.5 rounded-sm text-xs font-mono transition-colors",
+              viewMode === "table"
+                ? "bg-primary/20 text-primary"
+                : "text-muted-foreground hover:text-foreground hover:bg-secondary/50"
+            )}
+          >
+            <Table className="w-3.5 h-3.5" />
+            {t("timeline.tableView")}
+          </button>
+          <button
+            onClick={() => setViewMode("visual")}
+            className={cn(
+              "flex items-center gap-1.5 px-2.5 py-1.5 rounded-sm text-xs font-mono transition-colors",
+              viewMode === "visual"
+                ? "bg-primary/20 text-primary"
+                : "text-muted-foreground hover:text-foreground hover:bg-secondary/50"
+            )}
+          >
+            <GitBranch className="w-3.5 h-3.5" />
+            {t("timeline.visualView")}
+          </button>
+        </div>
+      )}
+
       {events.length > 0 ? (
+        viewMode === "visual" ? (
+          <TimelineVisual
+            events={events}
+            onRemove={removeEvent}
+            severityOptions={severityOptions}
+            deleteLabel={t("common.delete")}
+          />
+        ) : (
         <div className="border border-border rounded-sm overflow-hidden">
           <table className="w-full">
             <thead>
@@ -251,6 +291,7 @@ export const TimelineTable = memo(function TimelineTable({ events, onEventsChang
                           <button
                             onClick={() => removeEvent(event.id)}
                             className="p-1.5 rounded-sm text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+                            aria-label={t("common.delete")}
                             title={t("common.delete")}
                           >
                             <Trash2 className="w-4 h-4" />
@@ -278,6 +319,7 @@ export const TimelineTable = memo(function TimelineTable({ events, onEventsChang
             </table>
           )}
         </div>
+        )
       ) : (
         <div className="border border-dashed border-border rounded-sm p-8 text-center">
           <Clock className="w-8 h-8 text-muted-foreground mx-auto mb-2" />

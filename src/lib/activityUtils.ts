@@ -20,7 +20,7 @@ const SHOWN_MILESTONES_KEY = "mad-shown-milestones";
 /**
  * Get activity data from localStorage
  */
-export function getActivityData(): ActivityData {
+function getActivityData(): ActivityData {
   try {
     const stored = localStorage.getItem(STORAGE_KEYS.ACTIVITY_DATA);
     return stored ? JSON.parse(stored) : { activities: [] };
@@ -142,7 +142,7 @@ function saveShownMilestones(milestones: number[]): void {
 /**
  * Check and show milestone notification if user reached a new milestone
  */
-export function checkAndShowMilestoneNotification(): void {
+function checkAndShowMilestoneNotification(): void {
   const { totalDays } = calculateStreakInfo();
   const shownMilestones = getShownMilestones();
 

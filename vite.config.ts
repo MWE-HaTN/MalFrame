@@ -4,6 +4,7 @@ import path from "path";
 import { visualizer } from "rollup-plugin-visualizer";
 import viteCompression from "vite-plugin-compression";
 import basicSsl from "@vitejs/plugin-basic-ssl";
+import { VitePWA } from "vite-plugin-pwa";
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
@@ -37,6 +38,62 @@ export default defineConfig(({ mode }) => ({
       ext: ".br",
       threshold: 1024,
       deleteOriginFile: false,
+    }),
+    VitePWA({
+      registerType: "prompt",
+      workbox: {
+        globPatterns: ["**/*.{js,css,html,svg,woff2,ttf}"],
+        navigateFallback: "index.html",
+        navigateFallbackDenylist: [/^\/MalFrame\/api/],
+        runtimeCaching: [
+          {
+            urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
+            handler: "StaleWhileRevalidate",
+            options: {
+              cacheName: "google-fonts-stylesheets",
+            },
+          },
+          {
+            urlPattern: /^https:\/\/fonts\.gstatic\.com\/.*/i,
+            handler: "CacheFirst",
+            options: {
+              cacheName: "google-fonts-webfonts",
+              expiration: {
+                maxEntries: 30,
+                maxAgeSeconds: 60 * 60 * 24 * 365,
+              },
+              cacheableResponse: {
+                statuses: [0, 200],
+              },
+            },
+          },
+          {
+            urlPattern: /^https:\/\/raw\.githubusercontent\.com\/.*/i,
+            handler: "StaleWhileRevalidate",
+            options: {
+              cacheName: "mitre-external-data",
+            },
+          },
+        ],
+      },
+      manifest: {
+        name: "MalFrame — Malware Analyst Dashboard",
+        short_name: "MalFrame",
+        description: "Professional dashboard for Malware Incident Analysis (MIA) and Malware Reverse Engineering (MRE) workflows",
+        theme_color: "#0a0f14",
+        background_color: "#0a0f14",
+        display: "standalone",
+        scope: mode === "production" ? "/MalFrame/" : "/",
+        start_url: mode === "production" ? "/MalFrame/" : "/",
+        icons: [
+          {
+            src: "favicon.svg",
+            sizes: "any",
+            type: "image/svg+xml",
+            purpose: "any maskable",
+          },
+        ],
+      },
     }),
   ].filter(Boolean),
   resolve: {
@@ -98,6 +155,16 @@ export default defineConfig(({ mode }) => ({
           // Tailwind utilities
           if (id.includes("tailwind-merge") || id.includes("clsx") || id.includes("class-variance-authority")) {
             return "vendor-tailwind";
+          }
+
+          // ReactFlow - only used by GraphView, lazy loaded
+          if (id.includes("@xyflow")) {
+            return "vendor-reactflow";
+          }
+
+          // CodeMirror - only used by YARA editor, lazy loaded
+          if (id.includes("@codemirror") || id.includes("@lezer")) {
+            return "vendor-codemirror";
           }
           
           // Large data files - lazy loaded, separate chunks
@@ -234,6 +301,12 @@ export default defineConfig(({ mode }) => ({
     exclude: [
       "jspdf",
       "docx",
+      "@xyflow/react",
+      "@codemirror/commands",
+      "@codemirror/language",
+      "@codemirror/state",
+      "@codemirror/view",
+      "@lezer/highlight",
     ],
   },
 }));

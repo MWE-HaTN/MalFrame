@@ -1,9 +1,11 @@
-import { memo } from "react";
+import { memo, useCallback } from "react";
 import { Network } from "lucide-react";
 import { FormField } from "@/components/FormField";
 import { CollapsibleSection } from "@/components/CollapsibleSection";
 import { useLanguage } from "@/hooks/useLanguage";
 import type { BehaviorAnalysisData } from "@/features/mia/types";
+
+const EMPTY_IMAGES: string[] = [];
 
 interface BehaviorAnalysisSectionProps {
   data: BehaviorAnalysisData;
@@ -17,6 +19,13 @@ export const BehaviorAnalysisSection = memo(function BehaviorAnalysisSection({
   forceCloseCounter,
 }: BehaviorAnalysisSectionProps) {
   const { t } = useLanguage();
+
+  const handleProcessTreeImages = useCallback((imgs: string[]) => onChange({ ...data, processTreeImages: imgs }), [data, onChange]);
+  const handleFileSystemImages = useCallback((imgs: string[]) => onChange({ ...data, fileSystemModsImages: imgs }), [data, onChange]);
+  const handleRegistryImages = useCallback((imgs: string[]) => onChange({ ...data, registryPersistenceImages: imgs }), [data, onChange]);
+  const handleNetworkImages = useCallback((imgs: string[]) => onChange({ ...data, networkActivityImages: imgs }), [data, onChange]);
+  const handleMemoryImages = useCallback((imgs: string[]) => onChange({ ...data, memoryArtifactsImages: imgs }), [data, onChange]);
+  const handleSystemImages = useCallback((imgs: string[]) => onChange({ ...data, systemChangesImages: imgs }), [data, onChange]);
 
   return (
     <CollapsibleSection
@@ -39,10 +48,8 @@ export const BehaviorAnalysisSection = memo(function BehaviorAnalysisSection({
           onChange={(v) => onChange({ ...data, processTree: v })}
           placeholder={t("mia.placeholder.processTree")}
           allowImages
-          images={data.processTreeImages || []}
-          onImagesChange={(imgs) =>
-            onChange({ ...data, processTreeImages: imgs })
-          }
+          images={data.processTreeImages ?? EMPTY_IMAGES}
+          onImagesChange={handleProcessTreeImages}
         />
 
         {/* File System Modifications */}
@@ -54,10 +61,8 @@ export const BehaviorAnalysisSection = memo(function BehaviorAnalysisSection({
           onChange={(v) => onChange({ ...data, fileSystemMods: v })}
           placeholder={t("mia.placeholder.fileSystem")}
           allowImages
-          images={data.fileSystemModsImages || []}
-          onImagesChange={(imgs) =>
-            onChange({ ...data, fileSystemModsImages: imgs })
-          }
+          images={data.fileSystemModsImages ?? EMPTY_IMAGES}
+          onImagesChange={handleFileSystemImages}
         />
 
         {/* Registry / Persistence */}
@@ -69,10 +74,8 @@ export const BehaviorAnalysisSection = memo(function BehaviorAnalysisSection({
           onChange={(v) => onChange({ ...data, registryPersistence: v })}
           placeholder={t("mia.placeholder.registry")}
           allowImages
-          images={data.registryPersistenceImages || []}
-          onImagesChange={(imgs) =>
-            onChange({ ...data, registryPersistenceImages: imgs })
-          }
+          images={data.registryPersistenceImages ?? EMPTY_IMAGES}
+          onImagesChange={handleRegistryImages}
         />
 
         {/* Network Activity */}
@@ -84,10 +87,8 @@ export const BehaviorAnalysisSection = memo(function BehaviorAnalysisSection({
           onChange={(v) => onChange({ ...data, networkActivity: v })}
           placeholder={t("mia.placeholder.network")}
           allowImages
-          images={data.networkActivityImages || []}
-          onImagesChange={(imgs) =>
-            onChange({ ...data, networkActivityImages: imgs })
-          }
+          images={data.networkActivityImages ?? EMPTY_IMAGES}
+          onImagesChange={handleNetworkImages}
         />
 
         {/* Memory Artifacts */}
@@ -99,10 +100,8 @@ export const BehaviorAnalysisSection = memo(function BehaviorAnalysisSection({
           onChange={(v) => onChange({ ...data, memoryArtifacts: v })}
           placeholder={t("mia.placeholder.memory")}
           allowImages
-          images={data.memoryArtifactsImages || []}
-          onImagesChange={(imgs) =>
-            onChange({ ...data, memoryArtifactsImages: imgs })
-          }
+          images={data.memoryArtifactsImages ?? EMPTY_IMAGES}
+          onImagesChange={handleMemoryImages}
         />
 
         {/* System Changes */}
@@ -114,13 +113,10 @@ export const BehaviorAnalysisSection = memo(function BehaviorAnalysisSection({
           onChange={(v) => onChange({ ...data, systemChanges: v })}
           placeholder={t("mia.placeholder.systemChanges")}
           allowImages
-          images={data.systemChangesImages || []}
-          onImagesChange={(imgs) =>
-            onChange({ ...data, systemChangesImages: imgs })
-          }
+          images={data.systemChangesImages ?? EMPTY_IMAGES}
+          onImagesChange={handleSystemImages}
         />
       </div>
     </CollapsibleSection>
   );
 });
-

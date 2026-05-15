@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, memo } from "react";
 import { 
   Code, Bug, Layers, ChevronRight
 } from "lucide-react";
@@ -80,7 +80,7 @@ interface CodeAnalysisGroupsProps {
   onClearPacked: () => void;
 }
 
-export function CodeAnalysisGroups({
+export const CodeAnalysisGroups = memo(function CodeAnalysisGroups({
   codeData,
   onCodeDataChange,
   deepDiveData,
@@ -176,5 +176,5 @@ export function CodeAnalysisGroups({
       </div>
     </div>
   );
-}
+});
 

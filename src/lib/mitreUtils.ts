@@ -4,14 +4,17 @@
  * Repository: mitre-attack/attack-stix-data
  */
 
-import { 
-  MitreStixBundleSchema, 
+import {
+  MitreStixBundleSchema,
+  formatZodErrors,
   type MitreStixBundle,
 } from "@/lib/validationSchemas";
 import { debugWarn, debugError } from "@/lib/debugLogger";
 import { truncate } from "@/lib/utils";
 
 const MITRE_STIX_URL = "https://raw.githubusercontent.com/mitre-attack/attack-stix-data/master/enterprise-attack/enterprise-attack.json";
+const MITRE_STIX_PROXY_URL = "https://corsproxy.io/?https://raw.githubusercontent.com/mitre-attack/attack-stix-data/master/enterprise-attack/enterprise-attack.json";
+const FETCH_TIMEOUT_MS = 90000; // 90s timeout for ~30MB file
 
 export interface SubTechnique {
   id: string;
@@ -69,7 +72,7 @@ const TACTIC_ORDER = [
 
 // Size limits for validation
 const BYTES_PER_MB = 1024 * 1024;
-const MAX_MITRE_DATA_SIZE_MB = 50; // MITRE Enterprise ATT&CK is ~20MB, using 50MB for headroom
+const MAX_MITRE_DATA_SIZE_MB = 70; // MITRE Enterprise ATT&CK is ~53MB
 const MAX_MITRE_DATA_SIZE = MAX_MITRE_DATA_SIZE_MB * BYTES_PER_MB;
 
 // Retry configuration for network resilience
@@ -102,7 +105,11 @@ function getBackoffDelay(attempt: number): number {
  */
 function isRetryableError(error: unknown, response?: Response): boolean {
   // Network errors are retryable
-  if (error instanceof TypeError && error.message.includes('fetch')) {
+  if (error instanceof TypeError && (error.message.includes('fetch') || error.message.includes('Load failed'))) {
+    return true;
+  }
+  // Abort/timeout errors are retryable
+  if (error instanceof DOMException && error.name === 'AbortError') {
     return true;
   }
   
@@ -115,16 +122,44 @@ function isRetryableError(error: unknown, response?: Response): boolean {
 }
 
 /**
- * Fetches MITRE ATT&CK data from official GitHub repository and parses it
- * into the format used by the dashboard. Includes retry logic with exponential backoff.
+ * Fetch with timeout using AbortController
+ */
+async function fetchWithTimeout(url: string, timeoutMs: number): Promise<Response> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const response = await fetch(url, { signal: controller.signal });
+    return response;
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
+/**
+ * Fetch MITRE ATT&CK data from GitHub. Tries raw.githubusercontent.com first,
+ * falls back to GitHub API if that fails (e.g., CORS/firewall blocking raw).
+ * Includes retry logic with exponential backoff.
  */
 export async function fetchMitreData(): Promise<{ tactics: MitreTactic[]; version: string }> {
   let lastError: Error | null = null;
-  
+
   for (let attempt = 0; attempt <= RETRY_CONFIG.maxRetries; attempt++) {
     try {
-      const response = await fetch(MITRE_STIX_URL);
-      
+      let response: Response;
+
+      try {
+        response = await fetchWithTimeout(MITRE_STIX_URL, FETCH_TIMEOUT_MS);
+      } catch (rawError) {
+        // If raw.githubusercontent.com fails (CORS/firewall/network), try CORS proxy
+        debugWarn("[MITRE] Direct fetch failed, trying CORS proxy:", rawError);
+        try {
+          response = await fetchWithTimeout(MITRE_STIX_PROXY_URL, FETCH_TIMEOUT_MS);
+        } catch {
+          // Both failed, throw original error
+          throw rawError;
+        }
+      }
+
       if (!response.ok) {
         // Check if this is a retryable error
         if (isRetryableError(null, response) && attempt < RETRY_CONFIG.maxRetries) {
@@ -133,7 +168,10 @@ export async function fetchMitreData(): Promise<{ tactics: MitreTactic[]; versio
           await delay(delayMs);
           continue;
         }
-        throw new Error(`Failed to fetch MITRE data: ${response.statusText}`);
+        if (response.status === 403) {
+          throw new Error("GitHub API rate limit exceeded. Try again later or use Force Refresh.");
+        }
+        throw new Error(`Failed to fetch MITRE data: HTTP ${response.status}`);
       }
       
       // Check content-length header first (if available)
@@ -141,29 +179,28 @@ export async function fetchMitreData(): Promise<{ tactics: MitreTactic[]; versio
       if (contentLength && parseInt(contentLength, 10) > MAX_MITRE_DATA_SIZE) {
         throw new Error(`MITRE data exceeds maximum allowed size (${MAX_MITRE_DATA_SIZE_MB}MB)`);
       }
-      
-      // Read as text first to validate size before parsing
-      // Note: text.length is character count, not byte size, so we use Blob for accurate measurement
+
+      // Read response text and validate size
       const responseText = await response.text();
       const responseByteSize = new Blob([responseText]).size;
       if (responseByteSize > MAX_MITRE_DATA_SIZE) {
         throw new Error(`MITRE data exceeds maximum allowed size (${MAX_MITRE_DATA_SIZE_MB}MB)`);
       }
-      
+
       // Parse and validate with Zod schema
       const rawBundle = JSON.parse(responseText);
       const parseResult = MitreStixBundleSchema.safeParse(rawBundle);
       
       if (!parseResult.success) {
         debugError("[MITRE] Schema validation failed:", parseResult.error.format());
-        throw new Error("MITRE data failed schema validation - data structure is invalid");
+        throw new Error(formatZodErrors(parseResult.error.issues));
       }
       
       return parseMitreStixData(parseResult.data);
       
     } catch (error) {
       lastError = error instanceof Error ? error : new Error(String(error));
-      
+
       // Check if we should retry
       if (isRetryableError(error, undefined) && attempt < RETRY_CONFIG.maxRetries) {
         const delayMs = getBackoffDelay(attempt);
@@ -171,14 +208,21 @@ export async function fetchMitreData(): Promise<{ tactics: MitreTactic[]; versio
         await delay(delayMs);
         continue;
       }
-      
+
       // Non-retryable error or max retries reached
-      throw lastError;
+      break;
     }
   }
-  
-  // Should not reach here, but TypeScript needs this
-  throw lastError || new Error("Failed to fetch MITRE data after retries");
+
+  // Provide user-friendly error message
+  const msg = lastError?.message || "";
+  if (msg.includes("abort") || msg.includes("timeout")) {
+    throw new Error("Request timed out. The MITRE file is ~30MB — check your connection and try again.");
+  }
+  if (msg.includes("Failed to fetch") || msg.includes("NetworkError") || msg.includes("Load failed")) {
+    throw new Error("Network error: cannot reach GitHub. Check your internet connection, VPN, or firewall settings.");
+  }
+  throw lastError || new Error("Failed to fetch MITRE data");
 }
 
 /**
@@ -379,23 +423,7 @@ export async function loadMitreData(): Promise<{ tactics: MitreTactic[]; version
   // Create a fetch promise and store it to prevent concurrent fetches
   fetchPromise = (async () => {
     try {
-      // Fetch fresh data from GitHub
-      const { tactics, version } = await fetchMitreData();
-      
-      // Cache the data
-      const cachePayload = { tactics, version };
-      inMemoryMitreCache = cachePayload;
-      inMemoryCacheValid = true;
-      
-      localStorage.setItem(STORAGE_KEYS.MITRE_CACHE, JSON.stringify(cachePayload));
-      localStorage.setItem(STORAGE_KEYS.MITRE_VERSION, version);
-      localStorage.setItem(STORAGE_KEYS.MITRE_CACHE_EXPIRY, String(Date.now() + CACHE_DURATION_MS));
-      
-      // Invalidate technique lookup cache when data changes
-      cachedTechniqueLookup = null;
-      cachedTacticsHash = null;
-      
-      return cachePayload;
+      return await fetchAndCacheMitreData();
     } finally {
       // Clear the promise lock after completion (success or failure)
       fetchPromise = null;
@@ -403,6 +431,58 @@ export async function loadMitreData(): Promise<{ tactics: MitreTactic[]; version
   })();
   
   return fetchPromise;
+}
+
+/**
+ * Internal: fetches fresh MITRE data and populates all cache tiers.
+ * Shared by loadMitreData() and forceRefreshMitreData().
+ */
+async function fetchAndCacheMitreData(): Promise<{ tactics: MitreTactic[]; version: string }> {
+  const { tactics, version } = await fetchMitreData();
+
+  const cachePayload = { tactics, version };
+  inMemoryMitreCache = cachePayload;
+  inMemoryCacheValid = true;
+
+  localStorage.setItem(STORAGE_KEYS.MITRE_CACHE, JSON.stringify(cachePayload));
+  localStorage.setItem(STORAGE_KEYS.MITRE_VERSION, version);
+  localStorage.setItem(STORAGE_KEYS.MITRE_CACHE_EXPIRY, String(Date.now() + CACHE_DURATION_MS));
+
+  // Invalidate technique lookup cache when data changes
+  cachedTechniqueLookup = null;
+  cachedTacticsHash = null;
+
+  return cachePayload;
+}
+
+/**
+ * Force-refreshes MITRE data from GitHub, bypassing all caches.
+ * Returns the freshly fetched data.
+ */
+export async function forceRefreshMitreData(): Promise<{ tactics: MitreTactic[]; version: string }> {
+  // Clear all caches
+  inMemoryMitreCache = null;
+  inMemoryCacheValid = false;
+  fetchPromise = null;
+  localStorage.removeItem(STORAGE_KEYS.MITRE_CACHE);
+  localStorage.removeItem(STORAGE_KEYS.MITRE_CACHE_EXPIRY);
+
+  return fetchAndCacheMitreData();
+}
+
+/**
+ * Returns info about the current MITRE cache state.
+ * Useful for displaying version and last-fetch time in the UI.
+ */
+export function getMitreCacheInfo(): { version: string | null; lastFetchTime: number | null; cacheExpiry: number | null } {
+  const version = localStorage.getItem(STORAGE_KEYS.MITRE_VERSION);
+  const cacheExpiryStr = localStorage.getItem(STORAGE_KEYS.MITRE_CACHE_EXPIRY);
+  const cacheExpiry = cacheExpiryStr ? parseInt(cacheExpiryStr, 10) : null;
+
+  // lastFetchTime = cacheExpiry - CACHE_DURATION_MS
+  const lastFetchTime = cacheExpiry ? cacheExpiry - CACHE_DURATION_MS : null;
+
+  return { version, lastFetchTime, cacheExpiry };
 }
 
 /**

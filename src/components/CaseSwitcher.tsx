@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, memo } from "react";
 import { Plus, X, Pencil, FolderOpen } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useLanguage } from "@/hooks/useLanguage";
@@ -15,9 +15,11 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
-type Props = Omit<UseCaseManagerReturn, "activeStorageKey">;
+type Props = Omit<UseCaseManagerReturn, "activeStorageKey"> & {
+  onNewCaseClick?: () => void;
+};
 
-export function CaseSwitcher({ cases, activeCaseId, createCase, switchCase, deleteCase, renameCase }: Props) {
+export const CaseSwitcher = memo(function CaseSwitcher({ cases, activeCaseId, createCase, switchCase, deleteCase, renameCase, onNewCaseClick }: Props) {
   const { t } = useLanguage();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState("");
@@ -106,6 +108,7 @@ export function CaseSwitcher({ cases, activeCaseId, createCase, switchCase, dele
                   <button
                     className="opacity-0 group-hover:opacity-60 hover:!opacity-100 transition-opacity ml-0.5"
                     onClick={(e) => startRename(c, e)}
+                    aria-label={t("cases.rename")}
                     title={t("cases.rename")}
                   >
                     <Pencil className="w-2.5 h-2.5" />
@@ -117,6 +120,7 @@ export function CaseSwitcher({ cases, activeCaseId, createCase, switchCase, dele
                   <button
                     className="opacity-0 group-hover:opacity-50 hover:!opacity-100 hover:text-destructive transition-all"
                     onClick={(e) => handleDeleteClick(c, e)}
+                    aria-label={t("cases.delete")}
                     title={t("cases.delete")}
                   >
                     <X className="w-2.5 h-2.5" />
@@ -129,7 +133,7 @@ export function CaseSwitcher({ cases, activeCaseId, createCase, switchCase, dele
 
         {/* New case button */}
         <button
-          onClick={createCase}
+          onClick={() => onNewCaseClick ? onNewCaseClick() : createCase()}
           className="flex items-center gap-1 rounded border border-dashed border-border/40 px-2 py-0.5 text-xs text-muted-foreground hover:border-primary/40 hover:text-primary transition-colors shrink-0 select-none"
           title={t("cases.new")}
         >
@@ -162,4 +166,4 @@ export function CaseSwitcher({ cases, activeCaseId, createCase, switchCase, dele
       </AlertDialog>
     </>
   );
-}
+});
