@@ -104,6 +104,9 @@ npm run preview
 | Auto MBC Suggestion | ❌ | ✅ | Runtime behavior-based MBC behavior suggestions |
 | Export Reminder | ✅ | ✅ | Toast warning when data not exported in 7+ days |
 | Shortcut Hint Bar | ✅ | ✅ | Fixed icon buttons in bottom-left corner |
+| Undo / Redo | ✅ | ✅ | `Ctrl+Z` / `Ctrl+Shift+Z` — rolling history (20 snapshots) |
+| Section Navigation | ✅ | ✅ | `Ctrl+Shift+↓/↑` jump between sections, `Ctrl+Shift+A` expand/collapse all |
+| Save Status Indicator | ✅ | ✅ | Auto-save status in dashboard header (saving/saved/failed) |
 
 ---
 
@@ -247,6 +250,32 @@ FLARE-VM analysis tools reference: **33 categories, 240+ tools**, searchable, wi
 4. Accept or dismiss suggestions as needed
 5. **Update** button checks GitHub for newer MBC versions and shows a link if available
 
+### Undo / Redo
+
+**Where**: Both MIA and MRE dashboards
+
+- `Ctrl+Z` to undo, `Ctrl+Shift+Z` to redo
+- Stores up to 20 snapshots of your data state
+- Also accessible via the `?` shortcuts dialog
+- Works with all section edits, imports, and template fills
+
+### Section Keyboard Navigation
+
+**Where**: Both MIA and MRE dashboards
+
+- `Ctrl+Shift+↓` — jump to next section
+- `Ctrl+Shift+↑` — jump to previous section
+- `Ctrl+Shift+A` — expand or collapse all sections at once
+- Sections scroll into view smoothly and focus the header for accessibility
+
+### Save Status Indicator
+
+**Where**: Dashboard header (both MIA and MRE)
+
+- Shows real-time auto-save status next to the subtitle
+- States: **Saving...** (yellow spinner), **Saved** (green check), **Save failed** (red alert)
+- Data auto-saves to IndexedDB every 500ms after changes
+
 ---
 
 ## Multi-Case Management
@@ -325,10 +354,14 @@ Press `?` anywhere to view all shortcuts. Key bindings:
 | Shortcut | Action |
 |----------|--------|
 | `Ctrl+K` | Open command palette |
+| `Ctrl+Z` | Undo (dashboard only) |
+| `Ctrl+Shift+Z` | Redo (dashboard only) |
 | `Ctrl+Shift+X` | Search across all cases |
 | `Ctrl+Shift+I` | IOC Cross-Reference — find shared IOCs across cases |
 | `Ctrl+Shift+N` | New case |
 | `Ctrl+Shift+←` / `→` | Switch to previous / next case |
+| `Ctrl+Shift+↓` / `↑` | Jump to next / previous section |
+| `Ctrl+Shift+A` | Expand / collapse all sections |
 | `Ctrl+Shift+E` | Export data |
 | `Ctrl+Shift+1` | Go to MIA dashboard |
 | `Ctrl+Shift+2` | Go to MRE dashboard |
@@ -349,6 +382,8 @@ Press `?` anywhere to view all shortcuts. Key bindings:
 | `npm run preview` | Preview production build locally |
 | `npm run lint` | Run ESLint |
 | `npm run typecheck` | TypeScript type check (no emit) |
+| `npm run test` | Run unit tests (vitest) |
+| `npm run test:watch` | Run tests in watch mode |
 
 ---
 
@@ -393,6 +428,13 @@ Press `?` anywhere to view all shortcuts. Key bindings:
 | [workbox-window](https://developer.chrome.com/docs/workbox/modules/workbox-window) | Service worker registration + update prompt |
 | [rollup-plugin-visualizer](https://github.com/btd/rollup-plugin-visualizer) | Bundle analysis (`dist/stats.html`) |
 
+### Testing
+
+| Technology | Purpose |
+|------------|---------|
+| [Vitest](https://vitest.dev/) | Unit testing framework |
+| [jsdom](https://github.com/jsdom/jsdom) | DOM environment for tests |
+
 ---
 
 ## Project Structure
@@ -415,15 +457,21 @@ MalFrame/
 │   │   ├── header/                  # ActivityBadge, EasterEgg
 │   │   ├── SearchDialog.tsx         # Cross-case search dialog
 │   │   ├── CommandPalette.tsx       # Command palette (Ctrl+K)
+│   │   ├── ShortcutsDialog.tsx      # Keyboard shortcuts reference (?)
 │   │   ├── ShortcutsHintBar.tsx     # Fixed shortcut icon buttons
 │   │   ├── ReloadPrompt.tsx         # PWA update prompt
 │   │   ├── IOCPasteDialog.tsx       # Paste & extract IOCs from text
 │   │   ├── IOCCrossReferenceDialog.tsx  # Cross-case IOC analysis
 │   │   ├── CaseTemplateDialog.tsx   # New case template picker
+│   │   ├── CaseSwitcher.tsx         # Tab bar: switch/rename/delete cases
+│   │   ├── CollapsibleSection.tsx   # Section wrapper with persistence
 │   │   ├── GraphView.tsx            # ReactFlow MITRE graph visualization
+│   │   ├── ScrollToTop.tsx          # Scroll restoration
+│   │   ├── SectionErrorBoundary.tsx # Error boundary for sections
 │   │   └── lazy/                    # Lazy wrapper components (LazyXxx.tsx)
 │   │       ├── index.ts
-│   │       └── LazyGraphView.tsx
+│   │       ├── LazyGraphView.tsx
+│   │       └── LazyYaraEditor.tsx
 │   │
 │   ├── features/
 │   │   ├── mia/                     # ALL MIA domain code
@@ -451,13 +499,14 @@ MalFrame/
 │   │   ├── useLanguage.ts
 │   │   ├── useTheme.ts
 │   │   ├── useUser.ts
-│   │   ├── useDashboardData.ts      # IndexedDB load/save + auto-save
+│   │   ├── useDashboardData.ts      # IndexedDB load/save + auto-save + undo/redo
+│   │   ├── useDashboardActions.ts   # Shared export/import/undo actions for dashboards
 │   │   ├── useDashboardExport.ts    # Export dialog state machine
 │   │   ├── useImportJSON.ts         # JSON import with Zod validation
 │   │   ├── useCaseManager.ts        # Multi-case CRUD
+│   │   ├── useSectionNavigation.ts  # Keyboard navigation between sections
 │   │   ├── useDragReorder.ts        # Drag-to-reorder list items
 │   │   ├── useToolsData.ts          # Tools list with localStorage persistence
-│   │   ├── useSEO.ts                # Document title + meta tags
 │   │   ├── useKeyboardShortcuts.ts  # Keyboard shortcut bindings
 │   │   └── useTypingAnimation.ts    # Typing animation for landing page
 │   │
@@ -488,16 +537,22 @@ MalFrame/
 │   │   ├── toolsData.ts             # FLARE-VM tools reference data
 │   │   ├── validationSchemas.ts     # Zod schemas for import
 │   │   ├── lazyExport.ts            # Dynamic import wrappers for export
+│   │   ├── lazyPrefetch.ts          # Prefetch heavy component chunks on hover
+│   │   ├── dashboardExportUtils.ts  # Export helpers (hasData, formatExportError)
 │   │   ├── fileNameUtils.ts         # Export filename generation
 │   │   ├── imageUtils.ts            # Base64 image helpers
 │   │   ├── imageStorage.ts          # Image registry clear utilities
 │   │   ├── sectionState.ts          # Section open/close state helpers
-│   │   ├── navigation.ts            # getSavedDashboard()
 │   │   ├── preloadRoutes.ts         # Lazy page components + preload
 │   │   ├── semanticColors.ts        # Risk level → color mapping
 │   │   ├── activityUtils.ts         # Activity tracking helpers
 │   │   ├── debugLogger.ts           # debugLog/debugWarn/debugError (dev only)
 │   │   └── utils.ts                 # cn(), generateId(), formatFileSize()
+│   │
+│   │   └── __tests__/               # Unit tests (vitest)
+│   │       ├── parseIOCs.test.ts
+│   │       ├── helpers.test.ts
+│   │       └── mitreSuggestion.test.ts
 │   │
 │   ├── pages/
 │   │   ├── Index.tsx                # Landing page
@@ -523,6 +578,7 @@ MalFrame/
 ├── index.html
 ├── tailwind.config.ts
 ├── vite.config.ts
+├── vitest.config.ts
 ├── tsconfig.json
 ├── tsconfig.app.json
 ├── eslint.config.js

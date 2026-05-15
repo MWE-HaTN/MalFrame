@@ -61,7 +61,7 @@ export const DashboardHeader = memo(function DashboardHeader({
         <h1 className="text-2xl font-bold text-primary text-glow font-terminal tracking-wider flex items-center gap-2">
           <span className="text-accent">※</span> {title}
         </h1>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 mt-1.5">
           <p className="text-sm text-muted-foreground font-mono">{subtitle}</p>
           {saveStatus && saveStatus !== "idle" && (
             <span className={cn(
