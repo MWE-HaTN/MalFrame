@@ -1,6 +1,8 @@
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 import { toast } from "sonner";
+import { STORAGE_KEYS } from "@/lib/storageKeys";
+import { tSync, type Language } from "@/lib/translations";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -12,7 +14,7 @@ export function cn(...inputs: ClassValue[]) {
 export function generateId(prefix?: string): string {
   const uuid = typeof crypto !== 'undefined' && crypto.randomUUID 
     ? crypto.randomUUID() 
-    : `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    : `${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
   return prefix ? `${prefix}_${uuid}` : uuid;
 }
 
@@ -20,13 +22,13 @@ export function generateId(prefix?: string): string {
  * Format bytes to human readable string (e.g., "1.5 MB")
  */
 export function formatFileSize(bytes: number): string {
-  if (bytes === 0) return "0 B";
-  
+  if (!Number.isFinite(bytes) || bytes <= 0) return "0 B";
+
   const BYTES_PER_UNIT = 1024;
-  const SIZE_UNITS = ["B", "KB", "MB", "GB"];
-  const unitIndex = Math.floor(Math.log(bytes) / Math.log(BYTES_PER_UNIT));
+  const SIZE_UNITS = ["B", "KB", "MB", "GB", "TB"];
+  const unitIndex = Math.max(0, Math.min(Math.floor(Math.log(bytes) / Math.log(BYTES_PER_UNIT)), SIZE_UNITS.length - 1));
   const sizeInUnit = bytes / Math.pow(BYTES_PER_UNIT, unitIndex);
-  
+
   return parseFloat(sizeInUnit.toFixed(2)) + " " + SIZE_UNITS[unitIndex];
 }
 
@@ -35,11 +37,11 @@ export function formatFileSize(bytes: number): string {
  */
 export function parseSizeToBytes(sizeStr: string): number {
   if (!sizeStr || sizeStr === "—") return 0;
-  const match = sizeStr.match(/^([\d.]+)\s*(B|KB|MB|GB)?$/i);
+  const match = sizeStr.match(/^(\d+(?:\.\d+)?)\s*(B|KB|MB|GB|TB)?$/i);
   if (!match) return 0;
   const value = parseFloat(match[1]);
   const unit = (match[2] || "B").toUpperCase();
-  const multipliers: Record<string, number> = { B: 1, KB: 1024, MB: 1024 * 1024, GB: 1024 * 1024 * 1024 };
+  const multipliers: Record<string, number> = { B: 1, KB: 1024, MB: 1024 * 1024, GB: 1024 * 1024 * 1024, TB: 1024 * 1024 * 1024 * 1024 };
   return value * (multipliers[unit] || 1);
 }
 
@@ -48,6 +50,7 @@ export function parseSizeToBytes(sizeStr: string): number {
  */
 export function truncate(text: string, maxLength: number): string {
   if (!text || text.length <= maxLength) return text;
+  if (maxLength <= 3) return text.slice(0, maxLength);
   return text.substring(0, maxLength - 3) + "...";
 }
 
@@ -59,6 +62,8 @@ export function copyToClipboard(text: string, label?: string): Promise<void> {
     if (label) {
       toast.success(`${label} copied`);
     }
+  }).catch(() => {
+    toast.error(tSync((localStorage.getItem(STORAGE_KEYS.LANGUAGE) || "en") as Language, "error.failedToCopy"));
   });
 }
 
@@ -68,7 +73,10 @@ export function copyToClipboard(text: string, label?: string): Promise<void> {
  */
 export function formatReportHeader(analyst: string): { date: string; time: string; headerText: string } {
   const now = new Date();
-  const date = now.toISOString().slice(0, 10);
+  const y = now.getFullYear();
+  const m = String(now.getMonth() + 1).padStart(2, "0");
+  const d = String(now.getDate()).padStart(2, "0");
+  const date = `${y}-${m}-${d}`;
   const time = now.toTimeString().slice(0, 5);
   const sanitizedAnalyst = (analyst || "Analyst").replace(/\s+/g, "-");
   return { date, time, headerText: `${date} ${time} · ${sanitizedAnalyst}` };

@@ -1,6 +1,7 @@
 import { memo, useMemo } from "react";
-import { Clock, Info, TriangleAlert, Trash2 } from "lucide-react";
+import { Clock, Info, TriangleAlert, CircleAlert, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useLanguage } from "@/hooks/useLanguage";
 import type { TimelineEvent } from "@/types/dashboard";
 
 interface TimelineVisualProps {
@@ -15,7 +16,9 @@ const getSeverityIcon = (severity: string) => {
     case "warning":
       return <TriangleAlert className="w-3.5 h-3.5" />;
     case "critical":
-      return <TriangleAlert className="w-3.5 h-3.5" />;
+      return <CircleAlert className="w-3.5 h-3.5" />;
+    case "info":
+      return <Clock className="w-3.5 h-3.5" />;
     default:
       return <Info className="w-3.5 h-3.5" />;
   }
@@ -123,6 +126,7 @@ export const TimelineVisual = memo(function TimelineVisual({
   severityOptions,
   deleteLabel,
 }: TimelineVisualProps) {
+  const { t } = useLanguage();
   const sortedEvents = useMemo(
     () =>
       [...events].sort((a, b) => {
@@ -143,7 +147,7 @@ export const TimelineVisual = memo(function TimelineVisual({
       <div className="border border-dashed border-border rounded-sm p-8 text-center">
         <Clock className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
         <p className="text-sm text-muted-foreground font-mono">
-          No timeline events
+          {t("timeline.noEvents")}
         </p>
       </div>
     );

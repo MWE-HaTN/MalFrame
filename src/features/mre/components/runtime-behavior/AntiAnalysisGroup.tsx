@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { Shield, TriangleAlert, Bug, Monitor } from "lucide-react";
 import { generateId } from "@/lib/utils";
 import { RuntimeBehaviorData } from "./types";
@@ -9,8 +10,8 @@ import {
   FieldLabel,
   TagList,
   AutoTextarea,
-  inputStyles,
 } from "./ui-components";
+import { inputStyles } from "./styles";
 import { AnimatedCollapse } from "@/components/ui/skeleton";
 import { useLanguage } from "@/hooks/useLanguage";
 
@@ -22,37 +23,33 @@ interface AntiAnalysisGroupProps {
   onToggleSubItem: (key: string) => void;
   update: <K extends keyof RuntimeBehaviorData>(key: K, value: RuntimeBehaviorData[K]) => void;
   updateMany: (patch: Partial<RuntimeBehaviorData>) => void;
+  updateField: <K extends keyof RuntimeBehaviorData>(key: K, updater: (current: RuntimeBehaviorData[K]) => RuntimeBehaviorData[K]) => void;
 }
 
-export function AntiAnalysisGroup({
+export const AntiAnalysisGroup = memo(function AntiAnalysisGroup({
   data,
   isExpanded,
   onToggleGroup,
   expandedSubItems,
   onToggleSubItem,
-  update,
+  update: _update,
   updateMany,
+  updateField,
 }: AntiAnalysisGroupProps) {
   const { t } = useLanguage();
 
   const addTrigger = () => {
-    const next = [...data.triggers, { id: generateId(), name: "", description: "", images: [] }];
-    updateMany({ triggers: next, triggersEnabled: true });
+    updateMany({ triggers: [...data.triggers, { id: generateId(), name: "", description: "", images: [] }], triggersEnabled: true });
     if (!expandedSubItems["triggers"]) onToggleSubItem("triggers");
   };
 
   const addAntiDebug = () => {
-    const next = [
-      ...data.antiDebug,
-      { id: generateId(), categoryTags: [], apis: [], effect: "", notes: "", images: [] },
-    ];
-    updateMany({ antiDebug: next, antiDebugEnabled: true });
+    updateMany({ antiDebug: [...data.antiDebug, { id: generateId(), categoryTags: [], apis: [], effect: "", notes: "", images: [] }], antiDebugEnabled: true });
     if (!expandedSubItems["antiDebug"]) onToggleSubItem("antiDebug");
   };
 
   const addAntiVM = () => {
-    const next = [...data.antiVM, { id: generateId(), methodTags: [], indicator: "", effect: "", notes: "", images: [] }];
-    updateMany({ antiVM: next, antiVMEnabled: true });
+    updateMany({ antiVM: [...data.antiVM, { id: generateId(), methodTags: [], indicator: "", effect: "", notes: "", images: [] }], antiVMEnabled: true });
     if (!expandedSubItems["antiVM"]) onToggleSubItem("antiVM");
   };
 
@@ -81,9 +78,9 @@ export function AntiAnalysisGroup({
             <p className="text-xs text-muted-foreground font-mono italic">{t("runtime.antiAnalysis.noTriggers")}</p>
           ) : (
             data.triggers.map((triggerEntry, entryIndex) => (
-              <EntryCard 
-                key={triggerEntry.id} 
-                onDelete={() => update("triggers", data.triggers.filter((_, filterIndex) => filterIndex !== entryIndex))}
+              <EntryCard
+                key={triggerEntry.id}
+                onDelete={() => updateField("triggers", (current) => current.filter((_, i) => i !== entryIndex))}
                 canDelete={data.triggers.length > 0}
               >
                 <div className="grid grid-cols-1 lg:grid-cols-[1fr_2fr] gap-3">
@@ -91,9 +88,7 @@ export function AntiAnalysisGroup({
                     label={t("runtime.antiAnalysis.triggerName")}
                     value={triggerEntry.name}
                     onChange={(changeEvent) => {
-                      const updatedTriggers = [...data.triggers];
-                      updatedTriggers[entryIndex] = { ...triggerEntry, name: changeEvent.target.value };
-                      update("triggers", updatedTriggers);
+                      updateField("triggers", (current) => current.map((item, i) => i === entryIndex ? { ...item, name: changeEvent.target.value } : item));
                     }}
                     placeholder={t("runtime.antiAnalysis.triggerNamePlaceholder")}
                   />
@@ -101,9 +96,7 @@ export function AntiAnalysisGroup({
                     label={t("runtime.antiAnalysis.description")}
                     value={triggerEntry.description}
                     onChange={(changeEvent) => {
-                      const updatedTriggers = [...data.triggers];
-                      updatedTriggers[entryIndex] = { ...triggerEntry, description: changeEvent.target.value };
-                      update("triggers", updatedTriggers);
+                      updateField("triggers", (current) => current.map((item, i) => i === entryIndex ? { ...item, description: changeEvent.target.value } : item));
                     }}
                     placeholder={t("runtime.antiAnalysis.descriptionPlaceholder")}
                   />
@@ -127,9 +120,9 @@ export function AntiAnalysisGroup({
             <p className="text-xs text-muted-foreground font-mono italic">{t("runtime.antiAnalysis.noAntiDebug")}</p>
           ) : (
             data.antiDebug.map((debugEntry, entryIndex) => (
-              <EntryCard 
+              <EntryCard
                 key={debugEntry.id}
-                onDelete={() => update("antiDebug", data.antiDebug.filter((_, filterIndex) => filterIndex !== entryIndex))}
+                onDelete={() => updateField("antiDebug", (current) => current.filter((_, i) => i !== entryIndex))}
                 canDelete={data.antiDebug.length > 0}
               >
                 <div className="space-y-1.5">
@@ -138,9 +131,7 @@ export function AntiAnalysisGroup({
                     tags={debugEntry.categoryTags}
                     availableTags={ANTI_DEBUG_CATEGORIES}
                     onChange={(newTags) => {
-                      const updatedDebugEntries = [...data.antiDebug];
-                      updatedDebugEntries[entryIndex] = { ...debugEntry, categoryTags: newTags };
-                      update("antiDebug", updatedDebugEntries);
+                      updateField("antiDebug", (current) => current.map((item, i) => i === entryIndex ? { ...item, categoryTags: newTags } : item));
                     }}
                     placeholder={t("runtime.antiAnalysis.addCategory")}
                   />
@@ -151,9 +142,7 @@ export function AntiAnalysisGroup({
                     tags={debugEntry.apis}
                     availableTags={ANTI_DEBUG_APIS}
                     onChange={(newTags) => {
-                      const updatedDebugEntries = [...data.antiDebug];
-                      updatedDebugEntries[entryIndex] = { ...debugEntry, apis: newTags };
-                      update("antiDebug", updatedDebugEntries);
+                      updateField("antiDebug", (current) => current.map((item, i) => i === entryIndex ? { ...item, apis: newTags } : item));
                     }}
                   />
                 </div>
@@ -163,9 +152,7 @@ export function AntiAnalysisGroup({
                     type="text"
                     value={debugEntry.effect || ""}
                     onChange={(changeEvent) => {
-                      const updatedDebugEntries = [...data.antiDebug];
-                      updatedDebugEntries[entryIndex] = { ...debugEntry, effect: changeEvent.target.value };
-                      update("antiDebug", updatedDebugEntries);
+                      updateField("antiDebug", (current) => current.map((item, i) => i === entryIndex ? { ...item, effect: changeEvent.target.value } : item));
                     }}
                     placeholder={t("runtime.antiAnalysis.effectPlaceholder")}
                     className={inputStyles}
@@ -175,9 +162,7 @@ export function AntiAnalysisGroup({
                   label={t("runtime.antiAnalysis.behaviorNotes")}
                   value={debugEntry.notes}
                   onChange={(changeEvent) => {
-                    const updatedDebugEntries = [...data.antiDebug];
-                    updatedDebugEntries[entryIndex] = { ...debugEntry, notes: changeEvent.target.value };
-                    update("antiDebug", updatedDebugEntries);
+                    updateField("antiDebug", (current) => current.map((item, i) => i === entryIndex ? { ...item, notes: changeEvent.target.value } : item));
                   }}
                   placeholder={t("runtime.antiAnalysis.behaviorNotesPlaceholder")}
                 />
@@ -200,9 +185,9 @@ export function AntiAnalysisGroup({
             <p className="text-xs text-muted-foreground font-mono italic">{t("runtime.antiAnalysis.noAntiVM")}</p>
           ) : (
             data.antiVM.map((vmEntry, entryIndex) => (
-              <EntryCard 
+              <EntryCard
                 key={vmEntry.id}
-                onDelete={() => update("antiVM", data.antiVM.filter((_, filterIndex) => filterIndex !== entryIndex))}
+                onDelete={() => updateField("antiVM", (current) => current.filter((_, i) => i !== entryIndex))}
                 canDelete={data.antiVM.length > 0}
               >
                 <div className="space-y-1.5">
@@ -211,9 +196,7 @@ export function AntiAnalysisGroup({
                     tags={vmEntry.methodTags}
                     availableTags={ANTI_VM_METHODS}
                     onChange={(newTags) => {
-                      const updatedVMEntries = [...data.antiVM];
-                      updatedVMEntries[entryIndex] = { ...vmEntry, methodTags: newTags };
-                      update("antiVM", updatedVMEntries);
+                      updateField("antiVM", (current) => current.map((item, i) => i === entryIndex ? { ...item, methodTags: newTags } : item));
                     }}
                     placeholder={t("runtime.antiAnalysis.addMethod")}
                   />
@@ -224,9 +207,7 @@ export function AntiAnalysisGroup({
                     type="text"
                     value={vmEntry.indicator}
                     onChange={(changeEvent) => {
-                      const updatedVMEntries = [...data.antiVM];
-                      updatedVMEntries[entryIndex] = { ...vmEntry, indicator: changeEvent.target.value };
-                      update("antiVM", updatedVMEntries);
+                      updateField("antiVM", (current) => current.map((item, i) => i === entryIndex ? { ...item, indicator: changeEvent.target.value } : item));
                     }}
                     placeholder={t("runtime.antiAnalysis.indicatorPlaceholder")}
                     className={inputStyles}
@@ -238,9 +219,7 @@ export function AntiAnalysisGroup({
                     type="text"
                     value={vmEntry.effect || ""}
                     onChange={(changeEvent) => {
-                      const updatedVMEntries = [...data.antiVM];
-                      updatedVMEntries[entryIndex] = { ...vmEntry, effect: changeEvent.target.value };
-                      update("antiVM", updatedVMEntries);
+                      updateField("antiVM", (current) => current.map((item, i) => i === entryIndex ? { ...item, effect: changeEvent.target.value } : item));
                     }}
                     placeholder={t("runtime.antiAnalysis.vmEffectPlaceholder")}
                     className={inputStyles}
@@ -250,9 +229,7 @@ export function AntiAnalysisGroup({
                   label={t("runtime.antiAnalysis.notesImpact")}
                   value={vmEntry.notes}
                   onChange={(changeEvent) => {
-                    const updatedVMEntries = [...data.antiVM];
-                    updatedVMEntries[entryIndex] = { ...vmEntry, notes: changeEvent.target.value };
-                    update("antiVM", updatedVMEntries);
+                    updateField("antiVM", (current) => current.map((item, i) => i === entryIndex ? { ...item, notes: changeEvent.target.value } : item));
                   }}
                   placeholder={t("runtime.antiAnalysis.notesImpactPlaceholder")}
                 />
@@ -263,5 +240,4 @@ export function AntiAnalysisGroup({
       </AnimatedCollapse>
     </div>
   );
-}
-
+});

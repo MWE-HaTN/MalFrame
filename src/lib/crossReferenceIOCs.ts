@@ -3,6 +3,7 @@
  * Finds IOC values that appear in multiple cases.
  */
 import { dbGet } from "@/lib/db";
+import { STORAGE_KEYS } from "@/lib/storageKeys";
 import type { CaseMeta } from "@/types/cases";
 
 export interface IOCCrossRefResult {
@@ -54,10 +55,12 @@ function extractMREIOCs(data: unknown): { type: string; value: string }[] {
 }
 
 export async function crossReferenceIOCs(): Promise<IOCCrossRefResult[]> {
-  const [miaCases, mreCases] = await Promise.all([
-    dbGet<CaseMeta[]>("dashboard", "mia-cases"),
-    dbGet<CaseMeta[]>("dashboard", "mre-cases"),
+  const registryResults = await Promise.allSettled([
+    dbGet<CaseMeta[]>("dashboard", STORAGE_KEYS.MIA_CASES),
+    dbGet<CaseMeta[]>("dashboard", STORAGE_KEYS.MRE_CASES),
   ]);
+  const miaCases = registryResults[0].status === "fulfilled" ? registryResults[0].value : null;
+  const mreCases = registryResults[1].status === "fulfilled" ? registryResults[1].value : null;
 
   // Map: "type:value" -> { type, value, cases[] }
   const iocMap = new Map<string, IOCCrossRefResult>();
@@ -112,7 +115,7 @@ export async function crossReferenceIOCs(): Promise<IOCCrossRefResult[]> {
       promises.push(processCase(c, extractMREIOCs));
     }
   }
-  await Promise.all(promises);
+  await Promise.allSettled(promises);
 
   // Filter: only return IOCs that appear in 2+ cases
   const results: IOCCrossRefResult[] = [];

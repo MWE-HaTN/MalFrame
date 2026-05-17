@@ -56,7 +56,7 @@ function getFirstDayOffset(year: number, month: number): number {
 }
 
 export function DatePicker({ value, onChange, placeholder, className, id: externalId, name: externalName }: DatePickerProps) {
-  const { language } = useLanguage();
+  const { language, t } = useLanguage();
   const generatedId = useId();
   const fieldId = externalId || `datepicker-${generatedId}`;
   const fieldName = externalName || fieldId;
@@ -91,7 +91,8 @@ export function DatePicker({ value, onChange, placeholder, className, id: extern
     const spaceAbove = rect.top;
     const shouldFlipUp = spaceBelow < calendarHeight && spaceAbove > calendarHeight;
     setFlipUp(shouldFlipUp);
-    setPosition({ top: rect.bottom + 4, left: rect.left, width: rect.width });
+    const top = shouldFlipUp ? rect.top - 4 : rect.bottom + 4;
+    setPosition({ top, left: rect.left, width: rect.width });
   }, []);
 
   useEffect(() => {
@@ -106,15 +107,24 @@ export function DatePicker({ value, onChange, placeholder, className, id: extern
       }
     };
 
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setIsOpen(false);
+        triggerRef.current?.focus();
+      }
+    };
+
     const handleScroll = () => updatePosition();
     const handleResize = () => updatePosition();
 
     document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("keydown", handleKeyDown);
     window.addEventListener("scroll", handleScroll, true);
     window.addEventListener("resize", handleResize);
 
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("keydown", handleKeyDown);
       window.removeEventListener("scroll", handleScroll, true);
       window.removeEventListener("resize", handleResize);
     };
@@ -133,10 +143,10 @@ export function DatePicker({ value, onChange, placeholder, className, id: extern
   };
 
   const handleToday = () => {
-    const t = new Date();
-    const y = t.getFullYear();
-    const m = t.getMonth() + 1;
-    const d = t.getDate();
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = now.getMonth() + 1;
+    const d = now.getDate();
     onChange(toYMD(y, m, d));
     setViewYear(y);
     setViewMonth(m);
@@ -177,7 +187,7 @@ export function DatePicker({ value, onChange, placeholder, className, id: extern
       )}
       style={{
         top: flipUp ? "auto" : position.top,
-        bottom: flipUp ? window.innerHeight - position.top + 8 : "auto",
+        bottom: flipUp ? window.innerHeight - position.top : "auto",
         left: position.left,
         minWidth: 280,
         zIndex: 9999,
@@ -189,7 +199,7 @@ export function DatePicker({ value, onChange, placeholder, className, id: extern
           type="button"
           onClick={prevMonth}
           className="p-1 rounded-sm text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
-          aria-label="Previous month"
+          aria-label={t("aria.previousMonth")}
         >
           <ChevronLeft className="w-4 h-4" />
         </button>
@@ -200,7 +210,7 @@ export function DatePicker({ value, onChange, placeholder, className, id: extern
           type="button"
           onClick={nextMonth}
           className="p-1 rounded-sm text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
-          aria-label="Next month"
+          aria-label={t("aria.nextMonth")}
         >
           <ChevronRight className="w-4 h-4" />
         </button>
@@ -250,14 +260,14 @@ export function DatePicker({ value, onChange, placeholder, className, id: extern
           onClick={handleToday}
           className="flex-1 text-xs font-mono py-1.5 rounded-sm border border-primary/30 text-primary hover:bg-primary/10 transition-colors"
         >
-          {language === "vn" ? "Hôm nay" : "Today"}
+          {t("common.today")}
         </button>
         <button
           type="button"
           onClick={handleClear}
           className="flex-1 text-xs font-mono py-1.5 rounded-sm border border-primary/20 text-muted-foreground hover:text-foreground hover:bg-primary/5 transition-colors"
         >
-          {language === "vn" ? "Xóa" : "Clear"}
+          {t("common.clearSelection")}
         </button>
       </div>
     </div>
@@ -284,7 +294,7 @@ export function DatePicker({ value, onChange, placeholder, className, id: extern
         )}
       >
         <span className={cn("font-mono", value ? "text-foreground" : "text-muted-foreground")}>
-          {value ? formatDisplay(value) : (placeholder ?? (language === "vn" ? "Chọn ngày" : "Select date"))}
+          {value ? formatDisplay(value) : (placeholder ?? t("common.selectDate"))}
         </span>
         <CalendarDays className={cn("w-4 h-4 text-primary transition-opacity", isOpen && "opacity-70")} />
       </button>

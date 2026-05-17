@@ -1,6 +1,6 @@
 import { createContext, useState, useEffect, useCallback, useMemo, type ReactNode } from "react";
 import { STORAGE_KEYS } from "@/lib/storageKeys";
-import { translations, type Language } from "@/lib/translations";
+import { translationCache, loadVn, type Language } from "@/lib/translations";
 
 interface LanguageContextType {
   language: Language;
@@ -13,8 +13,17 @@ export const LanguageContext = createContext<LanguageContextType | undefined>(un
 export function LanguageProvider({ children }: { children: ReactNode }) {
   const [language, setLanguageState] = useState<Language>(() => {
     const saved = localStorage.getItem(STORAGE_KEYS.LANGUAGE);
-    return (saved as Language) || "en";
+    return saved === "en" || saved === "vn" ? saved : "en";
   });
+
+  // Load the non-default language on demand when first needed.
+  useEffect(() => {
+    if (language === "vn" && !translationCache.vn) {
+      loadVn().then((vnDict) => {
+        translationCache.vn = vnDict;
+      });
+    }
+  }, [language]);
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEYS.LANGUAGE, language);
@@ -22,11 +31,20 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
   }, [language]);
 
   const setLanguage = useCallback((lang: Language) => {
-    setLanguageState(lang);
+    // Pre-load the language before switching so t() is immediately available
+    if (lang === "vn" && !translationCache.vn) {
+      loadVn().then((vnDict) => {
+        translationCache.vn = vnDict;
+        setLanguageState(lang);
+      });
+    } else {
+      setLanguageState(lang);
+    }
   }, []);
 
   const t = useCallback((key: string): string => {
-    return translations[language][key] || key;
+    const dict = translationCache[language];
+    return dict?.[key] || translationCache.en?.[key] || key;
   }, [language]);
 
   // Memoize context value to prevent unnecessary re-renders

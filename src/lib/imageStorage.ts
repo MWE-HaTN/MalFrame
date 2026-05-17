@@ -58,9 +58,10 @@ function saveImagesToStorage(images: StoredImage[]): void {
 // Clear all images for a specific hash
 export function clearImagesForHash(hash: string): void {
   const registry = getStoredImages();
-  const shortHash = hash.slice(0, 8) || "nohash";
 
-  const remainingImages = registry.images.filter((img) => img.hash !== shortHash);
+  const remainingImages = registry.images.filter(
+    (img) => img.hash !== hash
+  );
   saveImagesToStorage(remainingImages);
 }
 

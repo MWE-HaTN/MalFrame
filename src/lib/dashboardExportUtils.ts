@@ -19,7 +19,8 @@ export function hasData<T extends object>(
   return Object.entries(obj).some(([key, value]) => {
     if (excludeKeys.includes(key)) return false;
     if (Array.isArray(value)) return value.length > 0;
-    if (typeof value === "boolean") return false;
+    if (typeof value === "boolean") return value;
+    if (typeof value === "object" && value !== null && !Array.isArray(value)) return Object.keys(value).length > 0;
     return Boolean(value);
   });
 }

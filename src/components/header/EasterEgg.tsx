@@ -4,6 +4,7 @@
  */
 import { useState, useEffect, memo, useMemo } from "react";
 import { LinkedinIcon } from "lucide-react";
+import { useLanguage } from "@/hooks/useLanguage";
 import {
   Dialog,
   DialogContent,
@@ -49,6 +50,7 @@ export const EasterEggDialog = memo(function EasterEggDialog({
   open, 
   onOpenChange 
 }: EasterEggProps) {
+  const { t } = useLanguage();
   const [visibleLines, setVisibleLines] = useState(0);
   const [typingText, setTypingText] = useState("");
   const [currentTypingLine, setCurrentTypingLine] = useState(-1);
@@ -125,7 +127,7 @@ export const EasterEggDialog = memo(function EasterEggDialog({
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center justify-center w-8 h-8 rounded-sm bg-primary/20 border border-primary/50 text-primary hover:bg-primary/30 hover:border-primary transition-all duration-300 hover:shadow-[0_0_10px_hsl(var(--primary)/0.5)] animate-fade-in"
-              aria-label="External Profile"
+              aria-label={t("aria.externalProfile")}
             >
               <LinkedinIcon className="w-4 h-4" />
             </a>
@@ -134,14 +136,24 @@ export const EasterEggDialog = memo(function EasterEggDialog({
       );
     }
 
-    const [label, ...rest] = line.full.split(": ");
-    const value = rest.join(": ");
+    const colonIdx = line.full.indexOf(": ");
+    const hasLabelValue = colonIdx !== -1;
+    const label = hasLabelValue ? line.full.slice(0, colonIdx) : "";
+    const value = hasLabelValue ? line.full.slice(colonIdx + 2) : "";
 
     return (
       <p key={lineIndex} className="text-muted-foreground">
         <span className="text-primary">{line.prefix}</span>{" "}
         {isTyping ? (
-          <>{typingText}<span className="animate-blink">_</span></>
+          hasLabelValue && typingText.length > colonIdx + 1 ? (
+            <>
+              <span>{typingText.slice(0, colonIdx + 2)}</span>
+              <span className="text-foreground">{typingText.slice(colonIdx + 2)}</span>
+              <span className="animate-blink">_</span>
+            </>
+          ) : (
+            <>{typingText}<span className="animate-blink">_</span></>
+          )
         ) : (
           <>{label}: <span className="text-foreground">{value}</span></>
         )}
@@ -158,7 +170,7 @@ export const EasterEggDialog = memo(function EasterEggDialog({
             <span className="animate-glitch">whoami</span>
             <span className="animate-blink">_</span>
           </DialogTitle>
-          <DialogDescription className="sr-only">Developer profile information</DialogDescription>
+          <DialogDescription className="sr-only">{t("aria.developerProfileInfo")}</DialogDescription>
         </DialogHeader>
         <div className="space-y-3 font-mono text-sm min-h-[140px]">
           {lines.map((line, idx) => renderLine(idx, line))}

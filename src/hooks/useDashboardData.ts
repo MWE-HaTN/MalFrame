@@ -1,11 +1,16 @@
 import { useState, useEffect, useCallback, useRef, type Dispatch, type SetStateAction } from "react";
 import { useUser } from "@/hooks/useUser";
 import { clearAllSectionStates } from "@/lib/sectionState";
-import { dbGet, dbSet, dbDelete, isUsingLocalStorage } from "@/lib/db";
+import { dbGet, dbSet, isUsingLocalStorage } from "@/lib/db";
 import { debugError } from "@/lib/debugLogger";
 import { getLastExportTime } from "@/lib/export/helpers";
 import { STORAGE_KEYS } from "@/lib/storageKeys";
-import { translations, type Language } from "@/lib/translations";
+import { tSync, type Language } from "@/lib/translations";
+
+/** Read current language from localStorage for use outside React render context */
+function getLang(): Language {
+  return (localStorage.getItem(STORAGE_KEYS.LANGUAGE) || "en") as Language;
+}
 import { toast } from "sonner";
 
 interface UseDashboardDataOptions<T> {
@@ -51,8 +56,7 @@ function checkExportReminder(storageKey: string): void {
 
     const days = Math.floor(elapsed / (24 * 60 * 60 * 1000));
     const lang = (localStorage.getItem(STORAGE_KEYS.LANGUAGE) || "en") as Language;
-    const t = translations[lang] || translations.en;
-    const template = t["export.reminder"] || "Data hasn't been exported in {days} days. Consider backing up.";
+    const template = tSync(lang, "export.reminder") || "Data hasn't been exported in {days} days. Consider backing up.";
     toast.warning(template.replace("{days}", String(days)));
   } catch {
     // Ignore errors
@@ -72,6 +76,7 @@ export function useDashboardData<T extends { background: { analyst: string; date
 
   // Tracks whether the initial IDB load has completed — prevents saving empty state over real data
   const isLoadedRef = useRef(false);
+  const unmountedRef = useRef(false);
 
   // Undo/redo: history stores all visited states, index points to current
   const historyRef = useRef<T[]>([options.initialData]);
@@ -126,6 +131,7 @@ export function useDashboardData<T extends { background: { analyst: string; date
               const parsed = JSON.parse(lsRaw) as unknown;
               loaded = options.migrateData(parsed);
               await dbSet("dashboard", options.storageKey, loaded);
+              // Only remove localStorage backup after IDB write is confirmed
               localStorage.removeItem(options.storageKey);
             } catch {
               // Corrupted localStorage data — ignore, use initialData
@@ -136,7 +142,7 @@ export function useDashboardData<T extends { background: { analyst: string; date
             loaded = options.migrateData(loaded);
           } catch (e) {
             debugError("useDashboardData: migration failed, using initial data", e);
-            toast.warning("Data migration failed. Starting with a fresh template.");
+            toast.warning(tSync(getLang(), "error.dataMigrationFailed"));
             loaded = null;
           }
         }
@@ -145,30 +151,33 @@ export function useDashboardData<T extends { background: { analyst: string; date
           const loadedData = loaded as T;
 
           // Basic structural validation — ensure background exists
-          if (!loadedData.background || typeof loadedData.background !== "object") {
+          if (!loadedData.background || typeof loadedData.background !== "object" || Array.isArray(loadedData.background)) {
             debugError("useDashboardData: invalid data structure, missing background");
-            toast.warning("Saved data appears corrupted. Starting with a fresh template.");
+            toast.warning(tSync(getLang(), "error.dataCorrupted"));
             setData(options.initialData);
             return;
           }
           // Auto-populate analyst field from profile if empty
+          isUndoRedoRef.current = true; // Prevent history tracking effect from pushing duplicate
+          let dataToSet: T;
           if (!loadedData.background.analyst && profile.name) {
-            setData({ ...loadedData, background: { ...loadedData.background, analyst: profile.name } });
+            dataToSet = { ...loadedData, background: { ...loadedData.background, analyst: profile.name } };
           } else {
-            setData(loadedData);
+            dataToSet = loadedData;
           }
-          // Reset history with loaded state
-          historyRef.current = [loadedData];
+          setData(dataToSet);
+          // Reset history with the actual data passed to setData (including analyst auto-fill)
+          historyRef.current = [dataToSet];
           historyIndexRef.current = 0;
         }
       } catch (e) {
         debugError("useDashboardData: failed to load from IDB", e);
-        toast.error("Failed to load saved data. Starting with a fresh template.");
+        toast.error(tSync(getLang(), "error.failedToLoad"));
       } finally {
         if (!cancelled) {
           isLoadedRef.current = true;
           if (isUsingLocalStorage()) {
-            toast.warning("Running in limited storage mode. Data may not persist across sessions.");
+            toast.warning(tSync(getLang(), "error.limitedStorage"));
           }
           // Check export reminder
           checkExportReminder(options.storageKey);
@@ -195,11 +204,12 @@ export function useDashboardData<T extends { background: { analyst: string; date
     saveTimeoutRef.current = setTimeout(() => {
       setSaveStatus("saving");
       dbSet("dashboard", options.storageKey, data)
-        .then(() => setSaveStatus("saved"))
+        .then(() => { if (!unmountedRef.current) setSaveStatus("saved"); })
         .catch((e) => {
+          if (unmountedRef.current) return;
           debugError("useDashboardData: failed to save to IDB", e);
           setSaveStatus("failed");
-          toast.error("Failed to save data. Your changes may not persist.");
+          toast.error(tSync(getLang(), "error.failedToSave"));
         });
     }, SAVE_DEBOUNCE);
 
@@ -217,12 +227,16 @@ export function useDashboardData<T extends { background: { analyst: string; date
     const saveTimeout = saveTimeoutRef;
     const isLoaded = isLoadedRef;
     const dataSnap = dataRef;
+    const unmounted = unmountedRef;
     return () => {
+      unmounted.current = true;
       if (saveTimeout.current) {
         clearTimeout(saveTimeout.current);
       }
       if (isLoaded.current) {
-        dbSet("dashboard", storageKey, dataSnap.current).catch(() => {});
+        dbSet("dashboard", storageKey, dataSnap.current).catch((e) => {
+          debugError("useDashboardData: unmount flush failed", e);
+        });
       }
     };
   }, []); // Mount only — uses refs to avoid stale closures
@@ -237,15 +251,20 @@ export function useDashboardData<T extends { background: { analyst: string; date
       },
     };
 
+    // setData triggers the debounced save effect which will overwrite IDB with resetData.
+    // We skip dbDelete here to avoid a race where the pending save writes stale data after delete.
+    isUndoRedoRef.current = true; // Prevent history tracking from pushing duplicate
     setData(resetData);
-    dbDelete("dashboard", options.storageKey).catch((e) =>
-      debugError("useDashboardData: failed to delete from IDB", e)
-    );
+    // Reset undo history so cleared state becomes the new baseline
+    historyRef.current = [resetData];
+    historyIndexRef.current = 0;
+    setHistoryVersion((v) => v + 1);
     clearAllSectionStates();
     setForceCloseCounter((counter) => counter + 1);
     options.onClearExtra?.();
     toast.success(options.clearSuccessMessage || "Data cleared!");
-  }, [options, profile.name]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- options object ref changes every render; individual fields are listed
+  }, [options.initialData, options.onClearExtra, options.clearSuccessMessage, profile.name]);
 
   const undo = useCallback(() => {
     const idx = historyIndexRef.current;
@@ -268,8 +287,9 @@ export function useDashboardData<T extends { background: { analyst: string; date
     setHistoryVersion((v) => v + 1);
   }, [setData]);
 
-  const canUndo = historyIndexRef.current > 0;
-  const canRedo = historyIndexRef.current < historyRef.current.length - 1;
+  // Derive from _historyVersion to ensure reactivity when undo/redo capability changes
+  const canUndo = _historyVersion >= 0 && historyIndexRef.current > 0;
+  const canRedo = _historyVersion >= 0 && historyIndexRef.current < historyRef.current.length - 1;
 
   return {
     data,

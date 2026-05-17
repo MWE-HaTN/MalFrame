@@ -34,7 +34,10 @@ function validateBase64Image(dataUri: string): { valid: boolean; error?: string 
   }
 
   // Extract and validate MIME type
-  const mimeType = match[1] || 'image/png';
+  const mimeType = match[1];
+  if (!mimeType) {
+    return { valid: false, error: 'Missing MIME type in data URI' };
+  }
   if (!ALLOWED_IMAGE_TYPES.includes(mimeType)) {
     return { valid: false, error: `Unsupported image type: ${mimeType}` };
   }
@@ -57,23 +60,6 @@ function validateBase64Image(dataUri: string): { valid: boolean; error?: string 
   }
 
   return { valid: true };
-}
-
-/**
- * Sanitize an array of base64 images, removing invalid ones
- * Internal use only - used by schema transforms
- */
-function sanitizeBase64Images(images: unknown[]): string[] {
-  if (!Array.isArray(images)) return [];
-  
-  return images.filter((img): img is string => {
-    if (typeof img !== 'string') return false;
-    const result = validateBase64Image(img);
-    if (!result.valid) {
-      debugWarn('Removed invalid image:', result.error);
-    }
-    return result.valid;
-  });
 }
 
 /**
@@ -114,95 +100,6 @@ export function safeJsonParse<T>(jsonString: string): T {
 
 
 // ============================================
-// Helper Schemas
-// ============================================
-
-export const LogEntrySchema = z.object({
-  id: z.string(),
-  text: z.string(),
-  images: z.array(z.string()).optional().default([]).transform(sanitizeBase64Images),
-  timestamp: z.string().optional(),
-});
-
-export const PESectionDataSchema = z.object({
-  id: z.string(),
-  sectionName: z.string(),
-  size: z.string(),
-  entropy: z.string(),
-  permissions: z.string(),
-  sectionHash: z.string(),
-  images: z.array(z.string()).optional().default([]).transform(sanitizeBase64Images),
-  timestamp: z.string().optional(),
-});
-
-export const UnpackLayerSchema = z.object({
-  id: z.string(),
-  layerNumber: z.number(),
-  packerType: z.string(),
-  oep: z.string(),
-  unpackingMethod: z.string(),
-  outputType: z.string(),
-  tools: z.string(),
-  antiAnalysis: z.string(),
-  indicators: z.string(),
-  cleanedHash: z.string(),
-});
-
-export const IOCSchema = z.object({
-  id: z.string(),
-  type: z.string(),
-  value: z.string(),
-  description: z.string(),
-});
-
-export const MBCMappingSchema = z.object({
-  id: z.string(),
-  name: z.string(),
-  objectiveId: z.string(),
-  objectiveName: z.string(),
-  type: z.enum(['behavior', 'micro', 'enhanced', 'sub-technique']),
-});
-
-export const TimelineEntrySchema = z.object({
-  id: z.string(),
-  time: z.string(),
-  content: z.string(),
-  severity: z.enum(["info", "warning", "critical"]),
-});
-
-// Runtime Behavior schemas
-const RuntimeEntrySchema = z.object({
-  id: z.string(),
-  type: z.string(),
-  value: z.string(),
-  description: z.string().optional().default(""),
-});
-
-const RuntimeGroupSchema = z.object({
-  id: z.string(),
-  title: z.string(),
-  enabled: z.boolean(),
-  entries: z.array(RuntimeEntrySchema),
-});
-
-const RuntimeSubitemSchema = z.object({
-  id: z.string(),
-  groupId: z.string(),
-  subitem: z.string(),
-  enabled: z.boolean(),
-  entries: z.array(RuntimeEntrySchema),
-});
-
-export const RuntimeBehaviorDataSchema = z.object({
-  groups: z.array(RuntimeGroupSchema),
-  subitems: z.array(RuntimeSubitemSchema),
-});
-
-// Code Analysis schemas (relaxed for complex nested structure)
-export const CodeAnalysisDataSchema = z.record(z.string(), z.unknown());
-export const DeepDiveDataSchema = z.record(z.string(), z.unknown());
-
-// ============================================
 // Image Registry Schema
 // ============================================
 
@@ -229,7 +126,10 @@ const ImageRegistrySchema = z.object({
 
 export const UserProfileSchema = z.object({
   name: z.string().max(100),
-  githubUrl: z.string().max(200),
+  githubUrl: z.string().max(200).optional().default("").refine(
+    (val) => !val || /^https?:\/\//.test(val),
+    { message: "URL must start with http:// or https://" }
+  ),
 });
 
 // ============================================
@@ -247,7 +147,10 @@ export const ActivityDataSchema = z.object({
 const ToolSchema = z.object({
   name: z.string().max(100),
   description: z.string().max(500),
-  projectUrl: z.string().url().optional().or(z.literal("")),
+  projectUrl: z.string().url().optional().or(z.literal("")).refine(
+    (val) => !val || /^https?:\/\//.test(val),
+    { message: "URL must use http:// or https:// protocol" }
+  ),
 });
 
 const ToolCategorySchema = z.object({
@@ -302,25 +205,6 @@ export const REDataSchema = z.object({
   iocTable: z.array(z.any()).optional(),
   summary: z.record(z.string(), z.unknown()).optional(),
 }).passthrough();
-
-// MIA Dashboard Data Schema
-export const MitreTechniqueSchema = z.object({
-  id: z.string(), 
-  name: z.string() 
-});
-
-// Artifact schema for MIA Dashboard - flexible to handle different formats
-export const ArtifactSchema = z.object({
-  id: z.string(),
-  name: z.string(),
-  type: z.string(),
-  size: z.string(),
-  md5: z.string().optional().default(""),
-  sha256: z.string(),
-  addedAt: z.string().optional().default(""),
-  usedIn: z.array(z.string()).optional().default([]),
-  notes: z.string().optional(), // Legacy field from sample data
-});
 
 // NOTE: DFIR normalization is handled by MIADashboard's migrateData function
 // These normalize functions were removed to reduce code duplication
@@ -385,7 +269,7 @@ const KillChainPhaseSchema = z.object({
 }).passthrough();
 
 // MITRE STIX objects - define known fields with proper types for TypeScript inference
-export const MitreStixObjectSchema = z.object({
+const MitreStixObjectSchema = z.object({
   type: z.string(),
   id: z.string(),
   name: z.string().optional(),
@@ -404,7 +288,6 @@ export const MitreStixBundleSchema = z.object({
 }).passthrough(); // Allow spec_version and other fields at bundle level
 
 // TypeScript types inferred from Zod schemas
-export type MitreStixObject = z.infer<typeof MitreStixObjectSchema>;
 export type MitreStixBundle = z.infer<typeof MitreStixBundleSchema>;
 
 

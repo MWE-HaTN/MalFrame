@@ -96,7 +96,7 @@ export const ShortcutsHintBar = memo(function ShortcutsHintBar({
 
         <button
           onClick={collapse}
-          aria-label="Close shortcuts bar"
+          aria-label={t("common.closeShortcutsBar")}
           className="w-8 h-8 flex items-center justify-center rounded-full border border-border/30 bg-background/60 backdrop-blur-sm text-muted-foreground/40 hover:text-muted-foreground hover:bg-muted/30 transition-all"
         >
           <X className="w-3 h-3" />

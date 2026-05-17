@@ -25,7 +25,7 @@ export const IOCPasteDialog = memo(function IOCPasteDialog({
 }: IOCPasteDialogProps) {
   const { t } = useLanguage();
   const [text, setText] = useState("");
-  const [parsed, setParsed] = useState<ParsedIOC[]>([]);
+  const [parsed, setParsed] = useState<(ParsedIOC & { _id: string })[]>([]);
   const [hasScanned, setHasScanned] = useState(false);
   const textAreaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -34,12 +34,13 @@ export const IOCPasteDialog = memo(function IOCPasteDialog({
       setText("");
       setParsed([]);
       setHasScanned(false);
-      setTimeout(() => textAreaRef.current?.focus(), 50);
+      const id = setTimeout(() => textAreaRef.current?.focus(), 50);
+      return () => clearTimeout(id);
     }
   }, [open]);
 
   const handleParse = useCallback(() => {
-    const results = parseIOCsFromText(text);
+    const results = parseIOCsFromText(text).map((r, i) => ({ ...r, _id: generateId() + i }));
     setParsed(results);
     setHasScanned(true);
   }, [text]);
@@ -79,7 +80,10 @@ export const IOCPasteDialog = memo(function IOCPasteDialog({
             value={text}
             onChange={(e) => {
               setText(e.target.value);
-              if (hasScanned) setHasScanned(false);
+              if (hasScanned) {
+                setHasScanned(false);
+                setParsed([]);
+              }
             }}
             placeholder={t("ioc.pastePlaceholder")}
             aria-label={t("ioc.pastePlaceholder")}
@@ -129,7 +133,7 @@ export const IOCPasteDialog = memo(function IOCPasteDialog({
                 </thead>
                 <tbody className="divide-y divide-border/30">
                   {parsed.map((ioc, i) => (
-                    <tr key={i} className="hover:bg-secondary/30 transition-colors">
+                    <tr key={ioc._id} className="hover:bg-secondary/30 transition-colors">
                       <td className="px-3 py-2">
                         <span className="text-xs font-medium bg-primary/10 text-primary px-2 py-0.5 rounded">
                           {ioc.type}
@@ -146,7 +150,7 @@ export const IOCPasteDialog = memo(function IOCPasteDialog({
                         <button
                           onClick={() => handleRemoveParsed(i)}
                           className="p-1 hover:bg-destructive/20 rounded transition-colors"
-                          aria-label="Remove parsed IOC"
+                          aria-label={t("aria.removeParsedIoc")}
                         >
                           <Trash2 className="w-3.5 h-3.5 text-destructive" />
                         </button>

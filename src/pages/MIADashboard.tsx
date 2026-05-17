@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useEffect, useCallback, useMemo } from "react";
 import { Target, Database, FolderOpen, Activity } from "lucide-react";
 import { Header } from "@/components/Header";
 import { formatExportError, hasData } from "@/lib/dashboardExportUtils";
@@ -42,11 +42,9 @@ import { generateFileName } from "@/lib/fileNameUtils";
 import { clearAllImages } from "@/lib/imageStorage";
 import { toast } from "sonner";
 import { validateDFIRData } from "@/lib/validationSchemas";
-import { MIA_STORAGE_KEY, initialDFIRData } from "@/features/mia/services/constants";
+import { MIA_STORAGE_KEY, createInitialDFIRData } from "@/features/mia/services/constants";
 import { transformForExport } from "@/features/mia/services/transform";
 import { migrateDFIRData } from "@/features/mia/services/migrate";
-import { CaseTemplateDialog } from "@/components/CaseTemplateDialog";
-import { getTemplatesForType } from "@/lib/caseTemplates";
 
 // ─────────────────────────────────────────────
 // Outer shell: case manager + page chrome
@@ -56,21 +54,6 @@ export default function MIADashboard() {
   const caseManager = useCaseManager("mia", MIA_STORAGE_KEY);
 
   useEffect(() => { document.title = "MIA - MalFrame"; }, []);
-  const [templateDialogOpen, setTemplateDialogOpen] = useState(false);
-
-  const handleTemplateSelect = useCallback(
-    async (templateId: string) => {
-      await caseManager.createCase();
-      const template = getTemplatesForType("mia").find((t) => t.id === templateId);
-      if (template?.fillMIA) {
-        const filled = template.fillMIA({ ...initialDFIRData });
-        // Save template-filled data for the new case
-        const { dbSet } = await import("@/lib/db");
-        await dbSet("dashboard", caseManager.activeStorageKey, filled);
-      }
-    },
-    [caseManager],
-  );
 
   return (
     <div className="min-h-screen bg-background cyber-grid flex flex-col">
@@ -84,7 +67,6 @@ export default function MIADashboard() {
           switchCase={caseManager.switchCase}
           deleteCase={caseManager.deleteCase}
           renameCase={caseManager.renameCase}
-          onNewCaseClick={() => setTemplateDialogOpen(true)}
         />
         {caseManager.activeCaseId && (
           <MIADashboardBody
@@ -93,13 +75,6 @@ export default function MIADashboard() {
           />
         )}
       </main>
-
-      <CaseTemplateDialog
-        open={templateDialogOpen}
-        onOpenChange={setTemplateDialogOpen}
-        caseType="mia"
-        onSelect={handleTemplateSelect}
-      />
     </div>
   );
 }
@@ -115,12 +90,15 @@ interface MIADashboardBodyProps {
 
 function MIADashboardBody({ storageKey }: MIADashboardBodyProps) {
   const { t } = useLanguage();
+  const initialData = useMemo(() => createInitialDFIRData(), []);
+  const handleClearExtra = useCallback(() => clearAllImages(), []);
+  const clearMsg = useMemo(() => t("clear.success"), [t]);
   const { data, setData, clearData, undo, redo, forceCloseCounter, saveStatus } = useDashboardData<DFIRData>({
     storageKey,
-    initialData: initialDFIRData,
+    initialData,
     migrateData: migrateDFIRData,
-    onClearExtra: () => clearAllImages(),
-    clearSuccessMessage: t("clear.success"),
+    onClearExtra: handleClearExtra,
+    clearSuccessMessage: clearMsg,
   });
 
   const { handleFileDropped, handleMultipleFilesDropped } = useArtifactFileDrop({ setData });
@@ -132,14 +110,14 @@ function MIADashboardBody({ storageKey }: MIADashboardBodyProps) {
         ...data,
         staticAnalysis: {
           ...data.staticAnalysis,
-          peSectionsEntropyLog: data.staticAnalysis.peSectionsEntropyLog.filter((entry) => hasData(entry)),
+          peSectionsEntropyLog: (data.staticAnalysis?.peSectionsEntropyLog ?? []).filter((entry) => hasData(entry)),
         },
         iocs: data.iocs.filter((entry) => hasData(entry)),
         timeline: data.timeline.filter((entry) => hasData(entry)),
         artifacts: data.artifacts.filter((entry) => hasData(entry)),
       };
       const exportData = transformForExport(cleanedData);
-      await lazyExportJSON(exportData, data.background.analyst, data.sampleInfo.fileName, data.sampleInfo.sha256, "MIA");
+      await lazyExportJSON(exportData, data.background?.analyst ?? "", data.sampleInfo?.fileName ?? "", data.sampleInfo?.sha256 ?? "", "MIA");
       toast.success(t("export.success.json"));
       recordExportTime(storageKey);
     } catch (err) {
@@ -149,7 +127,7 @@ function MIADashboardBody({ storageKey }: MIADashboardBodyProps) {
 
   const handleExportPDF = useCallback(async () => {
     try {
-      await lazyExportDFIRPDF(data, data.background.analyst, data.sampleInfo.fileName, data.sampleInfo.sha256);
+      await lazyExportDFIRPDF(data, data.background?.analyst ?? "", data.sampleInfo?.fileName ?? "", data.sampleInfo?.sha256 ?? "");
       toast.success(t("export.success.pdf"));
       recordExportTime(storageKey);
     } catch (err) {
@@ -159,7 +137,7 @@ function MIADashboardBody({ storageKey }: MIADashboardBodyProps) {
 
   const handleExportWord = useCallback(async () => {
     try {
-      await lazyExportDFIRWord(data, data.background.analyst, data.sampleInfo.fileName, data.sampleInfo.sha256);
+      await lazyExportDFIRWord(data, data.background?.analyst ?? "", data.sampleInfo?.fileName ?? "", data.sampleInfo?.sha256 ?? "");
       toast.success(t("export.success.word"));
       recordExportTime(storageKey);
     } catch (err) {
@@ -224,7 +202,7 @@ function MIADashboardBody({ storageKey }: MIADashboardBodyProps) {
     exportOptions,
     reportName,
   } = useDashboardActions({
-    data, setData, clearData, undo, redo,
+    setData, clearData, undo, redo,
     exportJSON: handleExportJSON,
     exportPDF: handleExportPDF,
     exportWord: handleExportWord,
@@ -232,7 +210,7 @@ function MIADashboardBody({ storageKey }: MIADashboardBodyProps) {
     migrateImport: migrateDFIRData,
     preloadPDF: preloadDFIRPDF,
     preloadWord: preloadDFIRWord,
-    generateReportName: (ext) => generateFileName(data.background.analyst, data.sampleInfo.fileName, data.sampleInfo.sha256, ext),
+    generateReportName: (ext) => generateFileName(data.background?.analyst ?? "", data.sampleInfo?.fileName ?? "", data.sampleInfo?.sha256 ?? "", ext),
     totalImageCount,
     downloadAllImages,
   });
@@ -244,13 +222,33 @@ function MIADashboardBody({ storageKey }: MIADashboardBodyProps) {
   const handleSampleSelected = useCallback((artifact: { name: string; size: string; sha256: string }) => {
     setData((p) => ({
       ...p,
-      sampleInfo: { ...p.sampleInfo, fileName: artifact.name, fileSize: artifact.size, sha256: artifact.sha256 },
+      sampleInfo: {
+        ...p.sampleInfo,
+        fileName: artifact.name,
+        fileSize: artifact.size,
+        sha256: artifact.sha256,
+        filePath: "",
+        fileType: "",
+        signature: "",
+        compileTime: "",
+        avDetection: "",
+      },
     }));
   }, [setData]);
   const handleSampleCleared = useCallback(() => {
     setData((p) => ({
       ...p,
-      sampleInfo: { ...p.sampleInfo, fileName: "", fileSize: "", sha256: "" },
+      sampleInfo: {
+        ...p.sampleInfo,
+        fileName: "",
+        fileSize: "",
+        sha256: "",
+        filePath: "",
+        fileType: "",
+        signature: "",
+        compileTime: "",
+        avDetection: "",
+      },
     }));
   }, [setData]);
   const handleStaticAnalysisChange = useCallback((staticAnalysis: DFIRData["staticAnalysis"]) => setData((p) => ({ ...p, staticAnalysis })), [setData]);

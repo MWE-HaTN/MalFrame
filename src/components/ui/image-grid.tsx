@@ -2,6 +2,7 @@ import { memo, useState, useRef, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { X, ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useLanguage } from "@/hooks/useLanguage";
 
 interface ImageGridProps {
   images: string[];
@@ -29,6 +30,12 @@ const LazyImage = memo(function LazyImage({
   const [isLoaded, setIsLoaded] = useState(false);
   const [isInView, setIsInView] = useState(false);
   const imgRef = useRef<HTMLImageElement>(null);
+
+  // Reset loaded state when src changes (e.g., when images are reordered/removed)
+  useEffect(() => {
+    setIsLoaded(false);
+    setIsInView(false);
+  }, [src]);
 
   useEffect(() => {
     const img = imgRef.current;
@@ -108,6 +115,7 @@ const Lightbox = memo(function Lightbox({
   onClose: () => void;
   onNav: (next: number) => void;
 }) {
+  const { t } = useLanguage();
   const hasPrev = index > 0;
   const hasNext = index < images.length - 1;
 
@@ -118,7 +126,13 @@ const Lightbox = memo(function Lightbox({
       if (e.key === "ArrowRight" && hasNext) onNav(index + 1);
     };
     document.addEventListener("keydown", handleKey);
-    return () => document.removeEventListener("keydown", handleKey);
+    // Lock body scroll while lightbox is open
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.removeEventListener("keydown", handleKey);
+      document.body.style.overflow = prevOverflow;
+    };
   }, [onClose, onNav, index, hasPrev, hasNext]);
 
   return createPortal(
@@ -129,9 +143,9 @@ const Lightbox = memo(function Lightbox({
       {/* Close button */}
       <button
         type="button"
-        onClick={onClose}
+        onClick={(e) => { e.stopPropagation(); onClose(); }}
         className="absolute top-4 right-4 p-2 rounded-sm bg-background/80 border border-primary/30 text-foreground hover:text-primary hover:border-primary transition-colors"
-        aria-label="Close preview"
+        aria-label={t("common.closePreview")}
       >
         <X className="w-4 h-4" />
       </button>
@@ -142,7 +156,7 @@ const Lightbox = memo(function Lightbox({
           type="button"
           onClick={(e) => { e.stopPropagation(); onNav(index - 1); }}
           className="absolute left-4 p-2 rounded-sm bg-background/80 border border-primary/30 text-foreground hover:text-primary hover:border-primary transition-colors"
-          aria-label="Previous image"
+          aria-label={t("common.previousImage")}
         >
           <ChevronLeft className="w-5 h-5" />
         </button>
@@ -163,7 +177,7 @@ const Lightbox = memo(function Lightbox({
           type="button"
           onClick={(e) => { e.stopPropagation(); onNav(index + 1); }}
           className="absolute right-4 p-2 rounded-sm bg-background/80 border border-primary/30 text-foreground hover:text-primary hover:border-primary transition-colors"
-          aria-label="Next image"
+          aria-label={t("common.nextImage")}
         >
           <ChevronRight className="w-5 h-5" />
         </button>
@@ -192,6 +206,16 @@ export const ImageGrid = memo(function ImageGrid({
   mobileColumns = 2,
 }: ImageGridProps) {
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
+  const closeLightbox = useCallback(() => setLightboxIndex(null), []);
+
+  // Close lightbox whenever images array changes (removal shifts indices, making the current index point to a different image)
+  const prevLengthRef = useRef(images.length);
+  useEffect(() => {
+    if (lightboxIndex !== null && images.length !== prevLengthRef.current) {
+      setLightboxIndex(null);
+    }
+    prevLengthRef.current = images.length;
+  }, [images.length, lightboxIndex]);
 
   if (images.length === 0) return null;
 
@@ -229,7 +253,7 @@ export const ImageGrid = memo(function ImageGrid({
         <Lightbox
           images={images}
           index={lightboxIndex}
-          onClose={() => setLightboxIndex(null)}
+          onClose={closeLightbox}
           onNav={setLightboxIndex}
         />
       )}

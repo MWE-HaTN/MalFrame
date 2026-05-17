@@ -59,7 +59,7 @@ export function useSectionNavigation() {
     // Check if majority are open
     const openCount = sections.filter((s) => {
       const button = s.querySelector("button");
-      return button?.getAttribute("aria-expanded") !== "false";
+      return button?.getAttribute("aria-expanded") === "true";
     }).length;
 
     const shouldClose = openCount > sections.length / 2;
@@ -68,7 +68,7 @@ export function useSectionNavigation() {
       const button = s.querySelector("button");
       if (!button) return;
 
-      const isCurrentlyOpen = button.getAttribute("aria-expanded") !== "false";
+      const isCurrentlyOpen = button.getAttribute("aria-expanded") === "true";
       if (shouldClose ? isCurrentlyOpen : !isCurrentlyOpen) {
         button.click();
       }

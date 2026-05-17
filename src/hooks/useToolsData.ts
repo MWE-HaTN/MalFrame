@@ -18,6 +18,9 @@ export async function loadToolsData(): Promise<{ data: ToolCategory[]; version: 
         version: module.TOOLS_DATA_VERSION
       };
       return toolsDataCache;
+    }).catch((err) => {
+      loadingPromise = null;
+      throw err;
     });
   }
   
@@ -35,20 +38,22 @@ export function useToolsData() {
 
   useEffect(() => {
     if (!toolsDataCache) {
-      loadToolsData().then(loaded => {
-        setData(loaded.data);
-        setVersion(loaded.version);
-        setIsLoading(false);
-      });
+      let cancelled = false;
+      loadToolsData()
+        .then(loaded => {
+          if (cancelled) return;
+          setData(loaded.data);
+          setVersion(loaded.version);
+        })
+        .catch(() => {
+          // Leave data=null so consumers can detect failure and retry
+        })
+        .finally(() => {
+          if (!cancelled) setIsLoading(false);
+        });
+      return () => { cancelled = true; };
     }
   }, []);
 
   return { toolsData: data, version, isLoading };
-}
-
-/**
- * Get cached Tools data synchronously (returns null if not loaded yet).
- */
-function _getCachedToolsData(): { data: ToolCategory[]; version: string } | null {
-  return toolsDataCache;
 }

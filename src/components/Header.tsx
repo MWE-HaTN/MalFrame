@@ -118,10 +118,10 @@ export function Header() {
         {/* Logo - Easter Egg trigger */}
         <div
           onClick={handleLogoClick}
-          onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); navigate("/", { state: { skipDashboardRedirect: true, triggerTyping: true } }); } }}
+          onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); handleLogoClick(e as unknown as React.MouseEvent); } }}
           role="button"
           tabIndex={0}
-          aria-label="Go to home"
+          aria-label={t("common.goToHome")}
           className="flex items-center gap-3 group cursor-pointer select-none"
         >
           <div className="relative transition-transform duration-150 group-hover:scale-105">

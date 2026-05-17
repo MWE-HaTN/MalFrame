@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback, memo } from "react";
+import { useState, useEffect, useMemo, useCallback, memo, useRef } from "react";
 import { ChevronRight, Search, X, Microscope, ChevronDown, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { COUNT_BADGE_CLASS, SELECTED_COUNT_BADGE_CLASS, getMBCItemTypeClass } from "@/lib/semanticColors";
@@ -29,9 +29,13 @@ export const MicroBehaviorsSection = memo(function MicroBehaviorsSection({
 }: MicroBehaviorsSectionProps) {
   const { t } = useLanguage();
   const { isExpanded, toggle } = useExpandedState(STORAGE_KEYS.CODE_ANALYSIS_MICRO);
-  const { mbcData, isLoading } = useMBCData();
+  const { mbcData, isLoading, error } = useMBCData();
   const [searchQuery, setSearchQuery] = useState("");
   const [expandedObjectives, setExpandedObjectives] = useState<Set<string>>(new Set());
+  const selectedBehaviorsRef = useRef(selectedBehaviors);
+  selectedBehaviorsRef.current = selectedBehaviors;
+
+  const selectedIds = useMemo(() => new Set(selectedBehaviors.map(b => b.id)), [selectedBehaviors]);
 
   const totalMicroBehaviors = useMemo(() => 
     mbcData?.microObjectives.reduce((sum, objective) => sum + objective.behaviors.length, 0) ?? 0,
@@ -50,11 +54,16 @@ export const MicroBehaviorsSection = memo(function MicroBehaviorsSection({
     })).filter(objective => objective.behaviors.length > 0);
   }, [mbcData, searchQuery]);
 
+  const filteredObjectivesRef = useRef(filteredObjectives);
+  filteredObjectivesRef.current = filteredObjectives;
+
   useEffect(() => {
     if (searchQuery) {
-      setExpandedObjectives(new Set(filteredObjectives.map(o => o.objectiveId)));
+      setExpandedObjectives(new Set(filteredObjectivesRef.current.map(o => o.objectiveId)));
+    } else {
+      setExpandedObjectives(new Set());
     }
-  }, [searchQuery, filteredObjectives]);
+  }, [searchQuery]);
 
   const toggleObjective = useCallback((objectiveId: string) => {
     setExpandedObjectives(prev => {
@@ -65,33 +74,35 @@ export const MicroBehaviorsSection = memo(function MicroBehaviorsSection({
     });
   }, []);
 
-  const isSelected = useCallback((behaviorId: string) => selectedBehaviors.some(behavior => behavior.id === behaviorId), [selectedBehaviors]);
-
   const selectBehavior = useCallback((behaviorToToggle: MBCMicroBehavior, parentObjective: MBCMicroObjective) => {
     if (readOnly) return;
-    if (selectedBehaviors.some(behavior => behavior.id === behaviorToToggle.id)) {
-      onBehaviorsChange(selectedBehaviors.filter(behavior => behavior.id !== behaviorToToggle.id));
+    const current = selectedBehaviorsRef.current;
+    if (current.some(behavior => behavior.id === behaviorToToggle.id)) {
+      onBehaviorsChange(current.filter(behavior => behavior.id !== behaviorToToggle.id));
     } else {
-      onBehaviorsChange([...selectedBehaviors, {
+      onBehaviorsChange([...current, {
         id: behaviorToToggle.id,
         name: behaviorToToggle.name,
         objectiveId: parentObjective.objectiveId,
         objectiveName: parentObjective.objectiveName
       }]);
     }
-  }, [readOnly, selectedBehaviors, onBehaviorsChange]);
+  }, [readOnly, onBehaviorsChange]);
 
   const handleRemoveBehavior = useCallback((behaviorId: string) => {
-    if (!readOnly) onBehaviorsChange(selectedBehaviors.filter(behavior => behavior.id !== behaviorId));
-  }, [readOnly, selectedBehaviors, onBehaviorsChange]);
+    if (!readOnly) onBehaviorsChange(selectedBehaviorsRef.current.filter(behavior => behavior.id !== behaviorId));
+  }, [readOnly, onBehaviorsChange]);
 
   const clearSearch = useCallback(() => setSearchQuery(""), []);
 
   return (
     <div className="space-y-2">
-      <div 
-        className="flex items-center justify-between cursor-pointer hover:bg-primary/5 rounded-sm transition-colors py-2 px-3" 
+      <div
+        className="flex items-center justify-between cursor-pointer hover:bg-primary/5 rounded-sm transition-colors py-2 px-3"
         onClick={toggle}
+        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggle(); }}}
+        role="button"
+        tabIndex={0}
       >
         <div className="flex-1 flex items-center gap-3 font-mono text-primary">
           <Microscope className="w-4 h-4" />
@@ -107,7 +118,11 @@ export const MicroBehaviorsSection = memo(function MicroBehaviorsSection({
       </div>
 
       <AnimatedCollapse isOpen={isExpanded} className="ml-6 p-3 bg-background/30 border border-border/40 rounded-sm space-y-3">
-        {isLoading || !mbcData ? (
+        {error && !mbcData ? (
+          <div className="flex items-center justify-center py-8 gap-3" role="alert">
+            <span className="text-sm text-destructive font-mono">{t("mbc.loadError") || "Failed to load MBC data"}</span>
+          </div>
+        ) : isLoading || !mbcData ? (
           <div className="flex items-center justify-center py-8 gap-3">
             <Loader2 className="w-5 h-5 animate-spin text-primary" />
             <span className="text-sm text-muted-foreground font-mono">{t("code.microBehaviors.loading")}</span>
@@ -142,14 +157,14 @@ export const MicroBehaviorsSection = memo(function MicroBehaviorsSection({
 
             <div className="grid grid-cols-2 md:grid-cols-3 gap-2 max-h-[400px] overflow-y-auto">
               {filteredObjectives.map(objectiveItem => (
-                <MicroObjectiveColumn 
-                  key={objectiveItem.objectiveId} 
+                <MicroObjectiveColumn
+                  key={objectiveItem.objectiveId}
                   objective={objectiveItem}
                   isExpanded={expandedObjectives.has(objectiveItem.objectiveId)}
-                  onToggle={() => toggleObjective(objectiveItem.objectiveId)} 
-                  isSelected={isSelected} 
-                  onSelectBehavior={(behaviorItem) => selectBehavior(behaviorItem, objectiveItem)} 
-                  readOnly={readOnly} 
+                  onToggle={() => toggleObjective(objectiveItem.objectiveId)}
+                  selectedIds={selectedIds}
+                  onSelectBehavior={(behaviorItem) => selectBehavior(behaviorItem, objectiveItem)}
+                  readOnly={readOnly}
                 />
               ))}
             </div>
@@ -212,22 +227,22 @@ interface MicroObjectiveColumnProps {
   objective: MBCMicroObjective;
   isExpanded: boolean;
   onToggle: () => void;
-  isSelected: (id: string) => boolean;
+  selectedIds: Set<string>;
   onSelectBehavior: (b: MBCMicroBehavior) => void;
   readOnly: boolean;
 }
 
-const MicroObjectiveColumn = memo(function MicroObjectiveColumn({ 
-  objective, 
-  isExpanded, 
-  onToggle, 
-  isSelected, 
-  onSelectBehavior, 
-  readOnly 
+const MicroObjectiveColumn = memo(function MicroObjectiveColumn({
+  objective,
+  isExpanded,
+  onToggle,
+  selectedIds,
+  onSelectBehavior,
+  readOnly
 }: MicroObjectiveColumnProps) {
-  const selectedCount = useMemo(() => 
-    objective.behaviors.filter(behavior => isSelected(behavior.id)).length, 
-  [objective.behaviors, isSelected]);
+  const selectedCount = useMemo(() =>
+    objective.behaviors.filter(behavior => selectedIds.has(behavior.id)).length,
+  [objective.behaviors, selectedIds]);
 
   return (
     <div className="flex flex-col border border-border/50 rounded-sm overflow-hidden">
@@ -262,9 +277,9 @@ const MicroObjectiveColumn = memo(function MicroObjectiveColumn({
       </button>
       
       {isExpanded && (
-        <VirtualizedBehaviorList 
+        <VirtualizedBehaviorList
           behaviors={objective.behaviors}
-          isSelected={isSelected}
+          selectedIds={selectedIds}
           onSelectBehavior={onSelectBehavior}
           readOnly={readOnly}
         />
@@ -276,7 +291,7 @@ const MicroObjectiveColumn = memo(function MicroObjectiveColumn({
 // Virtualized behavior list - only renders visible items
 interface VirtualizedBehaviorListProps {
   behaviors: MBCMicroBehavior[];
-  isSelected: (id: string) => boolean;
+  selectedIds: Set<string>;
   onSelectBehavior: (b: MBCMicroBehavior) => void;
   readOnly: boolean;
 }
@@ -286,7 +301,7 @@ const MAX_VISIBLE_HEIGHT = 250;
 
 const VirtualizedBehaviorList = memo(function VirtualizedBehaviorList({
   behaviors,
-  isSelected,
+  selectedIds,
   onSelectBehavior,
   readOnly
 }: VirtualizedBehaviorListProps) {
@@ -309,7 +324,7 @@ const VirtualizedBehaviorList = memo(function VirtualizedBehaviorList({
           <BehaviorRow 
             key={behaviorItem.id} 
             behavior={behaviorItem} 
-            isSelected={isSelected(behaviorItem.id)} 
+            isSelected={selectedIds.has(behaviorItem.id)} 
             onSelect={() => onSelectBehavior(behaviorItem)} 
             readOnly={readOnly} 
           />
@@ -339,7 +354,7 @@ const VirtualizedBehaviorList = memo(function VirtualizedBehaviorList({
           >
             <BehaviorRow 
               behavior={behaviorItem} 
-              isSelected={isSelected(behaviorItem.id)} 
+              isSelected={selectedIds.has(behaviorItem.id)} 
               onSelect={() => onSelectBehavior(behaviorItem)} 
               readOnly={readOnly} 
             />

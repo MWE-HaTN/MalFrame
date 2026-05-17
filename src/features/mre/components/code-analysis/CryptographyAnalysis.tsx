@@ -1,7 +1,8 @@
 import { useMemo, memo } from "react";
 import { Lock } from "lucide-react";
 import { PortalDropdown, DropdownOption } from "@/components/ui/portal-dropdown";
-import { EntryCard, FieldLabel, AutoTextarea, inputStyles, AccessibleField } from "@/features/mre/components/runtime-behavior/ui-components";
+import { EntryCard, FieldLabel, AutoTextarea, AccessibleField } from "@/features/mre/components/runtime-behavior/ui-components";
+import { inputStyles } from "@/features/mre/components/runtime-behavior/styles";
 import { AnimatedCollapse } from "@/components/ui/skeleton";
 import { SubSectionHeader, useExpandedState, useListManager } from "./shared";
 import { useDragReorder } from "@/hooks/useDragReorder";

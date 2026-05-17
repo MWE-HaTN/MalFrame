@@ -4,6 +4,7 @@ import { handleImagePaste, handleImageFileSelect } from "@/lib/imageUtils";
 import { Image } from "lucide-react";
 import { ImageGrid } from "@/components/ui/image-grid";
 import { DatePicker } from "@/components/ui/date-picker";
+import { useLanguage } from "@/hooks/useLanguage";
 
 interface FormFieldProps {
   label: string;
@@ -38,12 +39,15 @@ export const FormField = memo(function FormField({
   id: externalId,
   name: externalName,
 }: FormFieldProps) {
+  const { t } = useLanguage();
   const generatedId = useId();
   const fieldId = externalId || `field-${generatedId}`;
   const fieldName = externalName || fieldId;
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const imagesRef = useRef(images);
+  imagesRef.current = images;
   
   // Calculate min height based on rows (approximately 24px per row + padding)
   const minHeight = rows * 24 + 16;
@@ -75,12 +79,12 @@ export const FormField = memo(function FormField({
 
   const handlePaste = (e: ClipboardEvent<HTMLTextAreaElement | HTMLInputElement>) => {
     if (!allowImages || !onImagesChange) return;
-    handleImagePaste(e, images, onImagesChange);
+    handleImagePaste(e, imagesRef.current, onImagesChange);
   };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!onImagesChange) return;
-    handleImageFileSelect(e, images, onImagesChange);
+    handleImageFileSelect(e, imagesRef.current, (updater) => onImagesChange(updater(imagesRef.current)));
     // Reset input
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
@@ -102,8 +106,8 @@ export const FormField = memo(function FormField({
             type="button"
             onClick={() => fileInputRef.current?.click()}
             className="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition-colors shrink-0"
-            title="Add Image"
-            aria-label="Add image attachment"
+            title={t("common.addImage")}
+            aria-label={t("aria.addImageAttachment")}
           >
             <Image className="w-3.5 h-3.5" />
           </button>
@@ -166,7 +170,7 @@ export const FormField = memo(function FormField({
           className="hidden"
           id={`${fieldId}-file`}
           name={`${fieldName}-file`}
-          aria-label="Upload image files"
+          aria-label={t("aria.uploadImageFiles")}
         />
       )}
     </div>

@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 
 export type ExportType = "json" | "pdf" | "word";
 
@@ -10,18 +10,22 @@ interface UseDashboardExportOptions {
 
 export function useDashboardExport(options: UseDashboardExportOptions = {}) {
   const { jsonNeedsDialog = true, onExportJSONDirect } = options;
-  
+
   const [exportDialogOpen, setExportDialogOpen] = useState(false);
   const [pendingExportType, setPendingExportType] = useState<ExportType>("pdf");
+
+  // Store in ref to keep handleExportJSONClick stable across re-renders
+  const onExportJSONDirectRef = useRef(onExportJSONDirect);
+  onExportJSONDirectRef.current = onExportJSONDirect;
 
   const handleExportJSONClick = useCallback(() => {
     setPendingExportType("json");
     if (jsonNeedsDialog) {
       setExportDialogOpen(true);
     } else {
-      onExportJSONDirect?.();
+      onExportJSONDirectRef.current?.();
     }
-  }, [jsonNeedsDialog, onExportJSONDirect]);
+  }, [jsonNeedsDialog]);
 
   const handleExportPDFClick = useCallback(() => {
     setPendingExportType("pdf");

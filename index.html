@@ -5,7 +5,7 @@
   // Apply saved theme immediately to prevent flash
   (function(){
     try {
-      var theme = localStorage.getItem('theme');
+      var theme = localStorage.getItem('cyber-analyst-theme');
       if (theme === 'dark' || (!theme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
         document.documentElement.classList.add('dark');
       } else {
@@ -19,18 +19,10 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 <title>Malware Analyst Dashboard</title>
-<meta name="description" content="Malware Analyst Dashboard for incident analysis and reverse engineering with MITRE mapping." />
+<meta name="description" content="Malware Analyst Dashboard for incident analysis and reverse engineering." />
 
 <!-- Favicon -->
 <link rel="icon" type="image/x-icon" href="/favicon.svg" />
-
-<!-- Theme color for browser chrome -->
-<meta name="theme-color" content="#f8fafc" />
-
-<!-- PWA: Apple mobile web app -->
-<meta name="apple-mobile-web-app-capable" content="yes" />
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-<link rel="apple-touch-icon" href="/favicon.svg" />
 
 <!-- Preconnect to external resources for faster loading -->
 <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -45,91 +37,7 @@
 
 <!-- Vite will inject proper modulepreload tags during build -->
 <!-- Critical CSS inlined for faster First Contentful Paint -->
-<style>
-  /* Critical above-the-fold styles */
-  *{box-sizing:border-box;margin:0;padding:0}
-  html{-webkit-font-smoothing:antialiased}
-  body{font-family:'JetBrains Mono',monospace;background:#f8fafc}
-  .light body{background:#f8fafc}
-  .dark body{background:#0a0f14}
-  #root{min-height:100vh}
-  
-  /* Cyber-themed loading skeleton */
-  .app-loading{
-    display:flex;
-    flex-direction:column;
-    align-items:center;
-    justify-content:center;
-    min-height:100vh;
-    background:linear-gradient(180deg,#f8fafc 0%,#e2e8f0 100%);
-    gap:24px;
-  }
-  .dark .app-loading{
-    background:linear-gradient(180deg,#0a0f14 0%,#0d1318 100%);
-  }
-  .app-loading .logo{
-    width:48px;height:48px;
-    border:2px solid #16a34a;
-    border-radius:6px;
-    display:flex;align-items:center;justify-content:center;
-    animation:pulse-glow 2s ease-in-out infinite;
-    position:relative;
-  }
-  .dark .app-loading .logo{border-color:#00e676}
-  .app-loading .logo::before{
-    content:">";
-    color:#16a34a;
-    font-size:24px;
-    font-weight:bold;
-    font-family:'JetBrains Mono',monospace;
-  }
-  .dark .app-loading .logo::before{color:#00e676}
-  .app-loading .text{
-    color:#16a34a;
-    font-size:14px;
-    letter-spacing:4px;
-    text-transform:uppercase;
-    animation:fade-pulse 1.5s ease-in-out infinite;
-  }
-  .dark .app-loading .text{color:#00e676}
-  .app-loading .bars{
-    display:flex;
-    gap:6px;
-    margin-top:8px;
-  }
-  .app-loading .bar{
-    width:4px;height:20px;
-    background:#16a34a;
-    border-radius:2px;
-    animation:bar-wave 1s ease-in-out infinite;
-  }
-  .dark .app-loading .bar{background:#00e676}
-  .app-loading .bar:nth-child(1){animation-delay:0s}
-  .app-loading .bar:nth-child(2){animation-delay:0.1s}
-  .app-loading .bar:nth-child(3){animation-delay:0.2s}
-  .app-loading .bar:nth-child(4){animation-delay:0.3s}
-  .app-loading .bar:nth-child(5){animation-delay:0.4s}
-  
-  @keyframes pulse-glow{
-    0%,100%{box-shadow:0 0 20px rgba(22,163,74,0.3)}
-    50%{box-shadow:0 0 40px rgba(22,163,74,0.5)}
-  }
-  .dark .app-loading .logo{
-    animation-name:pulse-glow-dark;
-  }
-  @keyframes pulse-glow-dark{
-    0%,100%{box-shadow:0 0 20px rgba(0,230,118,0.3)}
-    50%{box-shadow:0 0 40px rgba(0,230,118,0.6)}
-  }
-  @keyframes fade-pulse{
-    0%,100%{opacity:0.6}
-    50%{opacity:1}
-  }
-  @keyframes bar-wave{
-    0%,100%{transform:scaleY(0.5);opacity:0.5}
-    50%{transform:scaleY(1);opacity:1}
-  }
-</style>
+<link rel="stylesheet" href="/critical.css" />
 
 </head>
 <body>

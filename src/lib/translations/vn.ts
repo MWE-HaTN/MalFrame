@@ -14,8 +14,74 @@ export const vn: Record<string, string> = {
   "common.select": "Chọn...",
   "common.notes": "Ghi chú",
   "common.cancel": "Hủy",
-  
+  "common.confirm": "Xác nhận",
+  "common.addRow": "Thêm hàng",
+  "common.deleteRow": "Xóa hàng",
+  "common.copy": "Sao chép",
+  "common.search": "Tìm kiếm",
+  "common.close": "Đóng",
+  "common.toggle": "Bật/tắt",
+  "common.expand": "Mở rộng",
+  "common.collapse": "Thu gọn",
+  "common.previous": "Trước",
+  "common.next": "Tiếp",
+  "common.upload": "Tải lên",
+  "common.remove": "Gỡ bỏ",
+  "common.edit": "Chỉnh sửa",
+  "common.clearAll": "Xóa tất cả",
+  "common.download": "Tải về",
+  "common.refresh": "Làm mới",
+  "common.filter": "Lọc",
+  "common.sort": "Sắp xếp",
+  "common.moreActions": "Thêm hành động",
+  "common.noResults": "Không tìm thấy kết quả",
+  "common.addImage": "Thêm ảnh",
+  "common.additionalNotes": "Ghi chú bổ sung",
+  "common.clearSearch": "Xóa tìm kiếm",
+  "common.closePreview": "Đóng xem trước",
+  "common.copyName": "Sao chép tên",
+  "common.copySha256": "Sao chép SHA-256",
+  "common.deleteFromCase": "Xóa khỏi vụ việc",
+  "common.nextImage": "Ảnh tiếp theo",
+  "common.previousImage": "Ảnh trước",
+  "common.selectStatus": "Chọn trạng thái",
+
+  // Aria / Accessibility
+  "aria.addToSection": "Thêm vào mục",
+  "aria.removeFromSection": "Xóa khỏi mục",
+  "aria.dragToReorder": "Kéo để sắp xếp lại",
+  "aria.selectItem": "Chọn mục",
+  "aria.openMenu": "Mở trình đơn",
+  "aria.closeMenu": "Đóng trình đơn",
+  "aria.loadingContent": "Đang tải nội dung",
+  "aria.noData": "Không có dữ liệu",
+  "aria.addImageAttachment": "Thêm tệp đính kèm ảnh",
+  "aria.artifactType": "Loại hiện vật",
+  "aria.developerProfileInfo": "Thông tin hồ sơ nhà phát triển",
+  "aria.enterCustomApiName": "Nhập tên API tùy chỉnh",
+  "aria.enterCustomApiPlaceholder": "Nhập API tùy chỉnh",
+  "aria.entropy": "Entropy",
+  "aria.entryName": "Tên mục",
+  "aria.externalProfile": "Hồ sơ bên ngoài",
+  "aria.moveEntryDown": "Di chuyển mục xuống",
+  "aria.moveEntryUp": "Di chuyển mục lên",
+  "aria.namePlaceholder": "Tên",
+  "aria.nextMonth": "Tháng sau",
+  "aria.permissions": "Quyền hạn",
+  "aria.previousMonth": "Tháng trước",
+  "aria.removeParsedIoc": "Xóa IOC đã phân tích",
+  "aria.searchMbcBehaviors": "Tìm kiếm hành vi MBC",
+  "aria.searchMitreTechniques": "Tìm kiếm kỹ thuật MITRE",
+  "aria.sectionHash": "Hash phần",
+  "aria.sectionName": "Tên phần",
+  "aria.selectFilesForHash": "Chọn file để băm",
+  "aria.size": "Kích thước",
+  "aria.uploadImageFiles": "Tải lên file ảnh",
+  "aria.uploadImages": "Tải lên ảnh",
+  "aria.visitProjectPage": "Truy cập trang dự án",
+
   // Export
+  "export.reminder": "Dữ liệu chưa được xuất trong {days} ngày. Cân nhắc sao lưu.",
   "export.json": "JSON (Dữ liệu)",
   "export.pdf": "PDF (Báo cáo)",
   "export.word": "Word (Tài liệu)",
@@ -39,7 +105,7 @@ export const vn: Record<string, string> = {
   "export.saveImages": "Lưu ảnh vào máy",
   "export.saveImagesDesc": "Tải {count} ảnh về máy tính của bạn",
   "export.clearDataTitle": "Xóa dữ liệu sau khi xuất?",
-  "export.clearDataDescription": "Bạn có muốn xóa tất cả dữ liệu sau khi xuất? Điều này sẽ đặt lại dashboard cho trường hợp mới.",
+  "export.clearDataDescription": "Bạn có muốn xóa tất cả dữ liệu sau khi xuất? Điều này sẽ đặt lại bảng điều khiển cho vụ việc mới.",
   "export.yesClearData": "Có, Xóa tất cả",
   "export.yesClearDataDesc": "Xuất rồi xóa dữ liệu để bắt đầu mới",
   "export.noKeepData": "Không, Giữ dữ liệu",
@@ -58,6 +124,21 @@ export const vn: Record<string, string> = {
   "clear.confirm": "Có, Xóa tất cả",
   "clear.success": "Đã xóa dữ liệu!",
   
+  // Error messages
+  "error.failedToLoad": "Không thể tải dữ liệu đã lưu. Bắt đầu với trạng thái trống.",
+  "error.failedToSave": "Không thể lưu dữ liệu. Thay đổi có thể không được giữ lại.",
+  "error.fileTooLarge": "File quá lớn (tối đa 5MB)",
+  "error.failedToReadFile": "Không thể đọc file",
+  "error.failedToProcessFiles": "Không thể xử lý file",
+  "error.imageTooLarge": "Ảnh quá lớn (tối đa 10MB)",
+  "error.failedToProcessImage": "Không thể xử lý ảnh",
+  "error.failedToProcessImages": "Không thể xử lý ảnh",
+  "error.failedToCopy": "Không thể sao chép",
+  "error.failedToReadImage": "Không thể đọc ảnh",
+  "error.dataMigrationFailed": "Di chuyển dữ liệu thất bại. Bắt đầu với mẫu mới.",
+  "error.dataCorrupted": "Dữ liệu đã lưu có vẻ bị lỗi. Bắt đầu với mẫu mới.",
+  "error.limitedStorage": "Đang ở chế độ lưu trữ hạn chế. Dữ liệu có thể không được giữ lại.",
+
   // MIA Dashboard
   "mia.title": "Bảng điều khiển Phân tích Sự cố Mã độc",
   "mia.subtitle": "Điều tra và phản hồi sự cố mã độc.",
@@ -180,6 +261,34 @@ export const vn: Record<string, string> = {
   "mre.stringsDetection": "Phát hiện Chuỗi",
   "mre.importsExports": "Imports / Exports",
   "mre.peSections": "PE Sections",
+  "mre.fileTypePlaceholder": "VD: PE32 thực thi, ELF nhị phân",
+  "mre.impHashPlaceholder": "VD: 0x12345678",
+
+  // PE Section Entry Table
+  "peSection.number": "#",
+  "peSection.name": "Tên",
+  "peSection.size": "Kích thước",
+  "peSection.entropy": "Entropy",
+  "peSection.rwx": "RWX",
+  "peSection.hash": "Băm",
+  "peSection.noSections": "Chưa có PE section nào",
+  "peSection.addSection": "Thêm Section",
+
+  // MRE Static Analysis Cards
+  "mre.basicFileInfo": "Thông tin File Cơ bản",
+  "mre.peInfo": "Thông tin Portable Executable",
+  "mre.sha256": "SHA256",
+  "mre.impHash": "ImpHash",
+  "mre.fileType": "Loại File",
+  "mre.fileSize": "Kích thước File",
+  "mre.compileTime": "Thời gian Biên dịch",
+  "mre.fileEntropy": "Entropy Tổng thể",
+  "mre.entryPoint": "Entry Point",
+  "mre.imageBase": "Image Base",
+  "mre.architecture": "Kiến trúc",
+  "mre.numberOfSections": "Số Sections",
+  "mre.characteristics": "Đặc trưng",
+  "mre.subsystem": "Subsystem",
   // MRE Malware Behavior Mapping
   "mre.mbcMapping": "Ánh xạ Hành vi Mã độc",
   // MRE Summary fields
@@ -205,6 +314,17 @@ export const vn: Record<string, string> = {
   "mre.placeholder.tiNotes": "Ghi chú tình báo mối đe dọa...",
   "mre.placeholder.stringsDetection": "Chuỗi đáng chú ý, mẫu đáng ngờ...",
   "mre.placeholder.importsExports": "Các import và export chính...",
+
+  // Security Posture
+  "securityPosture.title": "Tình trạng Bảo mật",
+  "securityPosture.digitalSignature": "Chữ ký số",
+  "securityPosture.dllMitigations": "DLL Characteristics / Mitigations",
+  "securityPosture.highHardening": "Hardening Cao",
+  "securityPosture.standardHardening": "Hardening Tiêu chuẩn",
+  "securityPosture.lowHardening": "Hardening Thấp",
+  "securityPosture.peHardeningPosture": "Tình trạng Hardening PE",
+  "securityPosture.applicableMitigations": "({enabled}/{total} mitigations khả dụng đã bật)",
+
   // MIA Placeholders
   "mia.placeholder.caseId": "VU-2024-001",
   "mia.placeholder.analyst": "Tên của bạn",
@@ -224,9 +344,9 @@ export const vn: Record<string, string> = {
   "mia.placeholder.processTree": "parent.exe → malware.exe → cmd.exe...",
   "mia.placeholder.fileSystem": "Các file được tạo/sửa đổi...",
   "mia.placeholder.registry": "Các khóa registry được tạo hoặc sửa đổi...",
-  "mia.placeholder.network": "C2 communication, DNS queries...",
-  "mia.placeholder.memory": "Injected code, unpacked payloads...",
-  "mia.placeholder.systemChanges": "Dịch vụ mới, scheduled tasks...",
+  "mia.placeholder.network": "Giao tiếp C2, truy vấn DNS...",
+  "mia.placeholder.memory": "Mã đã inject, payload đã unpack...",
+  "mia.placeholder.systemChanges": "Dịch vụ mới, tác vụ đã lên lịch...",
   "mia.placeholder.scope": "Số máy bị ảnh hưởng, phạm vi lây nhiễm...",
   "mia.placeholder.accounts": "Các tài khoản bị xâm nhập...",
   "mia.placeholder.dataStolen": "Loại dữ liệu bị truy cập hoặc đánh cắp...",
@@ -236,15 +356,19 @@ export const vn: Record<string, string> = {
   // MBC Mapping
   "mbc.description": "Chọn các hành vi mã độc liên quan quan sát được trong phân tích này.",
   "mbc.loading": "Đang tải dữ liệu MBC...",
+  "mbc.loadError": "Tải dữ liệu MBC thất bại",
   "mbc.update": "Cập nhật",
   "mbc.export": "Xuất",
   "mbc.search": "Tìm hành vi, phương thức, ID...",
   "mbc.selectedBehaviors": "Hành vi đã chọn",
   "mbc.clickToRemove": "Nhấn để xóa",
   "mbc.exportSuccess": "Đã xuất Ánh xạ Hành vi Mã độc thành công",
+  "mbc.checkForUpdates": "Kiểm tra cập nhật",
+  "mbc.exportSelected": "Xuất đã chọn",
+  "mbc.viewOnMitre": "Xem trên MITRE",
 
   // MITRE ATT&CK
-  "mitre.description": "Click để chọn các kỹ thuật MITRE ATT&CK liên quan trong phân tích này.",
+  "mitre.description": "Nhấn để chọn các kỹ thuật MITRE ATT&CK liên quan trong phân tích này.",
   "mitre.selected": "Kỹ thuật đã chọn:",
   "mitre.loading": "Đang tải dữ liệu MITRE...",
   "mitre.updating": "Đang cập nhật...",
@@ -264,6 +388,7 @@ export const vn: Record<string, string> = {
   "timeline.warning": "Cảnh báo",
   "timeline.critical": "Nghiêm trọng",
   "timeline.empty": "Chưa có sự kiện. Thêm sự kiện đầu tiên ở trên.",
+  "timeline.noEvents": "Không có sự kiện dòng thời gian",
   "timeline.placeholder.time": "2024-01-15 08:00",
   "timeline.placeholder.content": "Mô tả sự kiện...",
   
@@ -276,8 +401,10 @@ export const vn: Record<string, string> = {
   "ioc.copyAll": "Sao chép tất cả",
   "ioc.copied": "Đã sao chép IOC!",
   "ioc.copiedAll": "Đã sao chép tất cả IOC!",
+  "ioc.copyFailed": "Sao chép vào clipboard thất bại",
   "ioc.added": "Đã thêm IOC!",
   "ioc.removed": "Đã xóa IOC",
+  "ioc.remove": "Xóa",
   "ioc.enterValue": "Vui lòng nhập giá trị IOC",
   
   // Notes
@@ -286,18 +413,22 @@ export const vn: Record<string, string> = {
   
   // Settings
   "settings.title": "Cài đặt",
-  "settings.subtitle": "Tùy chỉnh cài đặt dashboard",
+  "settings.subtitle": "Tùy chỉnh cài đặt không gian làm việc",
   "settings.profile": "Hồ sơ người dùng",
   "settings.profileDesc": "Tên của bạn cho báo cáo",
   "settings.profileName": "Tên hiển thị",
   "settings.profileGithub": "GitHub URL",
   "settings.profileSaved": "Đã lưu hồ sơ!",
   "settings.language": "Ngôn ngữ",
-  "settings.languageDesc": "Chuyển đổi giữa EN/VN",
+  "settings.languageDesc": "Chuyển đổi giữa Tiếng Anh/Tiếng Việt",
+  "settings.languageEn": "Tiếng Anh",
+  "settings.languageVn": "Tiếng Việt",
   "settings.theme": "Giao diện",
-  "settings.themeDesc": "Chuyển đổi Dark/Light mode",
+  "settings.themeDesc": "Chuyển đổi chế độ Sáng/Tối",
   "settings.themeDark": "Đã chuyển sang chế độ Tối",
   "settings.themeLight": "Đã chuyển sang chế độ Sáng",
+  "settings.dark": "Tối",
+  "settings.light": "Sáng",
   "settings.displayScale": "Tỷ lệ hiển thị",
   "settings.displayScaleDesc": "Điều chỉnh kích thước giao diện",
   "settings.restoreScale": "Khôi phục về 100%",
@@ -310,14 +441,15 @@ export const vn: Record<string, string> = {
   "home.mreCardDesc": "Phân tích mã độc ngược với phân tích tĩnh/động, ghi chú unpacking và chữ ký YARA.",
   "home.localStorage": "Lưu trữ cục bộ",
   "home.localStorageDesc": "Dữ liệu được lưu cục bộ trong trình duyệt. Không cần server, dữ liệu riêng tư.",
-  "home.exportOptions": "Tùy chọn xuất",
+  "home.exportOptions": "Tùy chọn xuất báo cáo",
   "home.exportOptionsDesc": "Xuất báo cáo dưới dạng JSON để chia sẻ và lưu trữ phân tích.",
   "home.mitreCard": "MITRE ATT&CK",
-  "home.mitreCardDesc": "Ánh xạ kỹ thuật vào 14 tactic MITRE ATT&CK cho tài liệu đe dọa toàn diện.",
+  "home.mitreCardDesc": "Ánh xạ kỹ thuật vào {count} tactic MITRE ATT&CK cho tài liệu đe dọa toàn diện.",
   "home.behaviorCard": "Hành vi Malware",
   "home.behaviorCardDesc": "Ánh xạ hành vi và vi hành vi của malware để tiết lộ logic thực thi và mẫu né tránh.",
   "home.statsTitle": "ĐƯỢC THIẾT KẾ CHO CHUYÊN GIA PHÂN TÍCH MÃ ĐỘC",
   "home.mitreTactics": "MITRE Tactics",
+  "home.mbcBehaviors": "Hành vi Mã độc",
   "home.analysisWorkflows": "Quy trình Phân tích",
   "home.casesSupported": "Vụ việc hỗ trợ",
   "home.localPrivate": "Cục bộ & Riêng tư",
@@ -325,7 +457,7 @@ export const vn: Record<string, string> = {
   
   // Dropzone
   "dropzone.title": "Kéo & thả tệp vào đây",
-  "dropzone.subtitle": "hoặc click để chọn",
+  "dropzone.subtitle": "hoặc nhấn để chọn",
   
   // Tools
   "tools.title": "Công cụ phân tích (Flare VM)",
@@ -360,14 +492,14 @@ export const vn: Record<string, string> = {
   "header.backToRE": "Quay lại RE",
   
   // Index/Home page
-  "index.hero.subtitle": "Dashboard Phân tích Sự cố & Kỹ thuật Đảo ngược",
-  "index.hero.description": "Dashboard tập trung cho phân tích sự cố mã độc và kỹ thuật đảo ngược.",
-  "index.cta.mia": "Dashboard Phân tích Sự cố",
-  "index.cta.mre": "Dashboard Kỹ thuật Đảo ngược",
+  "index.hero.subtitle": "Bảng điều khiển Phân tích Sự cố & Kỹ thuật Đảo ngược",
+  "index.hero.description": "Bảng điều khiển tập trung cho phân tích sự cố mã độc và kỹ thuật đảo ngược.",
+  "index.cta.mia": "Bảng điều khiển Phân tích Sự cố",
+  "index.cta.mre": "Bảng điều khiển Kỹ thuật Đảo ngược",
   
   // Settings extras
   "settings.edit": "Sửa",
-  "settings.aboutDesc": "Không gian làm việc local-first cho phân tích sự cố mã độc, kỹ thuật đảo ngược và phân loại. Không cloud. Không telemetry. Dữ liệu của bạn không rời khỏi hệ thống.",
+  "settings.aboutDesc": "Môi trường làm việc ưu tiên cục bộ để phân tích sự cố mã độc, kỹ thuật đảo ngược và phân loại mối đe dọa. Không lưu trữ qua đám mây. Không thu thập dữ liệu. Thông tin của bạn không bao giờ rời khỏi thiết bị.",
   
   // Activity Tracker
   "activity.title": "Theo dõi Hoạt động",
@@ -376,11 +508,12 @@ export const vn: Record<string, string> = {
   "activity.exportSuccess": "Đã xuất dữ liệu hoạt động!",
   "activity.importSuccess": "Đã nhập dữ liệu hoạt động!",
   "activity.importError": "File hoạt động không hợp lệ",
-  "activity.clickToTrack": "Click để theo dõi",
-  "activity.clickToRemove": "Click để xóa",
+  "activity.clickToTrack": "Nhấn để theo dõi",
+  "activity.clickToRemove": "Nhấn để xóa",
   "activity.noSessions": "Không có phiên",
   "activity.session": "phiên",
   "activity.sessions": "phiên",
+  "activity.tracked": "Đã ghi nhận!",
 
   // Section Hints — hướng dẫn inline cho analyst
   "hint.mia.background": "Điền: Case ID (vd. INC-2026-001), tên analyst, hostname máy bị nhiễm, và cách lây nhiễm (phishing, USB, drive-by). Các trường này xuất hiện ở đầu mọi báo cáo được xuất.",
@@ -531,8 +664,11 @@ export const vn: Record<string, string> = {
   "codeAnalysis.stages.transitionMethod": "Phương thức Chuyển đổi",
   "codeAnalysis.stages.transitionPlaceholder": "VD: Chuyển shellcode qua JMP EAX",
   "codeAnalysis.stages.apisUsed": "API Sử dụng",
-  "codeAnalysis.stages.artifacts": "Artifacts",
+  "codeAnalysis.stages.apisPlaceholder": "VD: VirtualAlloc, WriteProcessMemory",
+  "codeAnalysis.stages.artifacts": "Dấu vết",
   "codeAnalysis.stages.ioc": "IOC",
+  "codeAnalysis.static.apiPlaceholder": "VD: CreateRemoteThread",
+  "codeAnalysis.dynamic.apiPlaceholder": "VD: NtReadVirtualMemory",
 
   // Runtime behavior component keys (runtime.*.title etc used by components)
   "runtime.antiAnalysis.title": "Chống Phân tích & Né tránh",
@@ -558,6 +694,8 @@ export const vn: Record<string, string> = {
   "runtime.antiAnalysis.notesImpact": "Ghi chú / Tác động",
   "runtime.antiAnalysis.notesImpactPlaceholder": "VD: Bypass bằng cách patch handler RDTSC trong ScyllaHide",
   "runtime.antiAnalysis.noAntiVM": "Chưa có phương thức anti-VM nào được ghi lại.",
+  "runtime.antiAnalysis.antiDebugging": "Anti-Debugging",
+  "runtime.antiAnalysis.antiVM": "Anti-VM",
 
   "runtime.execution.title": "Hành vi Thực thi",
   "runtime.execution.executionFlow": "Luồng Thực thi",
@@ -605,11 +743,11 @@ export const vn: Record<string, string> = {
   "runtime.technical.noNetwork": "Chưa có hành vi mạng nào được ghi lại.",
 
   // Case Management
-  "cases.label": "Case",
-  "cases.new": "Case mới",
+  "cases.label": "Vụ việc",
+  "cases.new": "Vụ việc mới",
   "cases.rename": "Đổi tên",
-  "cases.delete": "Xóa case",
-  "cases.deleteConfirmTitle": "Xóa case?",
+  "cases.delete": "Xóa vụ việc",
+  "cases.deleteConfirmTitle": "Xóa vụ việc?",
   "cases.deleteConfirmDesc": "Toàn bộ dữ liệu trong \"{name}\" sẽ bị xóa vĩnh viễn. Không thể hoàn tác.",
   "cases.deleteConfirm": "Xóa",
   "cases.deleteCancel": "Hủy",
@@ -617,30 +755,30 @@ export const vn: Record<string, string> = {
   // Keyboard shortcuts
   "shortcuts.title": "Phím tắt",
   "shortcuts.global": "Chung",
-  "shortcuts.dashboard": "Dashboard",
-  "shortcuts.goToMia": "Đến MIA Dashboard",
-  "shortcuts.goToMre": "Đến MRE Dashboard",
+  "shortcuts.dashboard": "Bảng điều khiển",
+  "shortcuts.goToMia": "Đến MIA",
+  "shortcuts.goToMre": "Đến MRE",
   "shortcuts.goToTools": "Đến Công cụ",
   "shortcuts.goToSettings": "Đến Cài đặt",
   "shortcuts.undo": "Hoàn tác",
   "shortcuts.redo": "Làm lại",
   "shortcuts.export": "Mở hộp thoại xuất",
-  "shortcuts.newCase": "Case mới",
-  "shortcuts.prevCase": "Case trước",
-  "shortcuts.nextCase": "Case sau",
+  "shortcuts.newCase": "Vụ việc mới",
+  "shortcuts.prevCase": "Vụ việc trước",
+  "shortcuts.nextCase": "Vụ việc sau",
   "shortcuts.nextSection": "Phần tiếp theo",
   "shortcuts.prevSection": "Phần trước",
   "shortcuts.toggleAllSections": "Mở/đóng tất cả",
   "shortcuts.showHelp": "Xem trợ giúp",
   "shortcuts.commandPalette": "Bảng lệnh",
-  "shortcuts.searchCases": "Tìm kiếm qua các case",
+  "shortcuts.searchCases": "Tìm kiếm qua các vụ việc",
   "shortcuts.hint.commandPalette": "Bảng lệnh",
   "shortcuts.hint.search": "Tìm kiếm",
   "shortcuts.hint.allShortcuts": "Tất cả phím tắt",
 
   // Cross-case Search
-  "search.title": "Tìm kiếm qua các Case",
-  "search.placeholder": "Tìm trong tất cả case...",
+  "search.title": "Tìm kiếm qua các vụ việc",
+  "search.placeholder": "Tìm trong tất cả vụ việc...",
   "search.noResults": "Không tìm thấy kết quả",
   "search.loading": "Đang tìm kiếm...",
   "search.showLess": "Thu gọn",
@@ -652,18 +790,18 @@ export const vn: Record<string, string> = {
   "commandPalette.noResults": "Không tìm thấy lệnh",
   "commandPalette.group.navigation": "Điều hướng",
   "commandPalette.group.search": "Tìm kiếm",
-  "commandPalette.group.cases": "Case",
+  "commandPalette.group.cases": "Vụ việc",
   "commandPalette.group.export": "Xuất",
   "commandPalette.group.help": "Trợ giúp",
   "commandPalette.group.settings": "Cài đặt",
-  "commandPalette.actions.goToMia": "Đến MIA Dashboard",
-  "commandPalette.actions.goToMre": "Đến MRE Dashboard",
+  "commandPalette.actions.goToMia": "Đến MIA",
+  "commandPalette.actions.goToMre": "Đến MRE",
   "commandPalette.actions.goToTools": "Đến Công cụ",
   "commandPalette.actions.goToSettings": "Đến Cài đặt",
-  "commandPalette.actions.searchCases": "Tìm kiếm qua các case",
-  "commandPalette.actions.newCase": "Case mới",
-  "commandPalette.actions.prevCase": "Case trước",
-  "commandPalette.actions.nextCase": "Case sau",
+  "commandPalette.actions.searchCases": "Tìm kiếm qua các vụ việc",
+  "commandPalette.actions.newCase": "Vụ việc mới",
+  "commandPalette.actions.prevCase": "Vụ việc trước",
+  "commandPalette.actions.nextCase": "Vụ việc sau",
   "commandPalette.actions.export": "Xuất dữ liệu",
   "commandPalette.actions.showHelp": "Phím tắt",
   "commandPalette.actions.toggleLanguage": "Đổi ngôn ngữ (EN/VN)",
@@ -674,22 +812,6 @@ export const vn: Record<string, string> = {
   // Timeline View Toggle
   "timeline.tableView": "Bảng",
   "timeline.visualView": "Dòng thời gian",
-
-  // Case Templates
-  "template.title": "Chọn mẫu Case",
-  "template.description": "Chọn mẫu để điền sẵn dữ liệu cho case",
-  "template.blank": "Trống",
-  "template.blankDesc": "Bắt đầu với case trống",
-  "template.ransomware": "Ransomware",
-  "template.ransomwareDesc": "Điền sẵn impact, timeline, và khuyến nghị cho sự cố ransomware",
-  "template.phishing": "Phishing",
-  "template.phishingDesc": "Điền sẵn infection vector, kỹ thuật MITRE, và IOC cho case phishing",
-  "template.apt": "APT",
-  "template.aptDesc": "Điền sẵn kỹ thuật MITRE và impact cho mối đe dọa bền bỉ",
-  "template.infoStealer": "Info-Stealer",
-  "template.infoStealerDesc": "Điền sẵn tóm tắt và MBC mappings cho phần mềm đánh cắp thông tin",
-  "template.custom": "Tùy chỉnh",
-  "template.customDesc": "Bắt đầu với case trống, tùy chỉnh sau",
 
   // Clipboard IOC Parser
   "ioc.pasteExtract": "Dán & Trích xuất",
@@ -704,14 +826,13 @@ export const vn: Record<string, string> = {
 
   // IOC Cross-Reference
   "iocXref.title": "Tham chiếu chéo IOC",
-  "iocXref.description": "Quét tất cả case để tìm IOC xuất hiện trong nhiều case. Giúp xác định mối liên kết giữa các cuộc điều tra khác nhau.",
-  "iocXref.scan": "Quét tất cả Case",
+  "iocXref.description": "Quét tất cả vụ việc để tìm IOC xuất hiện trong nhiều vụ việc. Giúp xác định mối liên kết giữa các cuộc điều tra khác nhau.",
+  "iocXref.scan": "Quét tất cả vụ việc",
   "iocXref.scanning": "Đang quét...",
-  "iocXref.noResults": "Không tìm thấy IOC chung giữa các case.",
-  "iocXref.foundIn": "Tìm thấy trong {count} case",
+  "iocXref.noResults": "Không tìm thấy IOC chung giữa các vụ việc.",
+  "iocXref.foundIn": "Tìm thấy trong {count} vụ việc",
 
-  // Command Palette — IOC XRef
-  "commandPalette.actions.iocCrossRef": "Tham chiếu chéo IOC",
+  // Command Palette
   "commandPalette.group.tools": "Công cụ",
 
   // Shortcuts — IOC XRef
@@ -762,4 +883,61 @@ export const vn: Record<string, string> = {
   "mbc.versionCheck.upToDate": "MBC đã là phiên bản mới nhất",
   "mbc.versionCheck.error": "Kiểm tra cập nhật thất bại",
   "mbc.noSuggestions": "Không có gợi ý dựa trên dữ liệu hành vi runtime hiện tại.",
+
+  // 404 Page
+  "notFound.title": "Oops! Không tìm thấy trang",
+  "notFound.returnHome": "Quay về trang chủ",
+
+  // Dashboard Header
+  "dashboard.saving": "Đang lưu...",
+  "dashboard.saved": "Đã lưu",
+  "dashboard.saveFailed": "Lưu thất bại",
+
+  // Scroll to Top
+  "common.scrollUp": "Cuộn lên đầu",
+
+  // Shortcuts Bar
+  "common.closeShortcutsBar": "Đóng thanh phím tắt",
+
+  // Header
+  "common.goToHome": "Về trang chủ",
+
+  // Collapsible Section
+  "common.toggleGuidance": "Bật/tắt hướng dẫn",
+  "common.dismissGuidance": "Bỏ qua hướng dẫn",
+
+  // File Hash Dropzone
+  "dropzone.fileAdded": "Đã thêm file vào bằng chứng!",
+  "dropzone.processFailed": "Xử lý file thất bại",
+
+  // Notes Log
+  "notes.imageTooLarge": "Hình ảnh quá lớn (tối đa 10MB)",
+  "notes.writeHere": "Viết ghi chú ở đây...",
+  "notes.writeHereWithImages": "Viết ghi chú ở đây... (Ctrl+V để dán hình ảnh)",
+
+  // Evidence Artifacts
+  "evidence.artifactRemoved": "Đã xóa bằng chứng.",
+  "evidence.undo": "Hoàn tác",
+  "evidence.noArtifacts": "Chưa có bằng chứng nào trong vụ việc",
+  "evidence.addArtifactHint": "Nhấn \"Thêm bằng chứng\" để đính kèm file bằng chứng",
+  "evidence.sampleInfoCleared": "Đã xóa thông tin mẫu",
+
+  // Date Picker
+  "common.selectDate": "Chọn ngày",
+
+  // Activity Tracker
+  "activity.daysIn": "ngày trong",
+  "activity.trackToday": "Theo dõi hôm nay",
+  "activity.trackedToday": "Đã theo dõi",
+
+  // Settings
+  "settings.languageChangedEn": "Ngôn ngữ đã chuyển sang Tiếng Anh",
+  "settings.languageChangedVn": "Ngôn ngữ đã chuyển sang Tiếng Việt",
+
+  // Date Picker
+  "common.today": "Hôm nay",
+  "common.clearSelection": "Xóa",
+
+  // Activity Tracker
+  "activity.year": "Năm",
 };

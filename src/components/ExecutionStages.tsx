@@ -1,4 +1,4 @@
-import { useState, useCallback, memo } from "react";
+import { useState, useCallback, useRef, memo } from "react";
 import { Layers } from "lucide-react";
 import { FormField } from "@/components/FormField";
 import { AnimatedCollapse } from "@/components/ui/skeleton";
@@ -50,6 +50,8 @@ export const ExecutionStages = memo(function ExecutionStages({ stages, onStagesC
   const { t } = useLanguage();
   const { isExpanded, toggle, expand } = useExpandedState(STORAGE_KEYS.EXECUTION_STAGES);
   const [expandedStages, setExpandedStages] = useState<Set<string>>(new Set());
+  const stagesRef = useRef(stages);
+  stagesRef.current = stages;
 
   const reorderStages = (fromIndex: number, toIndex: number) => {
     const result = [...stages];
@@ -67,26 +69,28 @@ export const ExecutionStages = memo(function ExecutionStages({ stages, onStagesC
   const { getDragProps } = useDragReorder(reorderStages);
 
   const addStage = useCallback(() => {
-    const newStageNumber = stages.length + 1;
+    const current = stagesRef.current;
+    const newStageNumber = current.length + 1;
     const newStage = createEmptyStage(newStageNumber);
-    onStagesChange([...stages, newStage]);
+    onStagesChange([...current, newStage]);
     setExpandedStages((prev) => new Set([...prev, newStage.id]));
     expand();
-  }, [stages, onStagesChange, expand]);
+  }, [onStagesChange, expand]);
 
   const removeStage = useCallback((id: string) => {
-    if (stages.length <= 1) return;
-    const updatedStages = stages
+    const current = stagesRef.current;
+    if (current.length <= 1) return;
+    const updatedStages = current
       .filter((s) => s.id !== id)
       .map((s, idx) => ({ ...s, stageNumber: idx + 1, stageName: `Stage ${idx + 1}` }));
     onStagesChange(updatedStages);
-  }, [stages, onStagesChange]);
+  }, [onStagesChange]);
 
   const updateStage = useCallback((id: string, field: keyof ExecutionStage, value: string | number) => {
     onStagesChange(
-      stages.map((s) => (s.id === id ? { ...s, [field]: value } : s))
+      stagesRef.current.map((s) => (s.id === id ? { ...s, [field]: value } : s))
     );
-  }, [stages, onStagesChange]);
+  }, [onStagesChange]);
 
   const toggleStageExpand = useCallback((id: string) => {
     setExpandedStages((prev) => {
@@ -180,7 +184,7 @@ export const ExecutionStages = memo(function ExecutionStages({ stages, onStagesC
                   label={t("codeAnalysis.stages.apisUsed")}
                   value={stage.apisUsed}
                   onChange={(v) => updateStage(stage.id, "apisUsed", v)}
-                  placeholder="VirtualAlloc, RtlMoveMemory"
+                  placeholder={t("codeAnalysis.stages.apisPlaceholder")}
                 />
                 <FormField
                   label={t("codeAnalysis.stages.artifacts")}

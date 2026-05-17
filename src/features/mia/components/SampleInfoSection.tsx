@@ -9,6 +9,28 @@ import { CollapsibleSection } from "@/components/CollapsibleSection";
 import { PortalDropdown } from "@/components/ui/portal-dropdown";
 import { useLanguage } from "@/hooks/useLanguage";
 import type { SampleInfoData } from "@/features/mia/types";
+import type { DropdownOption } from "@/components/ui/portal-dropdown";
+
+const getFileTypeOptions = (t: (key: string) => string): DropdownOption[] => [
+  { value: "", label: t("common.select") },
+  { value: "pe32", label: t("mia.fileType.pe32") },
+  { value: "pe64", label: t("mia.fileType.pe64") },
+  { value: "dll", label: t("mia.fileType.dll") },
+  { value: "script", label: t("mia.fileType.script") },
+  { value: "office", label: t("mia.fileType.office") },
+  { value: "pdf", label: t("mia.fileType.pdf") },
+  { value: "archive", label: t("mia.fileType.archive") },
+  { value: "other", label: t("mia.fileType.other") },
+];
+
+const getSignatureOptions = (t: (key: string) => string): DropdownOption[] => [
+  { value: "", label: t("common.select") },
+  { value: "unsigned", label: t("mia.sig.unsigned") },
+  { value: "valid", label: t("mia.sig.valid") },
+  { value: "invalid", label: t("mia.sig.invalid") },
+  { value: "expired", label: t("mia.sig.expired") },
+  { value: "self_signed", label: t("mia.sig.selfSigned") },
+];
 
 interface SampleInfoSectionProps {
   data: SampleInfoData;
@@ -62,17 +84,7 @@ export const SampleInfoSection = memo(function SampleInfoSection({
           label={t("mia.fileType")}
           value={data.fileType}
           onChange={(v) => updateField("fileType", v)}
-          options={[
-            { value: "", label: t("common.select") },
-            { value: "pe32", label: t("mia.fileType.pe32") },
-            { value: "pe64", label: t("mia.fileType.pe64") },
-            { value: "dll", label: t("mia.fileType.dll") },
-            { value: "script", label: t("mia.fileType.script") },
-            { value: "office", label: t("mia.fileType.office") },
-            { value: "pdf", label: t("mia.fileType.pdf") },
-            { value: "archive", label: t("mia.fileType.archive") },
-            { value: "other", label: t("mia.fileType.other") },
-          ]}
+          options={getFileTypeOptions(t)}
         />
         <FormField
           label={t("mia.sha256")}
@@ -85,14 +97,7 @@ export const SampleInfoSection = memo(function SampleInfoSection({
           label={t("mia.signature")}
           value={data.signature}
           onChange={(v) => updateField("signature", v)}
-          options={[
-            { value: "", label: t("common.select") },
-            { value: "unsigned", label: t("mia.sig.unsigned") },
-            { value: "valid", label: t("mia.sig.valid") },
-            { value: "invalid", label: t("mia.sig.invalid") },
-            { value: "expired", label: t("mia.sig.expired") },
-            { value: "self_signed", label: t("mia.sig.selfSigned") },
-          ]}
+          options={getSignatureOptions(t)}
         />
         <FormField
           label={t("mia.compileTime")}

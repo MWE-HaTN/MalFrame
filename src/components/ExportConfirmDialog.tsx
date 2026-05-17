@@ -15,6 +15,8 @@ import { useLanguage } from "@/hooks/useLanguage";
 import { Moon, Sun, X, FileText, Check, Image } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { trackTodayActivity } from "@/lib/activityUtils";
+import { toast } from "sonner";
+import { formatExportError } from "@/lib/dashboardExportUtils";
 
 interface ExportConfirmDialogProps {
   open: boolean;
@@ -43,19 +45,32 @@ export const ExportConfirmDialog = memo(function ExportConfirmDialog({
   const [saveImages, setSaveImages] = useState(true);
   const [progress, setProgress] = useState(0);
   const progressIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const isExportingRef = useRef(false);
+  const exportGenRef = useRef(0);
 
   const isDarkMode = theme === "dark";
   const isDocumentExport = exportType === "pdf" || exportType === "word";
 
   // Reset step when dialog opens — pick correct initial step immediately to avoid
   // a render with no DialogTitle (Radix accessibility requirement)
+  // Only reset on open transition, not on theme/type changes while already open
+  const prevOpenRef = useRef(open);
   useEffect(() => {
-    if (open) {
+    if (open && !prevOpenRef.current) {
       setStep(isDocumentExport && isDarkMode ? "theme-check" : "confirm-export");
       setSaveImages(true);
       setProgress(0);
+    } else if (!open) {
+      // Dialog closed: invalidate in-progress export and clean up
+      exportGenRef.current++;
+      if (progressIntervalRef.current) {
+        clearInterval(progressIntervalRef.current);
+        progressIntervalRef.current = null;
+      }
+      isExportingRef.current = false;
     }
-  }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
+    prevOpenRef.current = open;
+  }, [open, isDocumentExport, isDarkMode]);
 
   // Cleanup interval on unmount
   useEffect(() => {
@@ -87,9 +102,13 @@ export const ExportConfirmDialog = memo(function ExportConfirmDialog({
   };
 
   const handleFinalExport = async (shouldClear: boolean) => {
+    // Guard against double-click re-entry
+    if (step === "exporting" || isExportingRef.current) return;
+    isExportingRef.current = true;
+    const gen = ++exportGenRef.current;
     setStep("exporting");
     setProgress(0);
-    
+
     // Simulate progress while export runs
     progressIntervalRef.current = setInterval(() => {
       setProgress((prev) => {
@@ -97,19 +116,34 @@ export const ExportConfirmDialog = memo(function ExportConfirmDialog({
         return Math.min(90, prev + Math.random() * 15);
       });
     }, 200);
-    
+
     try {
       await onConfirmExport(saveImages, shouldClear);
+      // Guard: dialog was closed or a new export started — don't touch state
+      if (gen !== exportGenRef.current) return;
       // Track activity on successful export
       trackTodayActivity();
+      // Clear interval before setting 100% to prevent it from capping back to 90
+      if (progressIntervalRef.current) {
+        clearInterval(progressIntervalRef.current);
+        progressIntervalRef.current = null;
+      }
       setProgress(100);
       // Small delay to show 100%
       await new Promise((r) => setTimeout(r, 300));
+      if (gen !== exportGenRef.current) return;
+      onOpenChange(false);
+    } catch (err) {
+      if (gen !== exportGenRef.current) return;
+      toast.error(formatExportError(err));
+      setStep("confirm-export");
+      setProgress(0);
     } finally {
       if (progressIntervalRef.current) {
         clearInterval(progressIntervalRef.current);
+        progressIntervalRef.current = null;
       }
-      onOpenChange(false);
+      if (gen === exportGenRef.current) isExportingRef.current = false;
     }
   };
 
@@ -338,6 +372,14 @@ export const ExportConfirmDialog = memo(function ExportConfirmDialog({
 
         {step === "exporting" && (
           <div className="py-10 flex flex-col items-center justify-center gap-6 animate-fade-in">
+            <DialogHeader>
+              <DialogTitle className="font-terminal text-lg">
+                {t("export.exporting")}
+              </DialogTitle>
+              <DialogDescription className="text-sm text-muted-foreground">
+                {exportType === "pdf" ? t("export.generatingPDF") : exportType === "json" ? t("export.exporting") : t("export.generatingWord")}
+              </DialogDescription>
+            </DialogHeader>
             <div className="w-full space-y-3">
               <div className="flex justify-between text-sm">
                 <span className="font-terminal text-primary">
@@ -360,7 +402,7 @@ export const ExportConfirmDialog = memo(function ExportConfirmDialog({
               </div>
             </div>
             <p className="text-sm text-muted-foreground text-center">
-              {exportType === "pdf" ? t("export.generatingPDF") : t("export.generatingWord")}
+              {exportType === "pdf" ? t("export.generatingPDF") : exportType === "json" ? t("export.exporting") : t("export.generatingWord")}
             </p>
           </div>
         )}

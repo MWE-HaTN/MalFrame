@@ -96,14 +96,13 @@ export const FileHashDropzone = memo(function FileHashDropzone({ onHashGenerated
   const processFile = useCallback(async (file: File): Promise<FileDropInfo> => {
     const sha256 = await calculateSHA256(file);
     const sizeFormatted = formatFileSize(file.size);
-    const md5 = sha256.substring(0, 32); // MD5-like hash
 
     return {
       name: file.name,
       size: file.size,
       sizeFormatted,
       sha256,
-      md5,
+      md5: "",
     };
   }, [calculateSHA256]);
 
@@ -123,15 +122,15 @@ export const FileHashDropzone = memo(function FileHashDropzone({ onHashGenerated
       onHashGenerated?.(fileData.sha256, fileData.name, fileData.size);
       onFileDropped?.(fileData);
       
-      toast.success("File added to evidence!");
+      toast.success(t("dropzone.fileAdded"));
     } catch (error) {
-      toast.error("Failed to process file");
+      toast.error(t("dropzone.processFailed"));
       debugError("File processing error:", error);
     } finally {
       setIsProcessing(false);
       setProcessingProgress({ current: 0, total: 0, skipped: 0 });
     }
-  }, [processFile, onHashGenerated, onFileDropped, existingHashes]);
+  }, [processFile, onHashGenerated, onFileDropped, existingHashes, t]);
 
   const handleMultipleFiles = useCallback(async (files: File[]) => {
     if (files.length === 1) {
@@ -178,13 +177,13 @@ export const FileHashDropzone = memo(function FileHashDropzone({ onHashGenerated
         toast.success(`${processedFiles.length} files added to evidence!`);
       }
     } catch (error) {
-      toast.error("Failed to process files");
+      toast.error(t("error.failedToProcessFiles"));
       debugError("Files processing error:", error);
     } finally {
       setIsProcessing(false);
       setProcessingProgress({ current: 0, total: 0, skipped: 0 });
     }
-  }, [handleFile, processFile, onMultipleFilesDropped, existingHashes]);
+  }, [handleFile, processFile, onMultipleFilesDropped, existingHashes, t]);
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -237,7 +236,7 @@ export const FileHashDropzone = memo(function FileHashDropzone({ onHashGenerated
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
           onChange={handleFileSelect}
-          aria-label="Select files for hash calculation"
+          aria-label={t("aria.selectFilesForHash")}
           className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
         />
         

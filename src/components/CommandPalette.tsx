@@ -124,7 +124,8 @@ export const CommandPalette = memo(function CommandPalette({
     if (open) {
       setQuery("");
       setSelectedIndex(0);
-      setTimeout(() => inputRef.current?.focus(), 50);
+      const id = setTimeout(() => inputRef.current?.focus(), 50);
+      return () => clearTimeout(id);
     }
   }, [open]);
 
@@ -144,6 +145,7 @@ export const CommandPalette = memo(function CommandPalette({
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
+      if (flatList.length === 0) return;
       switch (e.key) {
         case "ArrowDown":
           e.preventDefault();
@@ -184,28 +186,26 @@ export const CommandPalette = memo(function CommandPalette({
             </div>
           )}
 
-          {grouped.map((group) => {
-            let offset = 0;
-            for (const g of grouped) {
-              if (g.label === group.label) break;
-              offset += g.items.length;
-            }
-
-            return (
+          {(() => {
+            let flatIndex = 0;
+            return grouped.map((group) => {
+              const groupStartIndex = flatIndex;
+              return (
               <div key={group.label}>
                 <div className="px-3 py-1.5 text-[10px] font-terminal text-primary tracking-wider uppercase">
                   {group.label}
                 </div>
                 {group.items.map((item, i) => {
-                  const flatIndex = offset + i;
+                  const itemIndex = groupStartIndex + i;
+                  flatIndex++;
                   return (
                     <button
                       key={item.id}
-                      data-index={flatIndex}
+                      data-index={itemIndex}
                       onClick={item.action}
-                      onMouseEnter={() => setSelectedIndex(flatIndex)}
+                      onMouseEnter={() => setSelectedIndex(itemIndex)}
                       className={`w-full flex items-center gap-3 px-3 py-2 text-sm text-left transition-colors ${
-                        flatIndex === selectedIndex
+                        itemIndex === selectedIndex
                           ? "bg-primary/10 text-foreground"
                           : "text-muted-foreground hover:bg-muted/50"
                       }`}
@@ -217,7 +217,7 @@ export const CommandPalette = memo(function CommandPalette({
                           {item.shortcut}
                         </kbd>
                       )}
-                      {flatIndex === selectedIndex && (
+                      {itemIndex === selectedIndex && (
                         <ArrowRight className="w-3 h-3 text-primary shrink-0" />
                       )}
                     </button>
@@ -225,7 +225,8 @@ export const CommandPalette = memo(function CommandPalette({
                 })}
               </div>
             );
-          })}
+          });
+        })()}
         </div>
 
         <div className="border-t px-3 py-1.5 flex items-center gap-3 text-[10px] text-muted-foreground/60">

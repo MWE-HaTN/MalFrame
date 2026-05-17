@@ -90,7 +90,6 @@ npm run preview
 | Dark/Light Theme | ✅ | ✅ | Toggle between themes |
 | EN/VN Language | ✅ | ✅ | Bilingual support |
 | Activity Tracker | ✅ | ✅ | GitHub-style analysis heatmap |
-| PWA | ✅ | ✅ | Installable, service worker with update prompt |
 | Keyboard Shortcuts | ✅ | ✅ | `?` to view all shortcuts |
 | Command Palette | ✅ | ✅ | `Ctrl+K` — navigation, actions, settings, export |
 | Cross-case Search | ✅ | ✅ | `Ctrl+Shift+X` — search across all cases |
@@ -311,10 +310,6 @@ All data saves automatically to **IndexedDB** with a short debounce. No manual s
 
 > Images are embedded as **base64 strings** directly in the case JSON — no separate image storage needed. This makes each JSON export fully self-contained.
 
-### Offline Capability
-
-The app registers a service worker (via vite-plugin-pwa + Workbox) that caches all static assets. Once loaded, the app works without an internet connection — dashboards, export, import, search, tools reference are all available offline. The only exception is the initial MITRE ATT&CK data fetch, which requires one online load and is then cached for 24 hours in localStorage.
-
 ### Privacy
 
 - **100% Local** — all data stays in your browser
@@ -424,8 +419,6 @@ Press `?` anywhere to view all shortcuts. Key bindings:
 |------------|---------|
 | [@vitejs/plugin-basic-ssl](https://github.com/vitejs/vite-plugin-basic-ssl) | Self-signed HTTPS for dev |
 | [vite-plugin-compression](https://github.com/vbenjs/vite-plugin-compression) | Gzip/Brotli compression (production) |
-| [vite-plugin-pwa](https://vite-pwa-org.netlify.app/) | PWA support + service worker (Workbox) |
-| [workbox-window](https://developer.chrome.com/docs/workbox/modules/workbox-window) | Service worker registration + update prompt |
 | [rollup-plugin-visualizer](https://github.com/btd/rollup-plugin-visualizer) | Bundle analysis (`dist/stats.html`) |
 
 ### Testing
@@ -459,7 +452,6 @@ MalFrame/
 │   │   ├── CommandPalette.tsx       # Command palette (Ctrl+K)
 │   │   ├── ShortcutsDialog.tsx      # Keyboard shortcuts reference (?)
 │   │   ├── ShortcutsHintBar.tsx     # Fixed shortcut icon buttons
-│   │   ├── ReloadPrompt.tsx         # PWA update prompt
 │   │   ├── IOCPasteDialog.tsx       # Paste & extract IOCs from text
 │   │   ├── IOCCrossReferenceDialog.tsx  # Cross-case IOC analysis
 │   │   ├── CaseTemplateDialog.tsx   # New case template picker

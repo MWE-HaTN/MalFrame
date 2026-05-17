@@ -10,6 +10,7 @@ import { debugWarn } from "@/lib/debugLogger";
 let robotoRegularBase64: string | null = null;
 let robotoBoldBase64: string | null = null;
 let fontsLoaded = false;
+let fontLoadPromise: Promise<void> | null = null;
 
 /**
  * Convert ArrayBuffer to Base64 string
@@ -40,19 +41,26 @@ async function loadFontAsBase64(url: string): Promise<string> {
  */
 export async function loadFonts(): Promise<void> {
   if (fontsLoaded) return;
+  if (fontLoadPromise) return fontLoadPromise;
 
-  try {
-    const [regular, bold] = await Promise.all([
-      loadFontAsBase64("/fonts/Roboto-Regular.ttf"),
-      loadFontAsBase64("/fonts/Roboto-Bold.ttf"),
-    ]);
+  fontLoadPromise = (async () => {
+    try {
+      const [regular, bold] = await Promise.all([
+        loadFontAsBase64("/fonts/Roboto-Regular.ttf"),
+        loadFontAsBase64("/fonts/Roboto-Bold.ttf"),
+      ]);
 
-    robotoRegularBase64 = regular;
-    robotoBoldBase64 = bold;
-    fontsLoaded = true;
-  } catch (error) {
-    debugWarn("Failed to load custom fonts, falling back to Helvetica:", error);
-  }
+      robotoRegularBase64 = regular;
+      robotoBoldBase64 = bold;
+      fontsLoaded = true;
+    } catch (error) {
+      debugWarn("Failed to load custom fonts, falling back to Helvetica:", error);
+      fontLoadPromise = null; // Allow retry on next call
+      throw error;
+    }
+  })();
+
+  return fontLoadPromise;
 }
 
 /**

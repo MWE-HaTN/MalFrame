@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, memo, useCallback, useDeferredValue } from "react";
+import { useState, useMemo, useEffect, memo, useCallback, useDeferredValue, useRef } from "react";
 import { ChevronDown, ChevronRight, Search, Download, RefreshCw, X, Loader2, Sparkles, Check, ExternalLink } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getMBCItemTypeClass } from "@/lib/semanticColors";
@@ -42,7 +42,7 @@ export const MBCMapping = memo(function MBCMapping({
   runtimeBehavior,
 }: MBCMappingProps) {
   const { t } = useLanguage();
-  const { mbcData, isLoading } = useMBCData();
+  const { mbcData, isLoading, error } = useMBCData();
   const [searchQuery, setSearchQuery] = useState("");
   const [expandedObjectives, setExpandedObjectives] = useState<Set<string>>(new Set());
   const [expandedBehaviors, setExpandedBehaviors] = useState<Set<string>>(new Set());
@@ -50,6 +50,8 @@ export const MBCMapping = memo(function MBCMapping({
   const [dismissedSuggestions, setDismissedSuggestions] = useState<Set<string>>(new Set());
   const [isCheckingVersion, setIsCheckingVersion] = useState(false);
   const [remoteVersion, setRemoteVersion] = useState<string | null>(null);
+  const mappingRef = useRef(mapping);
+  mappingRef.current = mapping;
 
   // Deferred runtime behavior for suggestion computation
   const deferredRuntime = useDeferredValue(runtimeBehavior);
@@ -114,35 +116,43 @@ export const MBCMapping = memo(function MBCMapping({
     }
   }, [searchQuery, filteredObjectives]);
 
-  const toggleObjective = (objectiveId: string) => {
-    const newSet = new Set(expandedObjectives);
-    if (newSet.has(objectiveId)) {
-      newSet.delete(objectiveId);
-    } else {
-      newSet.add(objectiveId);
-    }
-    setExpandedObjectives(newSet);
-  };
+  const toggleObjective = useCallback((objectiveId: string) => {
+    setExpandedObjectives(prev => {
+      const next = new Set(prev);
+      if (next.has(objectiveId)) {
+        next.delete(objectiveId);
+      } else {
+        next.add(objectiveId);
+      }
+      return next;
+    });
+  }, []);
 
-  const toggleBehavior = (behaviorId: string) => {
-    const newSet = new Set(expandedBehaviors);
-    if (newSet.has(behaviorId)) {
-      newSet.delete(behaviorId);
-    } else {
-      newSet.add(behaviorId);
-    }
-    setExpandedBehaviors(newSet);
-  };
+  const toggleBehavior = useCallback((behaviorId: string) => {
+    setExpandedBehaviors(prev => {
+      const next = new Set(prev);
+      if (next.has(behaviorId)) {
+        next.delete(behaviorId);
+      } else {
+        next.add(behaviorId);
+      }
+      return next;
+    });
+  }, []);
 
-  const isSelected = useCallback((id: string) => mapping.some(m => m.id === id), [mapping]);
+  const _isSelected = useCallback((id: string) => mappingRef.current.some(m => m.id === id), []);
+
+  // Stable Set of selected IDs for memo comparators (avoids ref-based stale reads)
+  const selectedIds = useMemo(() => new Set(mapping.map(m => m.id)), [mapping]);
 
   const selectBehavior = useCallback((behavior: MBCBehavior, objective: MBCObjective) => {
     if (readOnly) return;
-    const exists = mapping.some(m => m.id === behavior.id);
+    const current = mappingRef.current;
+    const exists = current.some(m => m.id === behavior.id);
     if (exists) {
-      onMappingChange?.(mapping.filter(m => m.id !== behavior.id));
+      onMappingChange?.(current.filter(m => m.id !== behavior.id));
     } else {
-      onMappingChange?.([...mapping, {
+      onMappingChange?.([...current, {
         id: behavior.id,
         name: behavior.name,
         objectiveId: objective.objectiveId,
@@ -150,14 +160,15 @@ export const MBCMapping = memo(function MBCMapping({
         type: 'behavior'
       }]);
     }
-  }, [mapping, onMappingChange, readOnly]);
+  }, [onMappingChange, readOnly]);
   const selectMethod = useCallback((methodId: string, methodName: string, behavior: MBCBehavior, objective: MBCObjective) => {
     if (readOnly) return;
-    const exists = mapping.some(m => m.id === methodId);
+    const current = mappingRef.current;
+    const exists = current.some(m => m.id === methodId);
     if (exists) {
-      onMappingChange?.(mapping.filter(m => m.id !== methodId));
+      onMappingChange?.(current.filter(m => m.id !== methodId));
     } else {
-      onMappingChange?.([...mapping, {
+      onMappingChange?.([...current, {
         id: methodId,
         name: `${behavior.name}: ${methodName}`,
         objectiveId: objective.objectiveId,
@@ -165,7 +176,7 @@ export const MBCMapping = memo(function MBCMapping({
         type: 'behavior'
       }]);
     }
-  }, [mapping, onMappingChange, readOnly]);
+  }, [onMappingChange, readOnly]);
 
   const exportMapping = () => {
     if (!mbcData) return;
@@ -200,10 +211,11 @@ export const MBCMapping = memo(function MBCMapping({
   const acceptSuggestion = useCallback(
     (suggestion: MBCSuggestion) => {
       if (readOnly) return;
-      const exists = mapping.some((m) => m.id === suggestion.behaviorId);
+      const current = mappingRef.current;
+      const exists = current.some((m) => m.id === suggestion.behaviorId);
       if (exists) return;
       onMappingChange?.([
-        ...mapping,
+        ...current,
         {
           id: suggestion.behaviorId,
           name: suggestion.behaviorName,
@@ -213,13 +225,22 @@ export const MBCMapping = memo(function MBCMapping({
         },
       ]);
     },
-    [mapping, onMappingChange, readOnly],
+    [onMappingChange, readOnly],
   );
 
   // Dismiss a suggestion
   const dismissSuggestion = useCallback((behaviorId: string) => {
     setDismissedSuggestions((prev) => new Set(prev).add(behaviorId));
   }, []);
+
+  // Error state
+  if (error && !mbcData) {
+    return (
+      <div className="flex items-center justify-center py-12 gap-3" role="alert">
+        <span className="text-sm text-destructive font-mono">{t("mbc.loadError") || "Failed to load MBC data"}</span>
+      </div>
+    );
+  }
 
   // Loading state
   if (isLoading || !mbcData) {
@@ -255,7 +276,7 @@ export const MBCMapping = memo(function MBCMapping({
             onClick={handleUpdate}
             disabled={isCheckingVersion}
             className="flex items-center gap-1 px-2 py-1 text-xs font-mono text-muted-foreground hover:text-primary border border-border/50 rounded-sm hover:bg-primary/10 transition-all disabled:opacity-50"
-            title="Check for updates"
+            title={t("mbc.checkForUpdates")}
           >
             {isCheckingVersion ? (
               <Loader2 className="w-3 h-3 animate-spin" />
@@ -268,7 +289,7 @@ export const MBCMapping = memo(function MBCMapping({
             <button
               onClick={exportMapping}
               className="flex items-center gap-1 px-2 py-1 text-xs font-mono text-primary hover:text-primary/80 border border-primary/30 rounded-sm hover:bg-primary/10 transition-all"
-              title="Export selected mappings"
+              title={t("mbc.exportSelected")}
             >
               <Download className="w-3 h-3" />
               <span>{t("mbc.export")}</span>
@@ -287,15 +308,15 @@ export const MBCMapping = memo(function MBCMapping({
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           placeholder={t("mbc.search")}
-          aria-label="Search MBC behaviors"
+          aria-label={t("aria.searchMbcBehaviors")}
           className="w-full pl-9 pr-9 py-2 text-sm font-mono bg-card border border-border rounded-sm focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/30 transition-all"
         />
         {searchQuery && (
           <button
             onClick={() => setSearchQuery("")}
             className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-            aria-label="Clear search"
-            title="Clear search"
+            aria-label={t("common.clearSearch")}
+            title={t("common.clearSearch")}
           >
             <X className="w-4 h-4" />
           </button>
@@ -388,7 +409,7 @@ export const MBCMapping = memo(function MBCMapping({
             expandedBehaviors={expandedBehaviors}
             onToggleObjective={() => toggleObjective(objective.objectiveId)}
             onToggleBehavior={toggleBehavior}
-            isSelected={isSelected}
+            selectedIds={selectedIds}
             onSelectBehavior={(b) => selectBehavior(b, objective)}
             onSelectMethod={(mId, mName, b) => selectMethod(mId, mName, b, objective)}
             readOnly={readOnly}
@@ -432,7 +453,7 @@ interface ObjectiveColumnProps {
   expandedBehaviors: Set<string>;
   onToggleObjective: () => void;
   onToggleBehavior: (id: string) => void;
-  isSelected: (id: string) => boolean;
+  selectedIds: Set<string>;
   onSelectBehavior: (b: MBCBehavior) => void;
   onSelectMethod: (methodId: string, methodName: string, behavior: MBCBehavior) => void;
   readOnly: boolean;
@@ -446,12 +467,12 @@ const ObjectiveColumn = memo(
     expandedBehaviors,
     onToggleObjective,
     onToggleBehavior,
-    isSelected,
+    selectedIds,
     onSelectBehavior,
     onSelectMethod,
     readOnly,
   }: ObjectiveColumnProps) {
-    const selectedCount = objective.behaviors.filter(b => isSelected(b.id)).length;
+    const selectedCount = objective.behaviors.filter(b => selectedIds.has(b.id)).length;
 
     return (
       <div className="flex flex-col border border-border/50 rounded-sm overflow-hidden">
@@ -492,11 +513,11 @@ const ObjectiveColumn = memo(
                 key={behavior.id}
                 behavior={behavior}
                 isExpanded={expandedBehaviors.has(behavior.id)}
-                isSelected={isSelected(behavior.id)}
+                isSelected={selectedIds.has(behavior.id)}
                 onToggleBehavior={onToggleBehavior}
                 onSelectBehavior={onSelectBehavior}
                 onSelectMethod={onSelectMethod}
-                isMethodSelected={isSelected}
+                methodSelectedIds={selectedIds}
                 readOnly={readOnly}
               />
             ))}
@@ -512,31 +533,22 @@ const ObjectiveColumn = memo(
     if (prevProps.readOnly !== nextProps.readOnly) return false;
     if (prevProps.objective.objectiveId !== nextProps.objective.objectiveId) return false;
     if (prevProps.objective.behaviors.length !== nextProps.objective.behaviors.length) return false;
-    
+    if (prevProps.selectedIds !== nextProps.selectedIds) return false;
+
+    // Check if behavior data changed (e.g., methods filtered by search)
+    for (let i = 0; i < prevProps.objective.behaviors.length; i++) {
+      if (prevProps.objective.behaviors[i] !== nextProps.objective.behaviors[i]) return false;
+    }
+
     // Check expanded behaviors for this objective
     const prevBehaviorIds = prevProps.objective.behaviors.map(b => b.id);
     const prevExpanded = prevBehaviorIds.filter(id => prevProps.expandedBehaviors.has(id));
     const nextExpanded = prevBehaviorIds.filter(id => nextProps.expandedBehaviors.has(id));
-    if (prevExpanded.length !== nextExpanded.length || 
+    if (prevExpanded.length !== nextExpanded.length ||
         prevExpanded.some((id, i) => id !== nextExpanded[i])) {
       return false;
     }
-    
-    // Check if selection changed for any behavior in this objective
-    for (const behavior of prevProps.objective.behaviors) {
-      if (prevProps.isSelected(behavior.id) !== nextProps.isSelected(behavior.id)) {
-        return false;
-      }
-      // Check methods too
-      if (behavior.methods) {
-        for (const method of behavior.methods) {
-          if (prevProps.isSelected(method.id) !== nextProps.isSelected(method.id)) {
-            return false;
-          }
-        }
-      }
-    }
-    
+
     return true;
   }
 );
@@ -549,7 +561,7 @@ interface BehaviorRowProps {
   onToggleBehavior: (id: string) => void;
   onSelectBehavior: (b: MBCBehavior) => void;
   onSelectMethod: (methodId: string, methodName: string, behavior: MBCBehavior) => void;
-  isMethodSelected: (id: string) => boolean;
+  methodSelectedIds: Set<string>;
   readOnly: boolean;
 }
 
@@ -561,9 +573,10 @@ const BehaviorRow = memo(
     onToggleBehavior,
     onSelectBehavior,
     onSelectMethod,
-    isMethodSelected,
+    methodSelectedIds,
     readOnly,
   }: BehaviorRowProps) {
+    const { t } = useLanguage();
     const hasMethods = behavior.methods && behavior.methods.length > 0;
 
     return (
@@ -598,7 +611,7 @@ const BehaviorRow = memo(
               rel="noopener noreferrer"
               className="text-[10px] font-mono text-orange-400 hover:underline shrink-0"
               onClick={(e) => e.stopPropagation()}
-              title="View on MITRE ATT&CK"
+              title={t("mbc.viewOnMitre")}
             >
               {behavior.attackMapping}
             </a>
@@ -622,7 +635,7 @@ const BehaviorRow = memo(
         {hasMethods && isExpanded && (
           <div className="ml-6 border-l-2 border-border/40 bg-card/30 mb-1">
             {behavior.methods!.map(method => {
-              const methodSelected = isMethodSelected(method.id);
+              const methodSelected = methodSelectedIds.has(method.id);
               return (
                 <div key={method.id} className="flex items-center gap-1 py-1 px-2">
                   <span className="text-sm font-mono text-accent/70 shrink-0">
@@ -651,13 +664,11 @@ const BehaviorRow = memo(
   (prevProps, nextProps) => {
     return (
       prevProps.behavior.id === nextProps.behavior.id &&
+      prevProps.behavior.methods === nextProps.behavior.methods &&
       prevProps.isExpanded === nextProps.isExpanded &&
       prevProps.isSelected === nextProps.isSelected &&
       prevProps.readOnly === nextProps.readOnly &&
-      // Check method selections
-      (prevProps.behavior.methods || []).every(m => 
-        prevProps.isMethodSelected(m.id) === nextProps.isMethodSelected(m.id)
-      )
+      prevProps.methodSelectedIds === nextProps.methodSelectedIds
     );
   }
 );

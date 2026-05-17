@@ -13,7 +13,7 @@ export const ThemeContext = createContext<ThemeContextType | undefined>(undefine
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [theme, setThemeState] = useState<Theme>(() => {
     const saved = localStorage.getItem(STORAGE_KEYS.THEME);
-    return (saved as Theme) || "light";
+    return saved === "dark" || saved === "light" ? saved : "light";
   });
   const transitionTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 

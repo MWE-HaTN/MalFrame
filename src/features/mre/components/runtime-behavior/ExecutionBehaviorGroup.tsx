@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { Workflow, FolderCog, Lock } from "lucide-react";
 import { cn, generateId } from "@/lib/utils";
 import { RuntimeBehaviorData } from "./types";
@@ -9,8 +10,8 @@ import {
   FieldLabel,
   TagList,
   AutoTextarea,
-  inputStyles,
 } from "./ui-components";
+import { inputStyles } from "./styles";
 import { AnimatedCollapse } from "@/components/ui/skeleton";
 import { useLanguage } from "@/hooks/useLanguage";
 
@@ -22,37 +23,33 @@ interface ExecutionBehaviorGroupProps {
   onToggleSubItem: (key: string) => void;
   update: <K extends keyof RuntimeBehaviorData>(key: K, value: RuntimeBehaviorData[K]) => void;
   updateMany: (patch: Partial<RuntimeBehaviorData>) => void;
+  updateField: <K extends keyof RuntimeBehaviorData>(key: K, updater: (current: RuntimeBehaviorData[K]) => RuntimeBehaviorData[K]) => void;
 }
 
-export function ExecutionBehaviorGroup({
+export const ExecutionBehaviorGroup = memo(function ExecutionBehaviorGroup({
   data,
   isExpanded,
   onToggleGroup,
   expandedSubItems,
   onToggleSubItem,
-  update,
+  update: _update,
   updateMany,
+  updateField,
 }: ExecutionBehaviorGroupProps) {
   const { t } = useLanguage();
 
   const addExecutionFlow = () => {
-    const next = [...data.executionFlow, { id: generateId(), stepName: "", description: "", images: [] }];
-    updateMany({ executionFlow: next, executionFlowEnabled: true });
+    updateMany({ executionFlow: [...data.executionFlow, { id: generateId(), stepName: "", description: "", images: [] }], executionFlowEnabled: true });
     if (!expandedSubItems["executionFlow"]) onToggleSubItem("executionFlow");
   };
 
   const addSystemArtifact = () => {
-    const next = [
-      ...data.systemArtifacts,
-      { id: generateId(), typeTags: [], path: "", notes: "", images: [] },
-    ];
-    updateMany({ systemArtifacts: next, systemArtifactsEnabled: true });
+    updateMany({ systemArtifacts: [...data.systemArtifacts, { id: generateId(), typeTags: [], path: "", notes: "", images: [] }], systemArtifactsEnabled: true });
     if (!expandedSubItems["systemArtifacts"]) onToggleSubItem("systemArtifacts");
   };
 
   const addPersistence = () => {
-    const next = [...data.persistence, { id: generateId(), typeTags: [], path: "", notes: "", images: [] }];
-    updateMany({ persistence: next, persistenceEnabled: true });
+    updateMany({ persistence: [...data.persistence, { id: generateId(), typeTags: [], path: "", notes: "", images: [] }], persistenceEnabled: true });
     if (!expandedSubItems["persistence"]) onToggleSubItem("persistence");
   };
 
@@ -65,7 +62,7 @@ export function ExecutionBehaviorGroup({
         isExpanded={isExpanded}
         onToggle={onToggleGroup}
       />
-      
+
       <AnimatedCollapse isOpen={isExpanded} className="ml-6 space-y-2">
         {/* Execution Flow */}
         <SubItemRow
@@ -81,9 +78,9 @@ export function ExecutionBehaviorGroup({
             <p className="text-xs text-muted-foreground font-mono italic">{t("runtime.execution.noExecutionFlow")}</p>
           ) : (
             data.executionFlow.map((flowEntry, entryIndex) => (
-              <EntryCard 
+              <EntryCard
                 key={flowEntry.id}
-                onDelete={() => update("executionFlow", data.executionFlow.filter((_, filterIndex) => filterIndex !== entryIndex))}
+                onDelete={() => updateField("executionFlow", (current) => current.filter((_, i) => i !== entryIndex))}
                 canDelete={data.executionFlow.length > 0}
               >
                 <div className="grid grid-cols-1 lg:grid-cols-[1fr_2fr] gap-3 items-start">
@@ -93,9 +90,7 @@ export function ExecutionBehaviorGroup({
                       type="text"
                       value={flowEntry.stepName}
                       onChange={(changeEvent) => {
-                        const updatedFlowEntries = [...data.executionFlow];
-                        updatedFlowEntries[entryIndex] = { ...flowEntry, stepName: changeEvent.target.value };
-                        update("executionFlow", updatedFlowEntries);
+                        updateField("executionFlow", (current) => current.map((item, i) => i === entryIndex ? { ...item, stepName: changeEvent.target.value } : item));
                       }}
                       placeholder={t("runtime.execution.stepNamePlaceholder")}
                       className={cn(inputStyles, "!min-h-[70px] py-3")}
@@ -106,9 +101,7 @@ export function ExecutionBehaviorGroup({
                     <AutoTextarea
                       value={flowEntry.description}
                       onChange={(changeEvent) => {
-                        const updatedFlowEntries = [...data.executionFlow];
-                        updatedFlowEntries[entryIndex] = { ...flowEntry, description: changeEvent.target.value };
-                        update("executionFlow", updatedFlowEntries);
+                        updateField("executionFlow", (current) => current.map((item, i) => i === entryIndex ? { ...item, description: changeEvent.target.value } : item));
                       }}
                       placeholder={t("runtime.execution.descriptionPlaceholder")}
                       minHeight={70}
@@ -134,9 +127,9 @@ export function ExecutionBehaviorGroup({
             <p className="text-xs text-muted-foreground font-mono italic">{t("runtime.execution.noArtifacts")}</p>
           ) : (
             data.systemArtifacts.map((artifactEntry, entryIndex) => (
-              <EntryCard 
+              <EntryCard
                 key={artifactEntry.id}
-                onDelete={() => update("systemArtifacts", data.systemArtifacts.filter((_, filterIndex) => filterIndex !== entryIndex))}
+                onDelete={() => updateField("systemArtifacts", (current) => current.filter((_, i) => i !== entryIndex))}
                 canDelete={data.systemArtifacts.length > 0}
               >
                 <div className="space-y-1.5">
@@ -145,9 +138,7 @@ export function ExecutionBehaviorGroup({
                     tags={artifactEntry.typeTags}
                     availableTags={ARTIFACT_TYPES}
                     onChange={(newTags) => {
-                      const updatedArtifacts = [...data.systemArtifacts];
-                      updatedArtifacts[entryIndex] = { ...artifactEntry, typeTags: newTags };
-                      update("systemArtifacts", updatedArtifacts);
+                      updateField("systemArtifacts", (current) => current.map((item, i) => i === entryIndex ? { ...item, typeTags: newTags } : item));
                     }}
                     placeholder={t("runtime.execution.addType")}
                   />
@@ -158,9 +149,7 @@ export function ExecutionBehaviorGroup({
                     type="text"
                     value={artifactEntry.path}
                     onChange={(changeEvent) => {
-                      const updatedArtifacts = [...data.systemArtifacts];
-                      updatedArtifacts[entryIndex] = { ...artifactEntry, path: changeEvent.target.value };
-                      update("systemArtifacts", updatedArtifacts);
+                      updateField("systemArtifacts", (current) => current.map((item, i) => i === entryIndex ? { ...item, path: changeEvent.target.value } : item));
                     }}
                     placeholder={t("runtime.execution.pathPlaceholder")}
                     className={inputStyles}
@@ -170,9 +159,7 @@ export function ExecutionBehaviorGroup({
                   label={t("common.notes")}
                   value={artifactEntry.notes}
                   onChange={(changeEvent) => {
-                    const updatedArtifacts = [...data.systemArtifacts];
-                    updatedArtifacts[entryIndex] = { ...artifactEntry, notes: changeEvent.target.value };
-                    update("systemArtifacts", updatedArtifacts);
+                    updateField("systemArtifacts", (current) => current.map((item, i) => i === entryIndex ? { ...item, notes: changeEvent.target.value } : item));
                   }}
                   placeholder={t("common.additionalNotes")}
                 />
@@ -195,9 +182,9 @@ export function ExecutionBehaviorGroup({
             <p className="text-xs text-muted-foreground font-mono italic">{t("runtime.execution.noPersistence")}</p>
           ) : (
             data.persistence.map((persistenceEntry, entryIndex) => (
-              <EntryCard 
+              <EntryCard
                 key={persistenceEntry.id}
-                onDelete={() => update("persistence", data.persistence.filter((_, filterIndex) => filterIndex !== entryIndex))}
+                onDelete={() => updateField("persistence", (current) => current.filter((_, i) => i !== entryIndex))}
                 canDelete={data.persistence.length > 0}
               >
                 <div className="space-y-1.5">
@@ -206,9 +193,7 @@ export function ExecutionBehaviorGroup({
                     tags={persistenceEntry.typeTags}
                     availableTags={PERSISTENCE_TYPES}
                     onChange={(newTags) => {
-                      const updatedPersistence = [...data.persistence];
-                      updatedPersistence[entryIndex] = { ...persistenceEntry, typeTags: newTags };
-                      update("persistence", updatedPersistence);
+                      updateField("persistence", (current) => current.map((item, i) => i === entryIndex ? { ...item, typeTags: newTags } : item));
                     }}
                     placeholder={t("runtime.execution.addType")}
                   />
@@ -219,9 +204,7 @@ export function ExecutionBehaviorGroup({
                     type="text"
                     value={persistenceEntry.path}
                     onChange={(changeEvent) => {
-                      const updatedPersistence = [...data.persistence];
-                      updatedPersistence[entryIndex] = { ...persistenceEntry, path: changeEvent.target.value };
-                      update("persistence", updatedPersistence);
+                      updateField("persistence", (current) => current.map((item, i) => i === entryIndex ? { ...item, path: changeEvent.target.value } : item));
                     }}
                     placeholder={t("runtime.execution.persistencePlaceholder")}
                     className={inputStyles}
@@ -231,9 +214,7 @@ export function ExecutionBehaviorGroup({
                   label={t("common.notes")}
                   value={persistenceEntry.notes}
                   onChange={(changeEvent) => {
-                    const updatedPersistence = [...data.persistence];
-                    updatedPersistence[entryIndex] = { ...persistenceEntry, notes: changeEvent.target.value };
-                    update("persistence", updatedPersistence);
+                    updateField("persistence", (current) => current.map((item, i) => i === entryIndex ? { ...item, notes: changeEvent.target.value } : item));
                   }}
                   placeholder={t("common.additionalNotes")}
                 />
@@ -244,5 +225,4 @@ export function ExecutionBehaviorGroup({
       </AnimatedCollapse>
     </div>
   );
-}
-
+});

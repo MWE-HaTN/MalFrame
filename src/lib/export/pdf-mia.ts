@@ -4,6 +4,7 @@ import { jsPDF } from "jspdf";
 import { generateFileName } from "@/lib/fileNameUtils";
 import { formatReportHeader } from "@/lib/utils";
 import { extractLogText, isMeaningful, formatLabelWithColon as formatLabel, clamp } from "./helpers";
+import { registerFonts, getFontFamily } from "./fontLoader";
 import type { DFIRData } from "@/features/mia/types";
 
 // Colors for PDF export (matching MRE)
@@ -25,8 +26,8 @@ const SPACING = {
   SECTION_AFTER: 4,
 };
 
-// Font family (will use default helvetica)
-const FONT_FAMILY = "helvetica";
+// Font family (dynamic: Roboto if loaded, helvetica fallback)
+let FONT_FAMILY = "helvetica";
 
 /**
  * Fix orphan punctuation: if a line ends up being just punctuation, merge with previous
@@ -394,6 +395,12 @@ function drawTextBlock(pdf: jsPDF, text: string, startY: number, pageWidth: numb
 
 export function exportDFIRPDF(data: DFIRData, analyst: string, fileName: string, hash: string): void {
   const pdf = new jsPDF();
+  // Register custom Unicode fonts if available
+  if (registerFonts(pdf)) {
+    FONT_FAMILY = getFontFamily();
+  } else {
+    FONT_FAMILY = "helvetica";
+  }
   const pageWidth = pdf.internal.pageSize.getWidth();
   let y = LAYOUT.NEW_PAGE_START_Y;
 
@@ -422,7 +429,7 @@ export function exportDFIRPDF(data: DFIRData, analyst: string, fileName: string,
   }
 
   // 2. Sample Information - two column layout
-  const sampleInfo = data.sampleInfo;
+  const sampleInfo = data.sampleInfo ?? {};
   const sampleLeft = [
     { label: "File Name", value: sampleInfo.fileName || "" },
     { label: "File Path", value: sampleInfo.filePath || "" },
@@ -498,6 +505,7 @@ export function exportDFIRPDF(data: DFIRData, analyst: string, fileName: string,
     y = drawSectionHeader(pdf, "MITRE ATT&CK Mapping", y, pageWidth);
     
     Object.entries(data.mitreMapping).forEach(([tactic, techniques]: [string, { id: string; name: string }[]]) => {
+      if (!techniques) return;
       const meaningfulTechniques = techniques.filter((t: { id: string; name: string }) => isMeaningful(t.id) || isMeaningful(t.name));
       if (meaningfulTechniques.length === 0) return;
       

@@ -1,3 +1,5 @@
+import { generateId } from "@/lib/utils";
+
 // ===== STATIC CODE ANALYSIS TYPES =====
 
 export interface InterestingFunction {
@@ -147,7 +149,6 @@ export const CRYPTO_ALGORITHMS = [
 ] as const;
 
 // ===== HELPER FUNCTIONS =====
-import { generateId } from "@/lib/utils";
 
 export const createEmptyFunction = (): InterestingFunction => ({
   id: generateId(),

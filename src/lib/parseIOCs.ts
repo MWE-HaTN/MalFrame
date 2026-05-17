@@ -149,18 +149,18 @@ export function parseIOCsFromText(text: string): ParsedIOC[] {
       if (seen.has(key)) continue;
 
       // If this is a hash, check if it was already matched as a longer hash
-      if (type === "File Hash (SHA1)" && value.length === 40) {
-        // Check if this 40-char string is a substring of a known SHA256
-        const isPartOfSha256 = [...hashValues].some(
-          (h) => h.length === 64 && h.startsWith(value.slice(0, 40))
-        );
-        if (isPartOfSha256) continue;
-      }
+      const lowerValue = value.toLowerCase();
       if (type === "File Hash (MD5)" && value.length === 32) {
         const isPartOfLonger = [...hashValues].some(
-          (h) => (h.length === 64 || h.length === 40) && h.includes(value)
+          (h) => (h.length === 64 || h.length === 40) && h.includes(lowerValue)
         );
         if (isPartOfLonger) continue;
+      }
+      if (type === "File Hash (SHA1)" && value.length === 40) {
+        const isPartOfSHA256 = [...hashValues].some(
+          (h) => h.length === 64 && h.includes(lowerValue)
+        );
+        if (isPartOfSHA256) continue;
       }
 
       if (type.startsWith("File Hash")) {

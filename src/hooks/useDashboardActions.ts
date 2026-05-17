@@ -1,4 +1,4 @@
-import { useEffect, useCallback, useMemo } from "react";
+import { useEffect, useCallback, useMemo, useRef } from "react";
 import { clearAllSectionStates } from "@/lib/sectionState";
 import { useLanguage } from "@/hooks/useLanguage";
 import { useDashboardExport } from "@/hooks/useDashboardExport";
@@ -6,7 +6,6 @@ import { useImportJSON } from "@/hooks/useImportJSON";
 import { useSectionNavigation } from "@/hooks/useSectionNavigation";
 
 interface UseDashboardActionsOptions<T> {
-  data: T;
   setData: React.Dispatch<React.SetStateAction<T>>;
   clearData: () => void;
   undo: () => void;
@@ -74,15 +73,22 @@ export function useDashboardActions<T>(options: UseDashboardActionsOptions<T>) {
     onExportJSONDirect: exportJSON,
   });
 
+  // Stable references for import callbacks to avoid defeating useImportJSON memoization
+  const setDataRef = useRef(setData);
+  setDataRef.current = setData;
+  const migrateImportRef = useRef(migrateImport);
+  migrateImportRef.current = migrateImport;
+
+  const handleImportSuccess = useCallback((importedData: unknown) => {
+    clearAllSectionStates();
+    const normalizedData = migrateImportRef.current(importedData as Record<string, unknown>);
+    setDataRef.current(normalizedData);
+  }, []);
+
   // Import
   const { importJSON } = useImportJSON({
     validate: validateImport,
-    onSuccess: (importedData) => {
-      clearAllSectionStates();
-      const normalizedData = migrateImport(importedData as Record<string, unknown>);
-      setData(normalizedData);
-    },
-    successMessage: t("import.success"),
+    onSuccess: handleImportSuccess,
   });
 
   // Preload export chunks when dialog opens
@@ -98,12 +104,14 @@ export function useDashboardActions<T>(options: UseDashboardActionsOptions<T>) {
     return generateReportName(ext);
   }, [generateReportName, pendingExportType]);
 
-  // Confirm export handler
+  // Confirm export handler — re-throws on failure so the dialog can handle it
   const handleConfirmExport = useCallback(async (shouldSaveImages: boolean, clearDataAfter: boolean) => {
     if (pendingExportType === "pdf") {
       await exportPDF();
-    } else {
+    } else if (pendingExportType === "word") {
       await exportWord();
+    } else {
+      return; // JSON export is handled directly, not through dialog
     }
     if (shouldSaveImages && totalImageCount > 0 && downloadAllImages) {
       downloadAllImages();

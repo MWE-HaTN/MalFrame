@@ -63,6 +63,7 @@ function openDB(): Promise<IDBDatabase> {
 
     request.onerror = () => {
       dbPromise = null;
+      _useLocalStorage = true; // Set before reject to prevent concurrent retries
       reject(request.error);
     };
   });
@@ -73,7 +74,7 @@ function openDB(): Promise<IDBDatabase> {
 // --- Exported API ---
 
 export async function dbGet<T>(store: StoreName, key: string): Promise<T | null> {
-  if (!isIndexedDBAvailable()) {
+  if (!isIndexedDBAvailable() || _useLocalStorage) {
     _useLocalStorage = true;
     try {
       const raw = localStorage.getItem(lsKey(store, key));
@@ -83,7 +84,18 @@ export async function dbGet<T>(store: StoreName, key: string): Promise<T | null>
     }
   }
 
-  const db = await openDB();
+  let db: IDBDatabase;
+  try {
+    db = await openDB();
+  } catch {
+    _useLocalStorage = true;
+    try {
+      const raw = localStorage.getItem(lsKey(store, key));
+      return raw ? (JSON.parse(raw) as T) : null;
+    } catch {
+      return null;
+    }
+  }
   return new Promise((resolve, reject) => {
     const tx = db.transaction(store, "readonly");
     const req = tx.objectStore(store).get(key);
@@ -93,27 +105,39 @@ export async function dbGet<T>(store: StoreName, key: string): Promise<T | null>
 }
 
 export async function dbSet(store: StoreName, key: string, value: unknown): Promise<void> {
-  if (!isIndexedDBAvailable()) {
+  if (!isIndexedDBAvailable() || _useLocalStorage) {
     _useLocalStorage = true;
     try {
       localStorage.setItem(lsKey(store, key), JSON.stringify(value));
     } catch {
-      // Storage full or other error — silently fail
+      // Ignore quota errors
     }
     return;
   }
 
-  const db = await openDB();
+  let db: IDBDatabase;
+  try {
+    db = await openDB();
+  } catch {
+    _useLocalStorage = true;
+    try {
+      localStorage.setItem(lsKey(store, key), JSON.stringify(value));
+    } catch {
+      // Ignore quota errors
+    }
+    return;
+  }
   return new Promise((resolve, reject) => {
     const tx = db.transaction(store, "readwrite");
-    const req = tx.objectStore(store).put(value, key);
-    req.onsuccess = () => resolve();
-    req.onerror = () => reject(req.error);
+    tx.objectStore(store).put(value, key);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+    tx.onabort = () => reject(tx.error ?? new Error("Transaction aborted"));
   });
 }
 
 export async function dbDelete(store: StoreName, key: string): Promise<void> {
-  if (!isIndexedDBAvailable()) {
+  if (!isIndexedDBAvailable() || _useLocalStorage) {
     _useLocalStorage = true;
     try {
       localStorage.removeItem(lsKey(store, key));
@@ -123,37 +147,23 @@ export async function dbDelete(store: StoreName, key: string): Promise<void> {
     return;
   }
 
-  const db = await openDB();
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction(store, "readwrite");
-    const req = tx.objectStore(store).delete(key);
-    req.onsuccess = () => resolve();
-    req.onerror = () => reject(req.error);
-  });
-}
-
-export async function dbClear(store: StoreName): Promise<void> {
-  if (!isIndexedDBAvailable()) {
+  let db: IDBDatabase;
+  try {
+    db = await openDB();
+  } catch {
     _useLocalStorage = true;
     try {
-      const prefix = `${LS_PREFIX}${store}:`;
-      const keysToRemove: string[] = [];
-      for (let i = 0; i < localStorage.length; i++) {
-        const k = localStorage.key(i);
-        if (k?.startsWith(prefix)) keysToRemove.push(k);
-      }
-      keysToRemove.forEach((k) => localStorage.removeItem(k));
+      localStorage.removeItem(lsKey(store, key));
     } catch {
       // Ignore
     }
     return;
   }
-
-  const db = await openDB();
   return new Promise((resolve, reject) => {
     const tx = db.transaction(store, "readwrite");
-    const req = tx.objectStore(store).clear();
-    req.onsuccess = () => resolve();
-    req.onerror = () => reject(req.error);
+    tx.objectStore(store).delete(key);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+    tx.onabort = () => reject(tx.error ?? new Error("Transaction aborted"));
   });
 }

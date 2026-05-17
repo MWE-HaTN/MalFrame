@@ -1,5 +1,6 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { dbGet, dbSet, dbDelete } from "@/lib/db";
+import { STORAGE_KEYS } from "@/lib/storageKeys";
 import { generateId } from "@/lib/utils";
 import { debugError } from "@/lib/debugLogger";
 import type { CaseMeta } from "@/types/cases";
@@ -7,20 +8,21 @@ import type { CaseMeta } from "@/types/cases";
 type DashboardType = "mia" | "mre";
 
 const REGISTRY_KEYS: Record<DashboardType, string> = {
-  mia: "mia-cases",
-  mre: "mre-cases",
+  mia: STORAGE_KEYS.MIA_CASES,
+  mre: STORAGE_KEYS.MRE_CASES,
 };
 
 const ACTIVE_CASE_LS_KEYS: Record<DashboardType, string> = {
-  mia: "mia-active-case",
-  mre: "mre-active-case",
+  mia: STORAGE_KEYS.MIA_ACTIVE_CASE,
+  mre: STORAGE_KEYS.MRE_ACTIVE_CASE,
 };
 
 export interface UseCaseManagerReturn {
   cases: CaseMeta[];
   activeCaseId: string;
   activeStorageKey: string;
-  createCase: (templateId?: string) => Promise<void>;
+  /** Creates a new case and returns its ID. Pass templateData to pre-populate before activation. */
+  createCase: (templateData?: unknown) => Promise<string>;
   switchCase: (id: string) => void;
   deleteCase: (id: string) => Promise<void>;
   renameCase: (id: string, name: string) => Promise<void>;
@@ -47,6 +49,12 @@ export function useCaseManager(
 
   const [cases, setCases] = useState<CaseMeta[]>([]);
   const [activeCaseId, setActiveCaseId] = useState<string>("");
+  const casesRef = useRef(cases);
+  const activeCaseIdRef = useRef(activeCaseId);
+  casesRef.current = cases;
+  activeCaseIdRef.current = activeCaseId;
+  const initDone = useRef(false);
+  const opsLockRef = useRef(Promise.resolve());
 
   useEffect(() => {
     let cancelled = false;
@@ -79,9 +87,13 @@ export function useCaseManager(
           setCases(registry);
           setActiveCaseId(activeId);
           localStorage.setItem(activeLSKey, activeId);
+          initDone.current = true;
         }
       } catch (e) {
         debugError("useCaseManager: init failed", e);
+        if (!cancelled) {
+          initDone.current = true;
+        }
       }
     }
 
@@ -92,71 +104,114 @@ export function useCaseManager(
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const createCase = useCallback(async () => {
-    const id = generateId();
-    const now = new Date().toISOString();
-    const newCase: CaseMeta = {
-      id,
-      name: `Case ${cases.length + 1}`,
-      type,
-      createdAt: now,
-      updatedAt: now,
-    };
-    const updated = [...cases, newCase];
-    try {
-      await dbSet("dashboard", registryKey, updated);
-      setCases(updated);
+  // Serialize async case operations to prevent UI/IDB desync on concurrent calls
+  const withLock = useCallback(<T>(fn: () => Promise<T>): Promise<T> => {
+    const next = opsLockRef.current.then(fn, fn);
+    opsLockRef.current = next.then(() => {}, () => {});
+    return next;
+  }, []);
+
+  const createCase = useCallback((templateData?: unknown): Promise<string> => {
+    return withLock(async () => {
+      if (!initDone.current) return "";
+      const id = generateId();
+      const now = new Date().toISOString();
+      let previous: CaseMeta[] = [];
+      let updated: CaseMeta[] = [];
+      setCases(prev => {
+        previous = prev;
+        const newCase: CaseMeta = { id, name: `Case ${prev.length + 1}`, type, createdAt: now, updatedAt: now };
+        updated = [...prev, newCase];
+        return updated;
+      });
+      try {
+        await dbSet("dashboard", registryKey, updated);
+        if (templateData != null) {
+          await dbSet("dashboard", `${type}-case-${id}`, templateData);
+        }
+      } catch (e) {
+        debugError("useCaseManager: createCase failed", e);
+        setCases(previous);
+        await dbSet("dashboard", registryKey, previous).catch(() => {});
+        return "";
+      }
       setActiveCaseId(id);
       localStorage.setItem(activeLSKey, id);
-    } catch (e) {
-      debugError("useCaseManager: createCase failed", e);
-    }
-  }, [cases, type, registryKey, activeLSKey]);
+      return id;
+    });
+  }, [type, registryKey, activeLSKey, withLock]);
 
   const switchCase = useCallback(
     (id: string) => {
-      setActiveCaseId(id);
-      localStorage.setItem(activeLSKey, id);
+      // Serialize with createCase/deleteCase to prevent switching to a case
+      // that hasn't been fully written to IDB yet
+      withLock(async () => {
+        setActiveCaseId(id);
+        localStorage.setItem(activeLSKey, id);
+      });
     },
-    [activeLSKey]
+    [activeLSKey, withLock]
   );
 
   const deleteCase = useCallback(
-    async (id: string) => {
-      if (cases.length <= 1) return;
-      try {
-        await dbDelete("dashboard", `${type}-case-${id}`);
-        const updated = cases.filter((c) => c.id !== id);
-        await dbSet("dashboard", registryKey, updated);
-        setCases(updated);
+    (id: string): Promise<void> => {
+      return withLock(async () => {
+        let previous: CaseMeta[] = [];
+        let updated: CaseMeta[] = [];
+        setCases(prev => {
+          previous = prev;
+          if (prev.length <= 1) {
+            updated = prev;
+            return prev;
+          }
+          updated = prev.filter((c) => c.id !== id);
+          return updated;
+        });
+        if (updated.length === 0 || (updated.length === previous.length)) return;
+        // Read activeCaseId after the lock is acquired to avoid stale ref
+        const shouldUpdateActive = activeCaseIdRef.current === id;
+        try {
+          // Update registry first so a partial failure doesn't leave a ghost entry
+          await dbSet("dashboard", registryKey, updated);
+          await dbDelete("dashboard", `${type}-case-${id}`);
 
-        if (activeCaseId === id) {
-          const newActive = updated[0].id;
-          setActiveCaseId(newActive);
-          localStorage.setItem(activeLSKey, newActive);
+          if (shouldUpdateActive && updated.length > 0) {
+            const newActive = updated[0].id;
+            setActiveCaseId(newActive);
+            localStorage.setItem(activeLSKey, newActive);
+          }
+        } catch (e) {
+          debugError("useCaseManager: deleteCase failed", e);
+          setCases(previous);
+          await dbSet("dashboard", registryKey, previous).catch(() => {});
         }
-      } catch (e) {
-        debugError("useCaseManager: deleteCase failed", e);
-      }
+      });
     },
-    [cases, type, registryKey, activeCaseId, activeLSKey]
+    [type, registryKey, activeLSKey, withLock]
   );
 
   const renameCase = useCallback(
-    async (id: string, name: string) => {
-      const trimmed = name.trim();
-      if (!trimmed) return;
-      const updated = cases.map((c) =>
-        c.id === id ? { ...c, name: trimmed, updatedAt: new Date().toISOString() } : c
-      );
-      try {
-        await dbSet("dashboard", registryKey, updated);
-        setCases(updated);
-      } catch (e) {
-        debugError("useCaseManager: renameCase failed", e);
-      }
+    (id: string, name: string): Promise<void> => {
+      return withLock(async () => {
+        const trimmed = name.trim();
+        if (!trimmed) return;
+        const now = new Date().toISOString();
+        let previous: CaseMeta[] = [];
+        let updated: CaseMeta[] = [];
+        setCases(prev => {
+          previous = prev;
+          updated = prev.map((c) => c.id === id ? { ...c, name: trimmed, updatedAt: now } : c);
+          return updated;
+        });
+        try {
+          await dbSet("dashboard", registryKey, updated);
+        } catch (e) {
+          debugError("useCaseManager: renameCase failed", e);
+          setCases(previous);
+        }
+      });
     },
-    [cases, registryKey]
+    [registryKey, withLock]
   );
 
   const activeStorageKey = activeCaseId ? `${type}-case-${activeCaseId}` : "";

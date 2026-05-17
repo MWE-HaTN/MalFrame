@@ -1,4 +1,4 @@
-import { useState, memo } from "react";
+import { useState, useRef, useCallback, memo } from "react";
 import { 
   Code, Bug, Layers, ChevronRight
 } from "lucide-react";
@@ -93,12 +93,38 @@ export const CodeAnalysisGroups = memo(function CodeAnalysisGroups({
   const { t } = useLanguage();
   const [expandedGroups, setExpandedGroups] = useState<Record<number, boolean>>({});
 
+  // Refs to avoid stale closures in onChange callbacks
+  const codeDataRef = useRef(codeData);
+  codeDataRef.current = codeData;
+  const deepDiveDataRef = useRef(deepDiveData);
+  deepDiveDataRef.current = deepDiveData;
+
   const toggleGroup = (groupNum: number) => {
     setExpandedGroups(prev => ({
       ...prev,
       [groupNum]: !prev[groupNum]
     }));
   };
+
+  const handleStaticChange = useCallback((staticData: StaticCodeAnalysisData) => {
+    onCodeDataChange({ ...codeDataRef.current, staticCodeAnalysis: staticData });
+  }, [onCodeDataChange]);
+
+  const handleDynamicChange = useCallback((dynamicData: DynamicCodeAnalysisData) => {
+    onCodeDataChange({ ...codeDataRef.current, dynamicCodeAnalysis: dynamicData });
+  }, [onCodeDataChange]);
+
+  const handleStagesChange = useCallback((stages: ExecutionStage[]) => {
+    onDeepDiveDataChange({ ...deepDiveDataRef.current, executionStages: stages });
+  }, [onDeepDiveDataChange]);
+
+  const handleCryptoChange = useCallback((entries: CryptoEntry[]) => {
+    onDeepDiveDataChange({ ...deepDiveDataRef.current, cryptoEntries: entries });
+  }, [onDeepDiveDataChange]);
+
+  const handleBehaviorsChange = useCallback((behaviors: DeepDiveData['microBehaviors']) => {
+    onDeepDiveDataChange({ ...deepDiveDataRef.current, microBehaviors: behaviors });
+  }, [onDeepDiveDataChange]);
 
   return (
     <div className="space-y-3">
@@ -110,11 +136,11 @@ export const CodeAnalysisGroups = memo(function CodeAnalysisGroups({
           isExpanded={!!expandedGroups[1]}
           onToggle={() => toggleGroup(1)}
         />
-        
+
         <AnimatedCollapse isOpen={!!expandedGroups[1]} className="ml-6">
           <StaticCodeAnalysis
             data={codeData.staticCodeAnalysis}
-            onChange={(staticData) => onCodeDataChange({ ...codeData, staticCodeAnalysis: staticData })}
+            onChange={handleStaticChange}
           />
         </AnimatedCollapse>
       </div>
@@ -127,11 +153,11 @@ export const CodeAnalysisGroups = memo(function CodeAnalysisGroups({
           isExpanded={!!expandedGroups[2]}
           onToggle={() => toggleGroup(2)}
         />
-        
+
         <AnimatedCollapse isOpen={!!expandedGroups[2]} className="ml-6">
           <DynamicCodeAnalysis
             data={codeData.dynamicCodeAnalysis}
-            onChange={(dynamicData) => onCodeDataChange({ ...codeData, dynamicCodeAnalysis: dynamicData })}
+            onChange={handleDynamicChange}
           />
         </AnimatedCollapse>
       </div>
@@ -144,7 +170,7 @@ export const CodeAnalysisGroups = memo(function CodeAnalysisGroups({
           isExpanded={!!expandedGroups[3]}
           onToggle={() => toggleGroup(3)}
         />
-        
+
         <AnimatedCollapse isOpen={!!expandedGroups[3]} className="ml-6 space-y-4">
           {/* Unpacking Layers - Only shown when isPacked is "yes" */}
           {isPacked === "yes" && (
@@ -158,19 +184,19 @@ export const CodeAnalysisGroups = memo(function CodeAnalysisGroups({
           {/* Execution Stages */}
           <ExecutionStages
             stages={deepDiveData.executionStages}
-            onStagesChange={(stages) => onDeepDiveDataChange({ ...deepDiveData, executionStages: stages })}
+            onStagesChange={handleStagesChange}
           />
-          
+
           {/* Cryptography Analysis */}
           <CryptographyAnalysis
             entries={deepDiveData.cryptoEntries}
-            onChange={(entries) => onDeepDiveDataChange({ ...deepDiveData, cryptoEntries: entries })}
+            onChange={handleCryptoChange}
           />
 
           {/* Micro-Behaviors */}
           <MicroBehaviorsSection
             selectedBehaviors={deepDiveData.microBehaviors}
-            onBehaviorsChange={(behaviors) => onDeepDiveDataChange({ ...deepDiveData, microBehaviors: behaviors })}
+            onBehaviorsChange={handleBehaviorsChange}
           />
         </AnimatedCollapse>
       </div>

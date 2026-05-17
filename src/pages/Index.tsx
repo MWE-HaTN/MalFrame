@@ -5,9 +5,11 @@ import { useLanguage } from "@/hooks/useLanguage";
 import { useState, useEffect, memo } from "react";
 import { preloadRoutes } from "@/lib/preloadRoutes";
 import { useTypingAnimation } from "@/hooks/useTypingAnimation";
+import { STORAGE_KEYS } from "@/lib/storageKeys";
 
-// Lazy load MITRE utils to reduce initial bundle (~15KB saved)
+// Lazy load MITRE & MBC utils to reduce initial bundle
 const loadMitreData = () => import("@/lib/mitreUtils").then(m => m.loadMitreData());
+const loadMBCData = () => import("@/features/mre/hooks/useMBCData").then(m => m.loadMBCData());
 
 // Tracks whether the user explicitly navigated to index this session (survives F5, clears on tab close)
 const INDEX_EXPLICIT_SESSION_KEY = "index-explicit-visit";
@@ -22,6 +24,7 @@ export default function Index() {
   const navigate = useNavigate();
   const location = useLocation();
   const [tacticCount, setTacticCount] = useState<number>(14);
+  const [behaviorCount, setBehaviorCount] = useState<number>(0);
   const [typingTrigger, setTypingTrigger] = useState(0);
 
   useEffect(() => {
@@ -32,12 +35,12 @@ export default function Index() {
     // Trigger typing animation when coming from logo click
     if (state?.triggerTyping) {
       setTypingTrigger(prev => prev + 1);
-      // Clear state to prevent re-triggering on refresh
-      window.history.replaceState({}, document.title);
+      // Clear state to prevent re-triggering on refresh — preserve React Router internal state
+      navigate(location.pathname, { replace: true, state: {} });
     }
 
     // User explicitly navigated here (e.g. logo click) — mark session so F5 won't redirect
-    if (state?.skipDashboardRedirect) {
+    if (state?.skipDashboardRedirect || state?.triggerTyping) {
       sessionStorage.setItem(INDEX_EXPLICIT_SESSION_KEY, "true");
       return;
     }
@@ -46,17 +49,24 @@ export default function Index() {
     if (sessionStorage.getItem(INDEX_EXPLICIT_SESSION_KEY)) return;
 
     // Fresh session: auto-redirect to last used dashboard
-    const savedDashboard = localStorage.getItem("preferred-dashboard") || "/mia";
+    const savedDashboard = localStorage.getItem(STORAGE_KEYS.LAST_DASHBOARD) || "/mia";
     if (savedDashboard && savedDashboard !== "/mia") {
       navigate(savedDashboard, { replace: true });
     }
-  }, [navigate, location.state]);
+  }, [navigate, location.state, location.pathname]);
 
-  // Load MITRE data on mount (lightweight, cached)
+  // Load MITRE & MBC data on mount (lightweight, cached)
   useEffect(() => {
     loadMitreData()
       .then(({ tactics }) => setTacticCount(tactics.length))
       .catch(() => setTacticCount(14));
+
+    loadMBCData()
+      .then((data) => {
+        const total = data.objectives.reduce((sum, obj) => sum + obj.behaviors.length, 0);
+        setBehaviorCount(total);
+      })
+      .catch(() => setBehaviorCount(0));
   }, []);
 
   const { displayedText } = useTypingAnimation("MALWARE ANALYST", 120, typingTrigger);
@@ -126,7 +136,7 @@ export default function Index() {
         <FeatureCard
           icon={<Target className="w-5 h-5" />}
           title={t("home.mitreCard")}
-          description={t("home.mitreCardDesc")}
+          description={t("home.mitreCardDesc").replace("{count}", String(tacticCount))}
         />
         <FeatureCard
           icon={<Shield className="w-5 h-5" />}
@@ -145,8 +155,9 @@ export default function Index() {
           <h2 className="text-xl font-terminal font-bold text-primary text-glow mb-10 tracking-wider">
             &gt; {t("home.statsTitle")}_
           </h2>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-10">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-10">
             <StatItem value={String(tacticCount).padStart(2, '0')} label={t("home.mitreTactics")} />
+            <StatItem value={behaviorCount > 0 ? String(behaviorCount) : "..."} label={t("home.mbcBehaviors")} />
             <StatItem value="2" label={t("home.analysisWorkflows")} />
             <StatItem value="∞" label={t("home.casesSupported")} />
             <StatItem value="100%" label={t("home.localPrivate")} />

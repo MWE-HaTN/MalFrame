@@ -1,5 +1,5 @@
 /* eslint-disable react-refresh/only-export-components */
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Plus, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { COUNT_BADGE_CLASS } from "@/lib/semanticColors";
@@ -32,6 +32,8 @@ export function useExpandedSections(storageKey: string) {
       return {};
     }
   });
+  const expandedRef = useRef(expandedSections);
+  expandedRef.current = expandedSections;
 
   useEffect(() => {
     localStorage.setItem(storageKey, JSON.stringify(expandedSections));
@@ -50,8 +52,8 @@ export function useExpandedSections(storageKey: string) {
   }, []);
 
   const isExpanded = useCallback((section: string) => {
-    return !!expandedSections[section];
-  }, [expandedSections]);
+    return !!expandedRef.current[section];
+  }, []);
 
   return {
     expandedSections,
@@ -69,7 +71,11 @@ export function useExpandedState(storageKey: string, defaultValue = false) {
   const [isExpanded, setIsExpanded] = useState<boolean>(() => {
     try {
       const saved = localStorage.getItem(storageKey);
-      return saved ? JSON.parse(saved) : defaultValue;
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        return typeof parsed === "boolean" ? parsed : defaultValue;
+      }
+      return defaultValue;
     } catch {
       return defaultValue;
     }
@@ -123,30 +129,41 @@ export function useListManager<T extends ListItem>(
   options: UseListManagerOptions<T>
 ) {
   const { createEmpty, onExpand } = options;
+  const itemsRef = useRef(items);
+  itemsRef.current = items;
 
   const add = useCallback(() => {
     const newItem = createEmpty();
-    onChange([...items, newItem]);
+    const updated = [...itemsRef.current, newItem];
+    itemsRef.current = updated;
+    onChange(updated);
     onExpand?.();
     return newItem;
-  }, [items, onChange, createEmpty, onExpand]);
+  }, [onChange, createEmpty, onExpand]);
 
   const update = useCallback((id: string, updates: Partial<T>) => {
-    onChange(items.map(item => 
+    const updated = itemsRef.current.map(item =>
       item.id === id ? { ...item, ...updates } : item
-    ));
-  }, [items, onChange]);
+    );
+    itemsRef.current = updated;
+    onChange(updated);
+  }, [onChange]);
 
   const remove = useCallback((id: string) => {
-    onChange(items.filter(item => item.id !== id));
-  }, [items, onChange]);
+    const updated = itemsRef.current.filter(item => item.id !== id);
+    itemsRef.current = updated;
+    onChange(updated);
+  }, [onChange]);
 
   const reorder = useCallback((fromIndex: number, toIndex: number) => {
-    const result = [...items];
+    const result = [...itemsRef.current];
+    if (fromIndex < 0 || fromIndex >= result.length) return;
+    if (toIndex < 0 || toIndex > result.length) return;
     const [removed] = result.splice(fromIndex, 1);
     result.splice(toIndex, 0, removed);
+    itemsRef.current = result;
     onChange(result);
-  }, [items, onChange]);
+  }, [onChange]);
 
   return {
     items,

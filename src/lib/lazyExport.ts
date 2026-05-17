@@ -22,7 +22,7 @@ let jsonModulePromise: Promise<JSONModule> | null = null;
 const loadJSONModule = () => {
   if (jsonModule) return Promise.resolve(jsonModule);
   if (!jsonModulePromise) {
-    jsonModulePromise = import("@/lib/export/json").then((m) => (jsonModule = m, m));
+    jsonModulePromise = import("@/lib/export/json").then((m) => (jsonModule = m, m)).catch((err) => { jsonModulePromise = null; throw err; });
   }
   return jsonModulePromise;
 };
@@ -33,7 +33,7 @@ let dfirPdfModulePromise: Promise<DFIRPDFModule> | null = null;
 const loadDFIRPDFModule = () => {
   if (dfirPdfModule) return Promise.resolve(dfirPdfModule);
   if (!dfirPdfModulePromise) {
-    dfirPdfModulePromise = import("@/lib/export/pdf-mia").then((m) => (dfirPdfModule = m, m));
+    dfirPdfModulePromise = import("@/lib/export/pdf-mia").then((m) => (dfirPdfModule = m, m)).catch((err) => { dfirPdfModulePromise = null; throw err; });
   }
   return dfirPdfModulePromise;
 };
@@ -44,7 +44,7 @@ let dfirWordModulePromise: Promise<DFIRWordModule> | null = null;
 const loadDFIRWordModule = () => {
   if (dfirWordModule) return Promise.resolve(dfirWordModule);
   if (!dfirWordModulePromise) {
-    dfirWordModulePromise = import("@/lib/export/word-mia").then((m) => (dfirWordModule = m, m));
+    dfirWordModulePromise = import("@/lib/export/word-mia").then((m) => (dfirWordModule = m, m)).catch((err) => { dfirWordModulePromise = null; throw err; });
   }
   return dfirWordModulePromise;
 };
@@ -55,7 +55,7 @@ let rePdfModulePromise: Promise<REPDFModule> | null = null;
 const loadREPDFModule = () => {
   if (rePdfModule) return Promise.resolve(rePdfModule);
   if (!rePdfModulePromise) {
-    rePdfModulePromise = import("@/lib/export/pdf-mre").then((m) => (rePdfModule = m, m));
+    rePdfModulePromise = import("@/lib/export/pdf-mre").then((m) => (rePdfModule = m, m)).catch((err) => { rePdfModulePromise = null; throw err; });
   }
   return rePdfModulePromise;
 };
@@ -66,7 +66,7 @@ let reWordModulePromise: Promise<REWordModule> | null = null;
 const loadREWordModule = () => {
   if (reWordModule) return Promise.resolve(reWordModule);
   if (!reWordModulePromise) {
-    reWordModulePromise = import("@/lib/export/word-mre").then((m) => (reWordModule = m, m));
+    reWordModulePromise = import("@/lib/export/word-mre").then((m) => (reWordModule = m, m)).catch((err) => { reWordModulePromise = null; throw err; });
   }
   return reWordModulePromise;
 };
@@ -109,7 +109,7 @@ export async function lazyExportJSON(
 }
 
 /**
- * Lazy export to PDF for MIA (DFIR) - loads jsPDF only when called
+ * Lazy export to PDF for MIA (DFIR) - loads jsPDF and fonts when called
  */
 export async function lazyExportDFIRPDF(
   data: ExportData,
@@ -117,6 +117,10 @@ export async function lazyExportDFIRPDF(
   fileName: string,
   hash: string
 ): Promise<void> {
+  // Load fonts first (for Unicode support)
+  const { loadFonts } = await import("@/lib/export/fontLoader");
+  await loadFonts();
+
   if (dfirPdfModule) {
     await dfirPdfModule.exportDFIRPDF(data, analyst, fileName, hash);
     return;

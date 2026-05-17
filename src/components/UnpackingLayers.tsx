@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import { ChevronUp, Layers, Trash2 } from "lucide-react";
 import { FormField } from "@/components/FormField";
 import { cn, generateId } from "@/lib/utils";
@@ -47,6 +47,8 @@ export function UnpackingLayers({
   const { isExpanded, toggle, expand } = useExpandedState(STORAGE_KEYS.UNPACKING_STAGES);
   const [expandedLayers, setExpandedLayers] = useState<Set<string>>(new Set());
   const [showLastLayerDialog, setShowLastLayerDialog] = useState(false);
+  const layersRef = useRef(unpackLayers);
+  layersRef.current = unpackLayers;
 
   const reorderLayers = (fromIndex: number, toIndex: number) => {
     const reorderedLayers = [...unpackLayers];
@@ -59,23 +61,25 @@ export function UnpackingLayers({
   const { getDragProps } = useDragReorder(reorderLayers);
 
   const addLayer = useCallback(() => {
-    const newLayerNumber = unpackLayers.length + 1;
+    const current = layersRef.current;
+    const newLayerNumber = current.length + 1;
     const newLayer = createEmptyLayer(newLayerNumber);
-    onUnpackLayersChange([...unpackLayers, newLayer]);
+    onUnpackLayersChange([...current, newLayer]);
     setExpandedLayers((prev) => new Set([...prev, newLayer.id]));
     expand();
-  }, [unpackLayers, onUnpackLayersChange, expand]);
+  }, [onUnpackLayersChange, expand]);
 
   const removeLayer = useCallback((layerId: string) => {
-    if (unpackLayers.length === 1) {
+    const current = layersRef.current;
+    if (current.length === 1) {
       setShowLastLayerDialog(true);
       return;
     }
-    const remainingLayers = unpackLayers
+    const remainingLayers = current
       .filter((layer) => layer.id !== layerId)
       .map((layer, index) => ({ ...layer, layerNumber: index + 1 }));
     onUnpackLayersChange(remainingLayers);
-  }, [unpackLayers, onUnpackLayersChange]);
+  }, [onUnpackLayersChange]);
 
   const handleConfirmRemoveLastLayer = useCallback(() => {
     onUnpackLayersChange([]);
@@ -85,9 +89,9 @@ export function UnpackingLayers({
 
   const updateLayer = useCallback((layerId: string, field: keyof UnpackLayer, value: string | number) => {
     onUnpackLayersChange(
-      unpackLayers.map((layer) => (layer.id === layerId ? { ...layer, [field]: value } : layer))
+      layersRef.current.map((layer) => (layer.id === layerId ? { ...layer, [field]: value } : layer))
     );
-  }, [unpackLayers, onUnpackLayersChange]);
+  }, [onUnpackLayersChange]);
 
   const toggleLayerExpand = useCallback((layerId: string) => {
     setExpandedLayers((previousExpanded) => {

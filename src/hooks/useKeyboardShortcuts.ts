@@ -1,4 +1,4 @@
-import { useEffect, useCallback } from "react";
+import { useEffect, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 
 interface ShortcutCallbacks {
@@ -18,6 +18,8 @@ interface ShortcutCallbacks {
  */
 export function useKeyboardShortcuts(callbacks: ShortcutCallbacks = {}) {
   const navigate = useNavigate();
+  const callbacksRef = useRef(callbacks);
+  callbacksRef.current = callbacks;
 
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
@@ -29,17 +31,19 @@ export function useKeyboardShortcuts(callbacks: ShortcutCallbacks = {}) {
         tag === "select" ||
         target.isContentEditable;
 
+      const cb = callbacksRef.current;
+
       // ? — show shortcuts help (only when not editing)
       if (e.key === "?" && !isEditing && !e.ctrlKey && !e.metaKey && !e.altKey) {
         e.preventDefault();
-        callbacks.onShowHelp?.();
+        cb.onShowHelp?.();
         return;
       }
 
       // Ctrl+K / Cmd+K — command palette (works even while editing)
       if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && (e.key === "k" || e.key === "K")) {
         e.preventDefault();
-        callbacks.onCommandPalette?.();
+        cb.onCommandPalette?.();
         return;
       }
 
@@ -73,45 +77,45 @@ export function useKeyboardShortcuts(callbacks: ShortcutCallbacks = {}) {
         case "e":
           if (!isEditing) {
             e.preventDefault();
-            callbacks.onExport?.();
+            cb.onExport?.();
           }
           break;
         case "N":
         case "n":
           if (!isEditing) {
             e.preventDefault();
-            callbacks.onNewCase?.();
+            cb.onNewCase?.();
           }
           break;
         case "ArrowLeft":
           if (!isEditing) {
             e.preventDefault();
-            callbacks.onPrevCase?.();
+            cb.onPrevCase?.();
           }
           break;
         case "ArrowRight":
           if (!isEditing) {
             e.preventDefault();
-            callbacks.onNextCase?.();
+            cb.onNextCase?.();
           }
           break;
         case "X":
         case "x":
           if (!isEditing) {
             e.preventDefault();
-            callbacks.onSearch?.();
+            cb.onSearch?.();
           }
           break;
         case "I":
         case "i":
           if (!isEditing) {
             e.preventDefault();
-            callbacks.onIOCCrossRef?.();
+            cb.onIOCCrossRef?.();
           }
           break;
       }
     },
-    [navigate, callbacks]
+    [navigate]
   );
 
   useEffect(() => {

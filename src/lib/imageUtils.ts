@@ -1,4 +1,10 @@
 import { ClipboardEvent } from "react";
+import { STORAGE_KEYS } from "@/lib/storageKeys";
+import { tSync, type Language } from "@/lib/translations";
+
+function getLang(): Language {
+  return (localStorage.getItem(STORAGE_KEYS.LANGUAGE) || "en") as Language;
+}
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 const MAX_DIMENSION = 1920; // Max width/height in pixels
@@ -12,7 +18,11 @@ function processImage(file: File): Promise<string> {
     // Small files — read directly
     if (file.size <= 1024 * 1024) {
       const reader = new FileReader();
-      reader.onload = (e) => resolve(e.target?.result as string);
+      reader.onload = (e) => {
+        const result = e.target?.result;
+        resolve(typeof result === "string" ? result : "");
+      };
+      reader.onerror = () => resolve("");
       reader.readAsDataURL(file);
       return;
     }
@@ -37,7 +47,11 @@ function processImage(file: File): Promise<string> {
       if (!ctx) {
         // Fallback: read as-is
         const reader = new FileReader();
-        reader.onload = (e) => resolve(e.target?.result as string);
+        reader.onload = (e) => {
+          const result = e.target?.result;
+          resolve(typeof result === "string" ? result : "");
+        };
+        reader.onerror = () => resolve("");
         reader.readAsDataURL(file);
         return;
       }
@@ -47,7 +61,11 @@ function processImage(file: File): Promise<string> {
     img.onerror = () => {
       URL.revokeObjectURL(url);
       const reader = new FileReader();
-      reader.onload = (e) => resolve(e.target?.result as string);
+      reader.onload = (e) => {
+        const result = e.target?.result;
+        resolve(typeof result === "string" ? result : "");
+      };
+      reader.onerror = () => resolve("");
       reader.readAsDataURL(file);
     };
     img.src = url;
@@ -72,13 +90,17 @@ export function handleImagePaste(
       const file = item.getAsFile();
       if (file) {
         if (file.size > MAX_FILE_SIZE) {
-          import("sonner").then(({ toast }) => toast.error("Image too large (max 10MB)"));
+          import("sonner").then(({ toast }) => toast.error(tSync(getLang(), "error.imageTooLarge")));
           return true;
         }
+        // Snapshot current images at paste time to avoid stale closure
+        const imagesSnapshot = [...currentImages];
         processImage(file).then((base64) => {
-          onImagesChange([...currentImages, base64]);
+          if (base64.length > 0) {
+            onImagesChange([...imagesSnapshot, base64]);
+          }
         }).catch(() => {
-          import("sonner").then(({ toast }) => toast.error("Failed to process image"));
+          import("sonner").then(({ toast }) => toast.error(tSync(getLang(), "error.failedToProcessImage")));
         });
       }
       return true;
@@ -89,11 +111,12 @@ export function handleImagePaste(
 
 /**
  * Handle image file selection from input
+ * Uses updater function to avoid stale closure on rapid batch uploads
  */
 export function handleImageFileSelect(
   event: React.ChangeEvent<HTMLInputElement>,
   currentImages: string[],
-  onImagesChange: (images: string[]) => void
+  onImagesChange: (updater: (prev: string[]) => string[]) => void
 ): void {
   const files = event.target.files;
   if (!files) return;
@@ -103,13 +126,16 @@ export function handleImageFileSelect(
 
   const oversized = imageFiles.filter((f) => f.size > MAX_FILE_SIZE);
   if (oversized.length > 0) {
-    import("sonner").then(({ toast }) => toast.error(`${oversized.length} image(s) too large (max 10MB)`));
+    import("sonner").then(({ toast }) => toast.error(tSync(getLang(), "error.imageTooLarge").replace("{count}", String(oversized.length))));
   }
 
   const validFiles = imageFiles.filter((f) => f.size <= MAX_FILE_SIZE);
   Promise.all(validFiles.map(processImage)).then((base64s) => {
-    onImagesChange([...currentImages, ...base64s]);
+    const validImages = base64s.filter((img) => img.length > 0);
+    if (validImages.length > 0) {
+      onImagesChange((prev) => [...prev, ...validImages]);
+    }
   }).catch(() => {
-    import("sonner").then(({ toast }) => toast.error("Failed to process images"));
+    import("sonner").then(({ toast }) => toast.error(tSync(getLang(), "error.failedToProcessImages")));
   });
 }

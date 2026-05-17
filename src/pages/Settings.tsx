@@ -9,9 +9,9 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ActivityTracker } from "@/components/ActivityTracker";
 
-import { STORAGE_KEYS } from "@/lib/storageKeys";
-
-const SCALE_OPTIONS = [75, 90, 100, 110, 125, 150, 175, 200];
+import { STORAGE_KEYS, SCALE_OPTIONS } from "@/lib/storageKeys";
+import { tSync } from "@/lib/translations";
+import { UserProfileSchema } from "@/lib/validationSchemas";
 export default function Settings() {
   const { language, setLanguage, t } = useLanguage();
   const { theme, setTheme } = useTheme();
@@ -22,11 +22,22 @@ export default function Settings() {
   const [tempGithub, setTempGithub] = useState(profile.githubUrl);
   const [scale, setScale] = useState(() => {
     const saved = localStorage.getItem(STORAGE_KEYS.DISPLAY_SCALE);
-    return saved ? parseInt(saved, 10) : 100;
+    const parsed = saved ? parseInt(saved, 10) : 100;
+    return Number.isFinite(parsed) ? parsed : 100;
   });
 
   useEffect(() => {
     document.title = "Settings - MalFrame";
+  }, []);
+
+  // Sync scale when changed externally (e.g., keyboard shortcut in App.tsx)
+  useEffect(() => {
+    const handleScaleEvent = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      if (typeof detail === "number") setScale(detail);
+    };
+    window.addEventListener("display-scale-change", handleScaleEvent);
+    return () => window.removeEventListener("display-scale-change", handleScaleEvent);
   }, []);
 
   useEffect(() => {
@@ -41,7 +52,7 @@ export default function Settings() {
 
   const handleLanguageChange = (newLang: "en" | "vn") => {
     setLanguage(newLang);
-    toast.success(newLang === "en" ? "Language changed to English" : "Ngôn ngữ đã chuyển sang Tiếng Việt");
+    toast.success(tSync(newLang, newLang === "en" ? "settings.languageChangedEn" : "settings.languageChangedVn"));
   };
 
   const handleThemeChange = (newTheme: "dark" | "light") => {
@@ -50,10 +61,13 @@ export default function Settings() {
   };
 
   const handleSaveProfile = () => {
-    setProfile({
-      name: tempName,
-      githubUrl: tempGithub,
-    });
+    const result = UserProfileSchema.safeParse({ name: tempName, githubUrl: tempGithub });
+    if (!result.success) {
+      const firstError = result.error.issues[0];
+      toast.error(firstError.message);
+      return;
+    }
+    setProfile(result.data);
     setIsEditingProfile(false);
     toast.success(t("settings.profileSaved"));
   };
@@ -99,7 +113,7 @@ export default function Settings() {
                 <Button 
                   variant="outline" 
                   size="sm" 
-                  onClick={() => setIsEditingProfile(true)}
+                  onClick={() => { setTempName(profile.name); setTempGithub(profile.githubUrl); setIsEditingProfile(true); }}
                   className="gap-1"
                 >
                   <Pencil className="w-3 h-3" />
@@ -195,7 +209,7 @@ export default function Settings() {
                     : "bg-input border border-border text-foreground hover:border-primary/50"
                 }`}
               >
-                English
+                {t("settings.languageEn")}
               </button>
               <button
                 onClick={() => handleLanguageChange("vn")}
@@ -205,7 +219,7 @@ export default function Settings() {
                     : "bg-input border border-border text-foreground hover:border-primary/50"
                 }`}
               >
-                Tiếng Việt
+                {t("settings.languageVn")}
               </button>
             </div>
           </div>
@@ -267,9 +281,11 @@ export default function Settings() {
                     <button
                       key={val}
                       onClick={() => handleScaleChange(val)}
-                      className={`relative z-10 rounded-full transition-all ${
-                        scale === val 
-                          ? 'w-3 h-3 bg-primary border-2 border-primary shadow-[0_0_8px_hsl(var(--primary))]' 
+                      aria-label={`${val}%`}
+                      aria-pressed={scale === val}
+                      className={`relative z-10 rounded-full transition-all focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 ${
+                        scale === val
+                          ? 'w-3 h-3 bg-primary border-2 border-primary shadow-[0_0_8px_hsl(var(--primary))]'
                           : 'w-2 h-2 bg-muted-foreground/50 hover:bg-primary/70'
                       }`}
                     />
@@ -308,7 +324,7 @@ export default function Settings() {
                 }`}
               >
                 <Moon className="w-4 h-4" />
-                Dark
+                {t("settings.dark")}
               </button>
               <button
                 onClick={() => handleThemeChange("light")}
@@ -319,7 +335,7 @@ export default function Settings() {
                 }`}
               >
                 <Sun className="w-4 h-4" />
-                Light
+                {t("settings.light")}
               </button>
             </div>
           </div>

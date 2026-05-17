@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback, memo, useDeferredValue } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef, memo, useDeferredValue } from "react";
 import { RefreshCw, Loader2, ChevronDown, ChevronRight, Search, X, GitBranch, Sparkles, Check } from "lucide-react";
 import { cn, truncate } from "@/lib/utils";
 import { toast } from "sonner";
@@ -17,6 +17,7 @@ import type { BehaviorAnalysisData } from "@/features/mia/types";
 import { STORAGE_KEYS } from "@/lib/storageKeys";
 import { buildMitreGraph } from "@/lib/graphBuilders";
 import { LazyGraphView } from "@/components/lazy";
+import { prefetchGraphView } from "@/lib/lazyPrefetch";
 import {
   Dialog,
   DialogContent,
@@ -103,8 +104,10 @@ export const MitreAttackMapping = memo(function MitreAttackMapping({
   const [isUpdating, setIsUpdating] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [graphOpen, setGraphOpen] = useState(false);
-  
+
   const [mitreVersion, setMitreVersion] = useState("unknown");
+  const mappingRef = useRef(mapping);
+  mappingRef.current = mapping;
   const [mitreTactics, setMitreTactics] = useState<TacticDisplay[]>(DEFAULT_TACTICS);
   const [isLoading, setIsLoading] = useState(true);
   const [suggestionsExpanded, setSuggestionsExpanded] = useState(true);
@@ -132,24 +135,27 @@ export const MitreAttackMapping = memo(function MitreAttackMapping({
 
   // Load MITRE data on mount (from cache or fetch from GitHub)
   useEffect(() => {
+    let ignore = false;
     setIsLoading(true);
     loadMitreData()
       .then(({ tactics, version }) => {
+        if (ignore) return;
         const displayTactics = convertToDisplayFormat(tactics);
         setMitreTactics(displayTactics);
         setMitreVersion(version);
       })
       .catch(err => {
+        if (ignore) return;
         debugError("Failed to load MITRE data:", err);
-        // Try to get version from cache even if load failed
         const cachedVersion = localStorage.getItem(STORAGE_KEYS.MITRE_VERSION);
         if (cachedVersion) {
           setMitreVersion(cachedVersion);
         }
       })
       .finally(() => {
-        setIsLoading(false);
+        if (!ignore) setIsLoading(false);
       });
+    return () => { ignore = true; };
   }, []);
 
   // Fetch MITRE data (clear cache + fetch fresh)
@@ -165,7 +171,7 @@ export const MitreAttackMapping = memo(function MitreAttackMapping({
 
       const techCount = tactics.reduce((sum, t) => sum + t.techniques.length, 0);
       const subTechCount = tactics.reduce((sum, t) =>
-        sum + t.techniques.reduce((s, tech) => s + tech.subtechniques.length, 0), 0);
+        sum + t.techniques.reduce((s, tech) => s + (tech.subtechniques?.length ?? 0), 0), 0);
       toast.success(t("mitre.updateSuccess").replace("{techCount}", String(techCount)).replace("{subTechCount}", String(subTechCount)));
     } catch (error) {
       debugError("Failed to update MITRE data:", error);
@@ -179,34 +185,32 @@ export const MitreAttackMapping = memo(function MitreAttackMapping({
   // Memoized handlers to prevent unnecessary re-renders
   const addTechnique = useCallback((tacticId: string, technique: Technique) => {
     if (!technique.id) return;
-    
-    const newMapping = { ...mapping };
-    if (!newMapping[tacticId]) {
-      newMapping[tacticId] = [];
-    }
-    
+
+    const current = mappingRef.current;
+    const existing = current[tacticId] ?? [];
+
     // Prevent duplicates (case-insensitive)
-    if (newMapping[tacticId].some(t => t.id.toLowerCase() === technique.id.toLowerCase())) {
+    if (existing.some(t => t.id.toLowerCase() === technique.id.toLowerCase())) {
       toast.info(t("mitre.alreadyExists").replace("{id}", technique.id));
       return;
     }
-    
-    newMapping[tacticId].push(technique);
+
+    const newMapping = { ...current, [tacticId]: [...existing, technique] };
     onMappingChange?.(newMapping);
-  }, [mapping, onMappingChange, t]);
+  }, [onMappingChange, t]);
 
   const removeTechnique = useCallback((tacticId: string, techniqueId: string) => {
-    const newMapping = { ...mapping };
+    const newMapping = { ...mappingRef.current };
     newMapping[tacticId] = newMapping[tacticId]?.filter(t => t.id !== techniqueId) || [];
     if (newMapping[tacticId].length === 0) {
       delete newMapping[tacticId];
     }
     onMappingChange?.(newMapping);
-  }, [mapping, onMappingChange]);
+  }, [onMappingChange]);
 
   const isSelected = useCallback((tacticId: string, techniqueId: string) => {
-    return mapping[tacticId]?.some(t => t.id === techniqueId) || false;
-  }, [mapping]);
+    return mappingRef.current[tacticId]?.some(t => t.id === techniqueId) || false;
+  }, []);
 
   const toggleTechnique = useCallback((tacticId: string, technique: Technique) => {
     if (isSelected(tacticId, technique.id)) {
@@ -301,6 +305,7 @@ export const MitreAttackMapping = memo(function MitreAttackMapping({
             </span>
             <button
               onClick={() => setGraphOpen(true)}
+              onMouseEnter={prefetchGraphView}
               disabled={allSelectedTechniques.length === 0}
               className="flex items-center gap-1 px-2 py-1 text-xs font-mono text-accent hover:text-accent/80 border border-accent/30 rounded-sm hover:bg-accent/10 transition-all disabled:opacity-50"
               title={t("graph.visualize")}
@@ -334,15 +339,15 @@ export const MitreAttackMapping = memo(function MitreAttackMapping({
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder={t("mitre.search")}
-            aria-label="Search MITRE techniques"
+            aria-label={t("aria.searchMitreTechniques")}
             className="w-full pl-9 pr-9 py-2 text-sm font-mono bg-card border border-border rounded-sm focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/30 transition-all"
           />
           {searchQuery && (
             <button
               onClick={() => setSearchQuery("")}
               className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-              aria-label="Clear search"
-              title="Clear search"
+              aria-label={t("common.clearSearch")}
+              title={t("common.clearSearch")}
             >
               <X className="w-4 h-4" />
             </button>
@@ -549,13 +554,15 @@ function TacticColumn({
   }, [searchQuery, tactic.techniques]);
 
   const toggleTechExpand = (techId: string) => {
-    const newSet = new Set(expandedTechs);
-    if (newSet.has(techId)) {
-      newSet.delete(techId);
-    } else {
-      newSet.add(techId);
-    }
-    setExpandedTechs(newSet);
+    setExpandedTechs(prev => {
+      const next = new Set(prev);
+      if (next.has(techId)) {
+        next.delete(techId);
+      } else {
+        next.add(techId);
+      }
+      return next;
+    });
   };
 
   return (
@@ -769,14 +776,13 @@ const TechniqueRow = memo(
 
 // Memoized version of TacticColumn to prevent unnecessary re-renders
 const MemoizedTacticColumn = memo(TacticColumn, (prevProps, nextProps) => {
-  // Only re-render if these specific props change
-  return (
-    prevProps.tactic.id === nextProps.tactic.id &&
-    prevProps.readOnly === nextProps.readOnly &&
-    prevProps.searchQuery === nextProps.searchQuery &&
-    // Deep compare mapping for this specific tactic
-    JSON.stringify(prevProps.mapping[prevProps.tactic.id]) === 
-    JSON.stringify(nextProps.mapping[nextProps.tactic.id])
-  );
+  if (prevProps.tactic.id !== nextProps.tactic.id ||
+      prevProps.readOnly !== nextProps.readOnly ||
+      prevProps.searchQuery !== nextProps.searchQuery) return false;
+  // Shallow compare mapping for this specific tactic
+  const prev = prevProps.mapping[prevProps.tactic.id] ?? [];
+  const next = nextProps.mapping[nextProps.tactic.id] ?? [];
+  if (prev.length !== next.length) return false;
+  return prev.every((t, i) => t.id === next[i].id && t.name === next[i].name);
 });
 

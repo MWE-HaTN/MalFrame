@@ -2,6 +2,7 @@ import { useRef, useEffect, useState, memo } from "react";
 import { Download, Upload, ChevronDown, File, FileText, Loader2, Check, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ClearDataDialog } from "@/components/ClearDataDialog";
+import { useLanguage } from "@/hooks/useLanguage";
 import type { SaveStatus } from "@/hooks/useDashboardData";
 
 export interface ExportOption {
@@ -31,6 +32,7 @@ export const DashboardHeader = memo(function DashboardHeader({
   exportLabel = "Export Data",
   saveStatus,
 }: DashboardHeaderProps) {
+  const { t } = useLanguage();
   const [exportMenuOpen, setExportMenuOpen] = useState(false);
   const exportMenuRef = useRef<HTMLDivElement>(null);
 
@@ -73,7 +75,7 @@ export const DashboardHeader = memo(function DashboardHeader({
               {saveStatus === "saving" && <Loader2 className="w-2.5 h-2.5 animate-spin" />}
               {saveStatus === "saved" && <Check className="w-2.5 h-2.5" />}
               {saveStatus === "failed" && <AlertCircle className="w-2.5 h-2.5" />}
-              {saveStatus === "saving" ? "Saving..." : saveStatus === "saved" ? "Saved" : "Save failed"}
+              {saveStatus === "saving" ? t("dashboard.saving") : saveStatus === "saved" ? t("dashboard.saved") : t("dashboard.saveFailed")}
             </span>
           )}
         </div>

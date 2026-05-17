@@ -1,5 +1,6 @@
 import { cn } from "@/lib/utils";
 import { ShimmerBar } from "@/components/ui/skeleton";
+import { useLanguage } from "@/hooks/useLanguage";
 
 interface SectionSkeletonProps {
   variant?: "default" | "form" | "table" | "list";
@@ -12,9 +13,10 @@ export function SectionSkeleton({
   rows = 3,
   className
 }: SectionSkeletonProps) {
+  const { t } = useLanguage();
   if (variant === "form") {
     return (
-      <div className={cn("space-y-4", className)} role="status" aria-busy="true" aria-label="Loading">
+      <div className={cn("space-y-4", className)} role="status" aria-busy="true" aria-label={t("aria.loadingContent")}>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {Array.from({ length: rows * 2 }).map((_, i) => (
             <div 
@@ -32,7 +34,7 @@ export function SectionSkeleton({
 
   if (variant === "table") {
     return (
-      <div className={cn("space-y-2", className)} role="status" aria-busy="true" aria-label="Loading">
+      <div className={cn("space-y-2", className)} role="status" aria-busy="true" aria-label={t("aria.loadingContent")}>
         <div className="flex gap-4 pb-2 border-b border-border/30">
           <ShimmerBar className="h-4 w-1/4" />
           <ShimmerBar className="h-4 w-1/4" style={{ animationDelay: "100ms" }} />
@@ -56,7 +58,7 @@ export function SectionSkeleton({
 
   if (variant === "list") {
     return (
-      <div className={cn("space-y-3", className)} role="status" aria-busy="true" aria-label="Loading">
+      <div className={cn("space-y-3", className)} role="status" aria-busy="true" aria-label={t("aria.loadingContent")}>
         {Array.from({ length: rows }).map((_, i) => (
           <div 
             key={i} 
@@ -76,7 +78,7 @@ export function SectionSkeleton({
 
   // Default variant
   return (
-    <div className={cn("space-y-3", className)} role="status" aria-busy="true" aria-label="Loading">
+    <div className={cn("space-y-3", className)} role="status" aria-busy="true" aria-label={t("aria.loadingContent")}>
       {Array.from({ length: rows }).map((_, i) => (
         <div 
           key={i} 

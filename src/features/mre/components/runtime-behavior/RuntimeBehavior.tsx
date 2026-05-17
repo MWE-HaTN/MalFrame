@@ -1,4 +1,4 @@
-import { useState, memo } from "react";
+import { useState, useRef, useCallback, memo } from "react";
 import { RuntimeBehaviorData } from "./types";
 import { STORAGE_KEYS } from "@/lib/storageKeys";
 import { AntiAnalysisGroup } from "./AntiAnalysisGroup";
@@ -8,7 +8,9 @@ import { TechnicalRuntimeGroup } from "./TechnicalRuntimeGroup";
 function loadExpandedGroups(): Record<number, boolean> {
   try {
     const saved = localStorage.getItem(STORAGE_KEYS.RUNTIME_GROUPS);
-    return saved ? JSON.parse(saved) : {};
+    if (!saved) return {};
+    const parsed = JSON.parse(saved);
+    return (parsed && typeof parsed === "object" && !Array.isArray(parsed)) ? parsed : {};
   } catch {
     return {};
   }
@@ -17,7 +19,9 @@ function loadExpandedGroups(): Record<number, boolean> {
 function loadExpandedSubItems(): Record<string, boolean> {
   try {
     const saved = localStorage.getItem(STORAGE_KEYS.RUNTIME_SUBITEMS);
-    return saved ? JSON.parse(saved) : {};
+    if (!saved) return {};
+    const parsed = JSON.parse(saved);
+    return (parsed && typeof parsed === "object" && !Array.isArray(parsed)) ? parsed : {};
   } catch {
     return {};
   }
@@ -39,7 +43,9 @@ interface RuntimeBehaviorProps {
 export const RuntimeBehavior = memo(function RuntimeBehavior({ data, onChange }: RuntimeBehaviorProps) {
   const [expandedGroups, setExpandedGroups] = useState<Record<number, boolean>>(loadExpandedGroups);
   const [expandedSubItems, setExpandedSubItems] = useState<Record<string, boolean>>(loadExpandedSubItems);
-  
+  const dataRef = useRef(data);
+  dataRef.current = data;
+
   const toggleGroup = (group: number) => {
     setExpandedGroups(prev => {
       const updated = { ...prev, [group]: !prev[group] };
@@ -56,13 +62,21 @@ export const RuntimeBehavior = memo(function RuntimeBehavior({ data, onChange }:
     });
   };
 
-  const update = <K extends keyof RuntimeBehaviorData>(key: K, value: RuntimeBehaviorData[K]) => {
-    onChange({ ...data, [key]: value });
-  };
+  const update = useCallback(<K extends keyof RuntimeBehaviorData>(key: K, value: RuntimeBehaviorData[K]) => {
+    onChange({ ...dataRef.current, [key]: value });
+  }, [onChange]);
 
-  const updateMany = (patch: Partial<RuntimeBehaviorData>) => {
-    onChange({ ...data, ...patch });
-  };
+  /** Like update but accepts an updater function to avoid stale closures in group components */
+  const updateField = useCallback(<K extends keyof RuntimeBehaviorData>(
+    key: K,
+    updater: (current: RuntimeBehaviorData[K]) => RuntimeBehaviorData[K]
+  ) => {
+    onChange({ ...dataRef.current, [key]: updater(dataRef.current[key]) });
+  }, [onChange]);
+
+  const updateMany = useCallback((patch: Partial<RuntimeBehaviorData>) => {
+    onChange({ ...dataRef.current, ...patch });
+  }, [onChange]);
 
   return (
     <div className="space-y-3">
@@ -75,6 +89,7 @@ export const RuntimeBehavior = memo(function RuntimeBehavior({ data, onChange }:
         onToggleSubItem={toggleSubItem}
         update={update}
         updateMany={updateMany}
+        updateField={updateField}
       />
 
       {/* GROUP 2: EXECUTION BEHAVIOR */}
@@ -86,6 +101,7 @@ export const RuntimeBehavior = memo(function RuntimeBehavior({ data, onChange }:
         onToggleSubItem={toggleSubItem}
         update={update}
         updateMany={updateMany}
+        updateField={updateField}
       />
 
       {/* GROUP 3: TECHNICAL RUNTIME BEHAVIOR */}
@@ -97,6 +113,7 @@ export const RuntimeBehavior = memo(function RuntimeBehavior({ data, onChange }:
         onToggleSubItem={toggleSubItem}
         update={update}
         updateMany={updateMany}
+        updateField={updateField}
       />
     </div>
   );

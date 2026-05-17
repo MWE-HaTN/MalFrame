@@ -4,7 +4,7 @@
 
 import { generateId } from "@/lib/utils";
 import { createInitialCodeAnalysisData, createInitialDeepDiveData } from "@/features/mre/services/codeAnalysisDefaults";
-import { initialRuntimeBehavior } from "@/features/mre/components/runtime-behavior";
+import { createInitialRuntimeBehavior } from "@/features/mre/components/runtime-behavior";
 import { STORAGE_KEYS } from "@/lib/storageKeys";
 import type { REData, SummaryData } from "@/features/mre/types";
 
@@ -30,10 +30,11 @@ export const defaultSummary: SummaryData = {
 };
 
 // ============================================
-// Initial Data
+// Initial Data (factory function to avoid shared mutable singleton)
 // ============================================
 
-export const initialREData: REData = {
+export function createInitialREData(): REData {
+  return {
   background: {
     analyst: "",
     date: new Date().toISOString().split("T")[0],
@@ -85,7 +86,7 @@ export const initialREData: REData = {
     importsExports: "",
   },
   codeBehavior: {
-    runtimeBehavior: initialRuntimeBehavior,
+    runtimeBehavior: createInitialRuntimeBehavior(),
     codeAnalysis: createInitialCodeAnalysisData(),
   },
   deepDive: createInitialDeepDiveData(),
@@ -95,4 +96,5 @@ export const initialREData: REData = {
     iocs: [],
     summary: { ...defaultSummary },
   },
-};
+  };
+}

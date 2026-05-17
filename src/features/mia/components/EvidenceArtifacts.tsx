@@ -1,8 +1,9 @@
-import { useState, useRef, useEffect, memo } from "react";
+import { useState, useRef, useEffect, useMemo, memo } from "react";
 import { Trash2, FileIcon, Copy, GripVertical, ArrowUpDown, X, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { cn, parseSizeToBytes, copyToClipboard } from "@/lib/utils";
 import { clearImagesForHash } from "@/lib/imageStorage";
+import { useLanguage } from "@/hooks/useLanguage";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -53,27 +54,29 @@ type SortDirection = "asc" | "desc";
 
 
 export const EvidenceArtifacts = memo(function EvidenceArtifacts({ artifacts, onArtifactsChange, onSampleSelected, onSampleCleared }: EvidenceArtifactsProps) {
+  const { t } = useLanguage();
   const [hoveredRow, setHoveredRow] = useState<string | null>(null);
-  const [removedArtifact, setRemovedArtifact] = useState<Artifact | null>(null);
   const [draggedId, setDraggedId] = useState<string | null>(null);
   const [dragOverId, setDragOverId] = useState<string | null>(null);
   const [sortField, setSortField] = useState<SortField>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
-  const undoTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const undoTimeoutsRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
+  const artifactsRef = useRef(artifacts);
+  artifactsRef.current = artifacts;
 
-  // Cleanup timeout on unmount
+  // Cleanup all timeouts on unmount
   useEffect(() => {
+    const timeouts = undoTimeoutsRef.current;
     return () => {
-      if (undoTimeoutRef.current) {
-        clearTimeout(undoTimeoutRef.current);
-      }
+      timeouts.forEach((timeout) => clearTimeout(timeout));
+      timeouts.clear();
     };
   }, []);
 
   // Sort artifacts
-  const sortedArtifacts = [...artifacts].sort((a, b) => {
+  const sortedArtifacts = useMemo(() => [...artifacts].sort((a, b) => {
     if (!sortField) return 0;
-    
+
     let comparison = 0;
     switch (sortField) {
       case "name":
@@ -87,7 +90,7 @@ export const EvidenceArtifacts = memo(function EvidenceArtifacts({ artifacts, on
         break;
     }
     return sortDirection === "asc" ? comparison : -comparison;
-  });
+  }), [artifacts, sortField, sortDirection]);
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
@@ -109,46 +112,46 @@ export const EvidenceArtifacts = memo(function EvidenceArtifacts({ artifacts, on
   };
 
   const canRemove = (artifact: Artifact): boolean => {
-    return artifact.type === "Unclassified" && artifact.usedIn.length === 0;
+    return artifact.type !== "Sample" || artifact.usedIn.length === 0;
   };
 
   const handleRemove = (artifact: Artifact) => {
     if (!canRemove(artifact)) return;
 
-    // Store for undo
-    setRemovedArtifact(artifact);
-    
     // Remove from list
     const remainingArtifacts = artifacts.filter((item) => item.id !== artifact.id);
     onArtifactsChange(remainingArtifacts);
 
-    // Clear any existing timeout
-    if (undoTimeoutRef.current) {
-      clearTimeout(undoTimeoutRef.current);
+    // Clear any existing timeout for this artifact
+    const existingTimeout = undoTimeoutsRef.current.get(artifact.id);
+    if (existingTimeout) {
+      clearTimeout(existingTimeout);
     }
 
-    // Show toast with undo action
-    toast("Artifact removed.", {
+    // Show toast with undo action — use captured `artifact` and ref for latest state
+    toast(t("evidence.artifactRemoved"), {
       action: {
-        label: "Undo",
+        label: t("evidence.undo"),
         onClick: () => {
-          if (removedArtifact) {
-            onArtifactsChange([...remainingArtifacts, artifact]);
-            setRemovedArtifact(null);
+          onArtifactsChange([...artifactsRef.current.filter((item) => item.id !== artifact.id), artifact]);
+          const timeout = undoTimeoutsRef.current.get(artifact.id);
+          if (timeout) {
+            clearTimeout(timeout);
+            undoTimeoutsRef.current.delete(artifact.id);
           }
         },
       },
       duration: 5000,
     });
 
-    // Clear removed artifact reference and associated images after timeout
-    undoTimeoutRef.current = setTimeout(() => {
-      // Clear images associated with this artifact's hash from localStorage
+    // Clear associated images after timeout
+    const newTimeout = setTimeout(() => {
       if (artifact.sha256) {
         clearImagesForHash(artifact.sha256);
       }
-      setRemovedArtifact(null);
+      undoTimeoutsRef.current.delete(artifact.id);
     }, 5000);
+    undoTimeoutsRef.current.set(artifact.id, newTimeout);
   };
 
   const handleTypeChange = (artifactId: string, newType: string) => {
@@ -156,22 +159,32 @@ export const EvidenceArtifacts = memo(function EvidenceArtifacts({ artifacts, on
     if (!artifact) return;
 
     const oldType = artifact.type;
-    const updatedArtifacts = artifacts.map((item) =>
+    if (oldType === newType) return;
+
+    // Downgrade existing "Sample" if another artifact already has that type
+    let updatedArtifacts = artifacts.map((item) =>
       item.id === artifactId ? { ...item, type: newType } : item
     );
+    if (newType === "Sample") {
+      updatedArtifacts = updatedArtifacts.map((item) =>
+        item.id !== artifactId && item.type === "Sample" ? { ...item, type: "Unclassified" } : item
+      );
+    }
     onArtifactsChange(updatedArtifacts);
 
-    // If "Sample" type is selected, trigger the callback to auto-fill Sample Info
     if (newType === "Sample" && onSampleSelected) {
       const updatedArtifact = { ...artifact, type: newType };
       onSampleSelected(updatedArtifact);
       toast.success(`Sample Info updated: ${artifact.name}`);
     }
-    
-    // If changing FROM "Sample" to another type, clear Sample Info
+
+    // Only clear Sample Info if no remaining artifact has "Sample" type
     if (oldType === "Sample" && newType !== "Sample" && onSampleCleared) {
-      onSampleCleared();
-      toast.info("Sample Info cleared");
+      const hasOtherSample = updatedArtifacts.some((item) => item.type === "Sample");
+      if (!hasOtherSample) {
+        onSampleCleared();
+        toast.info(t("evidence.sampleInfoCleared"));
+      }
     }
   };
 
@@ -202,7 +215,7 @@ export const EvidenceArtifacts = memo(function EvidenceArtifacts({ artifacts, on
 
   const handleDrop = (event: React.DragEvent, targetId: string) => {
     event.preventDefault();
-    
+
     if (!draggedId || draggedId === targetId) {
       setDraggedId(null);
       setDragOverId(null);
@@ -216,7 +229,8 @@ export const EvidenceArtifacts = memo(function EvidenceArtifacts({ artifacts, on
 
     const reorderedArtifacts = [...artifacts];
     const [draggedArtifact] = reorderedArtifacts.splice(draggedIndex, 1);
-    reorderedArtifacts.splice(targetIndex, 0, draggedArtifact);
+    const adjustedIndex = draggedIndex < targetIndex ? targetIndex - 1 : targetIndex;
+    reorderedArtifacts.splice(adjustedIndex, 0, draggedArtifact);
 
     onArtifactsChange(reorderedArtifacts);
     setDraggedId(null);
@@ -268,7 +282,7 @@ export const EvidenceArtifacts = memo(function EvidenceArtifacts({ artifacts, on
               {sortedArtifacts.map((artifact) => (
                 <tr
                   key={artifact.id}
-                  draggable
+                  draggable={!sortField}
                   onDragStart={(e) => handleDragStart(e, artifact.id)}
                   onDragEnd={handleDragEnd}
                   onDragOver={(e) => handleDragOver(e, artifact.id)}
@@ -296,8 +310,8 @@ export const EvidenceArtifacts = memo(function EvidenceArtifacts({ artifacts, on
                       <button
                         onClick={() => copyToClipboard(artifact.name, "Name")}
                         className="p-0.5 hover:bg-muted rounded opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
-                        aria-label="Copy name"
-                        title="Copy name"
+                        aria-label={t("common.copyName")}
+                        title={t("common.copyName")}
                       >
                         <Copy className="w-3 h-3 text-muted-foreground" />
                       </button>
@@ -309,7 +323,7 @@ export const EvidenceArtifacts = memo(function EvidenceArtifacts({ artifacts, on
                       name={`artifact-type-${artifact.id}`}
                       value={artifact.type}
                       onChange={(e) => handleTypeChange(artifact.id, e.target.value)}
-                      aria-label="Artifact type"
+                      aria-label={t("aria.artifactType")}
                       className={cn(
                         "w-full bg-background border border-border/50 rounded px-2 py-1 text-xs font-mono",
                         "focus:outline-none focus:border-primary",
@@ -333,8 +347,8 @@ export const EvidenceArtifacts = memo(function EvidenceArtifacts({ artifacts, on
                         <button
                           onClick={() => copyToClipboard(artifact.sha256, "SHA256")}
                           className="p-0.5 hover:bg-muted rounded opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
-                          aria-label="Copy SHA256"
-                          title="Copy SHA256"
+                          aria-label={t("common.copySha256")}
+                          title={t("common.copySha256")}
                         >
                           <Copy className="w-3 h-3 text-muted-foreground" />
                         </button>
@@ -415,8 +429,8 @@ export const EvidenceArtifacts = memo(function EvidenceArtifacts({ artifacts, on
                           ? "opacity-100"
                           : "opacity-0 pointer-events-none"
                       )}
-                      aria-label="Delete from case"
-                      title="Delete from case"
+                      aria-label={t("common.deleteFromCase")}
+                      title={t("common.deleteFromCase")}
                     >
                       <Trash2 className="w-4 h-4 text-destructive" />
                     </button>
@@ -429,9 +443,9 @@ export const EvidenceArtifacts = memo(function EvidenceArtifacts({ artifacts, on
       ) : (
         <div className="border border-dashed border-border/50 rounded-sm p-6 text-center">
           <FileIcon className="w-8 h-8 text-muted-foreground/30 mx-auto mb-2" />
-          <p className="text-sm text-muted-foreground">No artifacts added to this case</p>
+          <p className="text-sm text-muted-foreground">{t("evidence.noArtifacts")}</p>
           <p className="text-xs text-muted-foreground/50 mt-1">
-            Click "Add Artifact" to attach evidence files
+            {t("evidence.addArtifactHint")}
           </p>
         </div>
       )}

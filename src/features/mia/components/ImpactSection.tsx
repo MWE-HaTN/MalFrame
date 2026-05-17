@@ -9,6 +9,25 @@ import { CollapsibleSection } from "@/components/CollapsibleSection";
 import { PortalDropdown } from "@/components/ui/portal-dropdown";
 import { useLanguage } from "@/hooks/useLanguage";
 import type { ImpactData } from "@/features/mia/types";
+import type { DropdownOption } from "@/components/ui/portal-dropdown";
+
+const getPersistenceLikelihoodOptions = (t: (key: string) => string): DropdownOption[] => [
+  { value: "", label: t("common.select") },
+  { value: "none", label: t("mia.persist.none") },
+  { value: "low", label: t("mia.persist.low") },
+  { value: "medium", label: t("mia.persist.medium") },
+  { value: "high", label: t("mia.persist.high") },
+  { value: "critical", label: t("mia.persist.critical") },
+];
+
+const getRiskRatingOptions = (t: (key: string) => string): DropdownOption[] => [
+  { value: "", label: t("common.select") },
+  { value: "informational", label: t("mia.risk.info") },
+  { value: "low", label: t("mia.risk.low") },
+  { value: "medium", label: t("mia.risk.medium") },
+  { value: "high", label: t("mia.risk.high") },
+  { value: "critical", label: t("mia.risk.critical") },
+];
 
 interface ImpactSectionProps {
   data: ImpactData;
@@ -78,27 +97,13 @@ export const ImpactSection = memo(function ImpactSection({
             label={t("mia.persistence")}
             value={data.persistenceLikelihood}
             onChange={(v) => updateField("persistenceLikelihood", v)}
-            options={[
-              { value: "", label: t("common.select") },
-              { value: "none", label: t("mia.persist.none") },
-              { value: "low", label: t("mia.persist.low") },
-              { value: "medium", label: t("mia.persist.medium") },
-              { value: "high", label: t("mia.persist.high") },
-              { value: "critical", label: t("mia.persist.critical") },
-            ]}
+            options={getPersistenceLikelihoodOptions(t)}
           />
           <PortalDropdown
             label={t("mia.riskRating")}
             value={data.riskRating}
             onChange={(v) => updateField("riskRating", v)}
-            options={[
-              { value: "", label: t("common.select") },
-              { value: "informational", label: t("mia.risk.info") },
-              { value: "low", label: t("mia.risk.low") },
-              { value: "medium", label: t("mia.risk.medium") },
-              { value: "high", label: t("mia.risk.high") },
-              { value: "critical", label: t("mia.risk.critical") },
-            ]}
+            options={getRiskRatingOptions(t)}
           />
         </div>
       </div>

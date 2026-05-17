@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useEffect, useCallback, useMemo } from "react";
 import { FileText, Cpu, Code, Activity, Database } from "lucide-react";
 import { Header } from "@/components/Header";
 import { formatExportError, hasData } from "@/lib/dashboardExportUtils";
@@ -37,17 +37,16 @@ import {
   prefetchStaticAnalysisCards,
   prefetchSecurityPosture,
   prefetchPESectionEntry,
+  prefetchYaraEditor,
 } from "@/lib/lazyPrefetch";
 import { generateFileName } from "@/lib/fileNameUtils";
 import { toast } from "sonner";
 import { validateREData } from "@/lib/validationSchemas";
 
 import type { REData } from "@/features/mre/types";
-import { MRE_STORAGE_KEY, initialREData, defaultSummary } from "@/features/mre/services/constants";
+import { MRE_STORAGE_KEY, createInitialREData, defaultSummary } from "@/features/mre/services/constants";
 import { transformForExport } from "@/features/mre/services/transform";
 import { migrateREData } from "@/features/mre/services/migrate";
-import { CaseTemplateDialog } from "@/components/CaseTemplateDialog";
-import { getTemplatesForType } from "@/lib/caseTemplates";
 
 // ─────────────────────────────────────────────
 // Outer shell: case manager + page chrome
@@ -57,20 +56,6 @@ export default function MREDashboard() {
   const caseManager = useCaseManager("mre", MRE_STORAGE_KEY);
 
   useEffect(() => { document.title = "MRE - MalFrame"; }, []);
-  const [templateDialogOpen, setTemplateDialogOpen] = useState(false);
-
-  const handleTemplateSelect = useCallback(
-    async (templateId: string) => {
-      await caseManager.createCase();
-      const template = getTemplatesForType("mre").find((t) => t.id === templateId);
-      if (template?.fillMRE) {
-        const filled = template.fillMRE({ ...initialREData });
-        const { dbSet } = await import("@/lib/db");
-        await dbSet("dashboard", caseManager.activeStorageKey, filled);
-      }
-    },
-    [caseManager],
-  );
 
   return (
     <div className="min-h-screen bg-background cyber-grid flex flex-col">
@@ -84,7 +69,6 @@ export default function MREDashboard() {
           switchCase={caseManager.switchCase}
           deleteCase={caseManager.deleteCase}
           renameCase={caseManager.renameCase}
-          onNewCaseClick={() => setTemplateDialogOpen(true)}
         />
         {caseManager.activeCaseId && (
           <MREDashboardBody
@@ -93,13 +77,6 @@ export default function MREDashboard() {
           />
         )}
       </main>
-
-      <CaseTemplateDialog
-        open={templateDialogOpen}
-        onOpenChange={setTemplateDialogOpen}
-        caseType="mre"
-        onSelect={handleTemplateSelect}
-      />
     </div>
   );
 }
@@ -115,11 +92,13 @@ interface MREDashboardBodyProps {
 
 function MREDashboardBody({ storageKey }: MREDashboardBodyProps) {
   const { t } = useLanguage();
+  const initialData = useMemo(() => createInitialREData(), []);
+  const clearMsg = useMemo(() => t("clear.success"), [t]);
   const { data, setData, clearData, undo, redo, forceCloseCounter, saveStatus } = useDashboardData<REData>({
     storageKey,
-    initialData: initialREData,
+    initialData,
     migrateData: migrateREData,
-    clearSuccessMessage: t("clear.success"),
+    clearSuccessMessage: clearMsg,
   });
 
   const handleHashGenerated = useCallback((hash: string, fileName: string, fileSize: number) => {
@@ -137,61 +116,65 @@ function MREDashboardBody({ storageKey }: MREDashboardBodyProps) {
   // MRE-specific export handlers
   const handleExportJSON = useCallback(async () => {
     try {
+      const rb = data.codeBehavior?.runtimeBehavior;
+      const sca = data.codeBehavior?.codeAnalysis?.staticCodeAnalysis;
+      const dca = data.codeBehavior?.codeAnalysis?.dynamicCodeAnalysis;
+      const dd = data.deepDive;
       const cleanedData: REData = {
         ...data,
         staticAnalysis: {
           ...data.staticAnalysis,
-          peSections: data.staticAnalysis.peSections.filter((entry) => hasData(entry)),
-          unpackLayers: data.staticAnalysis.unpackLayers.filter((entry) => hasData(entry)),
+          peSections: (data.staticAnalysis?.peSections ?? []).filter((entry) => hasData(entry)),
+          unpackLayers: (data.staticAnalysis?.unpackLayers ?? []).filter((entry) => hasData(entry)),
         },
         codeBehavior: {
           ...data.codeBehavior,
           runtimeBehavior: {
-            ...data.codeBehavior.runtimeBehavior,
-            triggers: data.codeBehavior.runtimeBehavior.triggers.filter((entry) => hasData(entry)),
-            antiDebug: data.codeBehavior.runtimeBehavior.antiDebug.filter((entry) => hasData(entry)),
-            antiVM: data.codeBehavior.runtimeBehavior.antiVM.filter((entry) => hasData(entry)),
-            executionFlow: data.codeBehavior.runtimeBehavior.executionFlow.filter((entry) => hasData(entry)),
-            systemArtifacts: data.codeBehavior.runtimeBehavior.systemArtifacts.filter((entry) => hasData(entry)),
-            persistence: data.codeBehavior.runtimeBehavior.persistence.filter((entry) => hasData(entry)),
-            network: data.codeBehavior.runtimeBehavior.network.filter((entry) => hasData(entry)),
-            memory: data.codeBehavior.runtimeBehavior.memory.filter((entry) => hasData(entry)),
-            processInjection: data.codeBehavior.runtimeBehavior.processInjection.filter((entry) => hasData(entry)),
+            ...rb,
+            triggers: (rb?.triggers ?? []).filter((entry) => hasData(entry)),
+            antiDebug: (rb?.antiDebug ?? []).filter((entry) => hasData(entry)),
+            antiVM: (rb?.antiVM ?? []).filter((entry) => hasData(entry)),
+            executionFlow: (rb?.executionFlow ?? []).filter((entry) => hasData(entry)),
+            systemArtifacts: (rb?.systemArtifacts ?? []).filter((entry) => hasData(entry)),
+            persistence: (rb?.persistence ?? []).filter((entry) => hasData(entry)),
+            network: (rb?.network ?? []).filter((entry) => hasData(entry)),
+            memory: (rb?.memory ?? []).filter((entry) => hasData(entry)),
+            processInjection: (rb?.processInjection ?? []).filter((entry) => hasData(entry)),
           },
           codeAnalysis: {
             staticCodeAnalysis: {
-              interestingFunctions: data.codeBehavior.codeAnalysis.staticCodeAnalysis.interestingFunctions.filter((entry) => hasData(entry)),
-              controlFlow: data.codeBehavior.codeAnalysis.staticCodeAnalysis.controlFlow.filter((entry) => hasData(entry)),
-              apiUsage: data.codeBehavior.codeAnalysis.staticCodeAnalysis.apiUsage.filter((entry) => hasData(entry)),
-              obfuscation: data.codeBehavior.codeAnalysis.staticCodeAnalysis.obfuscation.filter((entry) => hasData(entry)),
+              interestingFunctions: (sca?.interestingFunctions ?? []).filter((entry) => hasData(entry)),
+              controlFlow: (sca?.controlFlow ?? []).filter((entry) => hasData(entry)),
+              apiUsage: (sca?.apiUsage ?? []).filter((entry) => hasData(entry)),
+              obfuscation: (sca?.obfuscation ?? []).filter((entry) => hasData(entry)),
             },
             dynamicCodeAnalysis: {
-              breakpointEvents: data.codeBehavior.codeAnalysis.dynamicCodeAnalysis.breakpointEvents.filter((entry) => hasData(entry)),
-              memoryRegions: data.codeBehavior.codeAnalysis.dynamicCodeAnalysis.memoryRegions.filter((entry) => hasData(entry)),
-              runtimeApiTrace: data.codeBehavior.codeAnalysis.dynamicCodeAnalysis.runtimeApiTrace.filter((entry) => hasData(entry)),
-              registerStack: data.codeBehavior.codeAnalysis.dynamicCodeAnalysis.registerStack.filter((entry) => hasData(entry)),
+              breakpointEvents: (dca?.breakpointEvents ?? []).filter((entry) => hasData(entry)),
+              memoryRegions: (dca?.memoryRegions ?? []).filter((entry) => hasData(entry)),
+              runtimeApiTrace: (dca?.runtimeApiTrace ?? []).filter((entry) => hasData(entry)),
+              registerStack: (dca?.registerStack ?? []).filter((entry) => hasData(entry)),
             },
           },
         },
         deepDive: {
-          ...data.deepDive,
-          executionStages: data.deepDive.executionStages.filter((stage) =>
+          ...dd,
+          executionStages: (dd?.executionStages ?? []).filter((stage) =>
             stage.entryPoint || stage.entryCondition || stage.purpose || stage.actions ||
             stage.exitCondition || stage.failureAbortBehavior || stage.transitionMethod ||
             stage.apisUsed || stage.artifacts || stage.ioc
           ),
-          cryptoEntries: data.deepDive.cryptoEntries.filter((entry) => hasData(entry)),
-          microBehaviors: data.deepDive.microBehaviors.filter((entry) => entry.name),
+          cryptoEntries: (dd?.cryptoEntries ?? []).filter((entry) => hasData(entry)),
+          microBehaviors: (dd?.microBehaviors ?? []).filter((entry) => entry.name),
         },
         detection: {
-          mbcMapping: (data.detection?.mbcMapping || []).filter((entry) => entry.name),
-          yaraSignature: data.detection?.yaraSignature || "",
-          iocs: (data.detection?.iocs || []).filter((entry) => hasData(entry)),
-          summary: data.detection?.summary || defaultSummary,
+          mbcMapping: (data.detection?.mbcMapping ?? []).filter((entry) => entry.name),
+          yaraSignature: data.detection?.yaraSignature ?? "",
+          iocs: (data.detection?.iocs ?? []).filter((entry) => hasData(entry)),
+          summary: data.detection?.summary ?? defaultSummary,
         },
       };
       const exportData = transformForExport(cleanedData);
-      await lazyExportJSON(exportData, data.background.analyst, data.background.fileName, data.staticAnalysis.sha256, "MRE");
+      await lazyExportJSON(exportData, data.background?.analyst ?? "", data.background?.fileName ?? "", data.staticAnalysis?.sha256 ?? "", "MRE");
       toast.success(t("export.success.json"));
       recordExportTime(storageKey);
     } catch (err) {
@@ -201,7 +184,7 @@ function MREDashboardBody({ storageKey }: MREDashboardBodyProps) {
 
   const handleExportPDF = useCallback(async () => {
     try {
-      await lazyExportREPDF(data, data.background.analyst, data.background.fileName, data.staticAnalysis.sha256);
+      await lazyExportREPDF(data, data.background?.analyst ?? "", data.background?.fileName ?? "", data.staticAnalysis?.sha256 ?? "");
       toast.success(t("export.success.pdf"));
       recordExportTime(storageKey);
     } catch (err) {
@@ -211,7 +194,7 @@ function MREDashboardBody({ storageKey }: MREDashboardBodyProps) {
 
   const handleExportWord = useCallback(async () => {
     try {
-      await lazyExportREWord(data, data.background.analyst, data.background.fileName, data.staticAnalysis.sha256);
+      await lazyExportREWord(data, data.background?.analyst ?? "", data.background?.fileName ?? "", data.staticAnalysis?.sha256 ?? "");
       toast.success(t("export.success.word"));
       recordExportTime(storageKey);
     } catch (err) {
@@ -229,7 +212,7 @@ function MREDashboardBody({ storageKey }: MREDashboardBodyProps) {
     exportOptions,
     reportName,
   } = useDashboardActions({
-    data, setData, clearData, undo, redo,
+    setData, clearData, undo, redo,
     exportJSON: handleExportJSON,
     exportPDF: handleExportPDF,
     exportWord: handleExportWord,
@@ -237,7 +220,7 @@ function MREDashboardBody({ storageKey }: MREDashboardBodyProps) {
     migrateImport: migrateREData,
     preloadPDF: preloadREPDF,
     preloadWord: preloadREWord,
-    generateReportName: (ext) => generateFileName(data.background.analyst, data.background.fileName, data.staticAnalysis.sha256, ext),
+    generateReportName: (ext) => generateFileName(data.background?.analyst ?? "", data.background?.fileName ?? "", data.staticAnalysis?.sha256 ?? "", ext),
   });
 
   // Memoized onChange handlers for section components
@@ -449,6 +432,7 @@ function MREDashboardBody({ storageKey }: MREDashboardBodyProps) {
         lazy
         skeletonVariant="default"
         skeletonRows={4}
+        onPrefetch={prefetchYaraEditor}
         hint={t("hint.mre.yara")}
       >
         <LazyYaraEditor

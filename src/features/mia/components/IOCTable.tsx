@@ -21,6 +21,7 @@ interface IOCRowProps {
 }
 
 const IOCRow = memo(function IOCRow({ ioc, isCopied, onCopy, onRemove }: IOCRowProps) {
+  const { t } = useLanguage();
   return (
     <tr className="hover:bg-secondary/30 transition-colors">
       <td className="px-4 py-3">
@@ -51,7 +52,7 @@ const IOCRow = memo(function IOCRow({ ioc, isCopied, onCopy, onRemove }: IOCRowP
           </button>
           <button
             onClick={() => onRemove(ioc.id)}
-            aria-label="Remove IOC"
+            aria-label={t("ioc.remove")}
             className="p-1.5 hover:bg-destructive/20 rounded transition-colors"
           >
             <Trash2 className="w-4 h-4 text-destructive" />
@@ -97,6 +98,8 @@ export const IOCTable = memo(function IOCTable({ iocs, onIOCsChange }: IOCTableP
   });
 
   const parentRef = useRef<HTMLDivElement>(null);
+  const iocsRef = useRef(iocs);
+  iocsRef.current = iocs;
 
   const shouldVirtualize = iocs.length > MAX_VISIBLE_ROWS;
 
@@ -117,20 +120,23 @@ export const IOCTable = memo(function IOCTable({ iocs, onIOCsChange }: IOCTableP
       id: generateId(),
       ...newIOC,
     };
-    onIOCsChange([...iocs, ioc]);
+    onIOCsChange([...iocsRef.current, ioc]);
     setNewIOC({ type: "File Hash (SHA256)", value: "", description: "" });
     toast.success(t("ioc.added"));
-  }, [newIOC, iocs, onIOCsChange, t]);
+  }, [newIOC, onIOCsChange, t]);
 
   const removeIOC = useCallback((iocId: string) => {
-    onIOCsChange(iocs.filter((iocItem) => iocItem.id !== iocId));
+    onIOCsChange(iocsRef.current.filter((iocItem) => iocItem.id !== iocId));
     toast.success(t("ioc.removed"));
-  }, [iocs, onIOCsChange, t]);
+  }, [onIOCsChange, t]);
 
   const copyIOC = useCallback((ioc: IOC) => {
-    navigator.clipboard.writeText(ioc.value);
-    setCopiedId(ioc.id);
-    toast.success(t("ioc.copied"));
+    navigator.clipboard.writeText(ioc.value).then(() => {
+      setCopiedId(ioc.id);
+      toast.success(t("ioc.copied"));
+    }).catch(() => {
+      toast.error(t("ioc.copyFailed") || "Failed to copy to clipboard");
+    });
   }, [t]);
 
   // Cleanup copiedId with proper timer cleanup
@@ -141,17 +147,20 @@ export const IOCTable = memo(function IOCTable({ iocs, onIOCsChange }: IOCTableP
   }, [copiedId]);
 
   const copyAllIOCs = useCallback(() => {
-    const formattedText = iocs.map((iocItem) => `${iocItem.type}: ${iocItem.value}`).join("\n");
-    navigator.clipboard.writeText(formattedText);
-    toast.success(t("ioc.copiedAll"));
-  }, [iocs, t]);
+    const formattedText = iocsRef.current.map((iocItem) => `${iocItem.type}: ${iocItem.value}`).join("\n");
+    navigator.clipboard.writeText(formattedText).then(() => {
+      toast.success(t("ioc.copiedAll"));
+    }).catch(() => {
+      toast.error(t("ioc.copyFailed") || "Failed to copy to clipboard");
+    });
+  }, [t]);
 
   const handlePasteIOCs = useCallback(
     (newIOCs: IOC[]) => {
-      onIOCsChange([...iocs, ...newIOCs]);
+      onIOCsChange([...iocsRef.current, ...newIOCs]);
       toast.success(t("ioc.parsedCount").replace("{count}", String(newIOCs.length)));
     },
-    [iocs, onIOCsChange, t],
+    [onIOCsChange, t],
   );
 
   const containerHeight = useMemo(() => {
@@ -316,7 +325,7 @@ export const IOCTable = memo(function IOCTable({ iocs, onIOCsChange }: IOCTableP
                             </button>
                             <button
                               onClick={() => removeIOC(ioc.id)}
-                              aria-label="Remove IOC"
+                              aria-label={t("ioc.remove")}
                               className="p-1.5 hover:bg-destructive/20 rounded transition-colors"
                             >
                               <Trash2 className="w-4 h-4 text-destructive" />

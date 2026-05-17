@@ -17,7 +17,8 @@ export const createInitialEntry = (text: string = ""): LogEntry => ({
   timestamp: new Date().toISOString(),
 });
 
-export const initialDFIRData: DFIRData = {
+export function createInitialDFIRData(): DFIRData {
+  return {
   background: {
     caseId: "",
     analyst: "",
@@ -72,4 +73,5 @@ export const initialDFIRData: DFIRData = {
   },
   timeline: [],
   artifacts: [],
-};
+  };
+}

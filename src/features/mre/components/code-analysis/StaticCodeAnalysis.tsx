@@ -1,7 +1,8 @@
-import { useMemo, memo } from "react";
+import { useMemo, memo, useRef, useCallback } from "react";
 import { GitBranch, Cpu, Shield, Code2 } from "lucide-react";
 import { PortalDropdown, DropdownOption } from "@/components/ui/portal-dropdown";
-import { EntryCard, FieldLabel, AutoTextarea, inputStyles, AccessibleField } from "@/features/mre/components/runtime-behavior/ui-components";
+import { EntryCard, FieldLabel, AutoTextarea, AccessibleField } from "@/features/mre/components/runtime-behavior/ui-components";
+import { inputStyles } from "@/features/mre/components/runtime-behavior/styles";
 import { AnimatedCollapse } from "@/components/ui/skeleton";
 import { SubSectionHeader, useExpandedSections, useListManager } from "./shared";
 import { useDragReorder } from "@/hooks/useDragReorder";
@@ -28,29 +29,49 @@ interface StaticCodeAnalysisProps {
 export const StaticCodeAnalysis = memo(function StaticCodeAnalysis({ data, onChange }: StaticCodeAnalysisProps) {
   const { t } = useLanguage();
   const { isExpanded, toggle, expand } = useExpandedSections(STORAGE_KEYS.CODE_ANALYSIS_STATIC);
+  const dataRef = useRef(data);
+  dataRef.current = data;
+
+  // Stable onChange wrappers — only recreate when onChange prop changes
+  const onFunctionsChange = useCallback(
+    (items: InterestingFunction[]) => onChange({ ...dataRef.current, interestingFunctions: items }),
+    [onChange]
+  );
+  const onControlFlowChange = useCallback(
+    (items: ControlFlowEntry[]) => onChange({ ...dataRef.current, controlFlow: items }),
+    [onChange]
+  );
+  const onApiUsageChange = useCallback(
+    (items: APIUsageEntry[]) => onChange({ ...dataRef.current, apiUsage: items }),
+    [onChange]
+  );
+  const onObfuscationChange = useCallback(
+    (items: ObfuscationEntry[]) => onChange({ ...dataRef.current, obfuscation: items }),
+    [onChange]
+  );
 
   // List managers for each section
   const functions = useListManager<InterestingFunction>(
     data.interestingFunctions,
-    (items) => onChange({ ...data, interestingFunctions: items }),
+    onFunctionsChange,
     { createEmpty: createEmptyFunction, onExpand: () => expand("functions") }
   );
 
   const controlFlow = useListManager<ControlFlowEntry>(
     data.controlFlow,
-    (items) => onChange({ ...data, controlFlow: items }),
+    onControlFlowChange,
     { createEmpty: createEmptyControlFlow, onExpand: () => expand("controlFlow") }
   );
 
   const apiUsage = useListManager<APIUsageEntry>(
     data.apiUsage,
-    (items) => onChange({ ...data, apiUsage: items }),
+    onApiUsageChange,
     { createEmpty: createEmptyAPIUsage, onExpand: () => expand("apiUsage") }
   );
 
   const obfuscation = useListManager<ObfuscationEntry>(
     data.obfuscation,
-    (items) => onChange({ ...data, obfuscation: items }),
+    onObfuscationChange,
     { createEmpty: createEmptyObfuscation, onExpand: () => expand("obfuscation") }
   );
 
@@ -222,7 +243,7 @@ export const StaticCodeAnalysis = memo(function StaticCodeAnalysis({ data, onCha
                     type="text"
                     value={apiEntry.apiName}
                     onChange={(changeEvent) => apiUsage.update(apiEntry.id, { apiName: changeEvent.target.value })}
-                    placeholder="VirtualAlloc, CreateProcessW..."
+                    placeholder={t("codeAnalysis.static.apiPlaceholder")}
                     className={inputStyles}
                   />
                 )}

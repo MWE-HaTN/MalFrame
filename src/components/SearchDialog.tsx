@@ -59,6 +59,7 @@ export const SearchDialog = memo(function SearchDialog({
   const [loading, setLoading] = useState(false);
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const searchSeqRef = useRef(0);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -66,8 +67,15 @@ export const SearchDialog = memo(function SearchDialog({
       setQuery("");
       setResults([]);
       setExpandedGroups(new Set());
-      setTimeout(() => inputRef.current?.focus(), 50);
+      const focusId = setTimeout(() => inputRef.current?.focus(), 50);
+      return () => {
+        clearTimeout(focusId);
+        if (debounceRef.current) clearTimeout(debounceRef.current);
+      };
     }
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
   }, [open]);
 
   const toggleGroup = useCallback((key: string) => {
@@ -92,15 +100,16 @@ export const SearchDialog = memo(function SearchDialog({
         return;
       }
 
+      const seq = ++searchSeqRef.current;
       debounceRef.current = setTimeout(async () => {
         setLoading(true);
         try {
           const res = await searchAcrossCases(value);
-          setResults(res);
+          if (seq === searchSeqRef.current) setResults(res);
         } catch {
-          setResults([]);
+          if (seq === searchSeqRef.current) setResults([]);
         } finally {
-          setLoading(false);
+          if (seq === searchSeqRef.current) setLoading(false);
         }
       }, 300);
     },
@@ -110,9 +119,15 @@ export const SearchDialog = memo(function SearchDialog({
   const handleSelect = useCallback(
     (result: SearchResult) => {
       const lsKey = result.caseType === "mia" ? "mia-active-case" : "mre-active-case";
+      const targetPath = result.caseType === "mia" ? "/mia" : "/mre";
       localStorage.setItem(lsKey, result.caseId);
-      navigate(result.caseType === "mia" ? "/mia" : "/mre");
       onOpenChange(false);
+      // Force remount when navigating to the same route type (switching cases within MIA or MRE)
+      if (window.location.pathname.startsWith(targetPath)) {
+        window.location.href = targetPath;
+      } else {
+        navigate(targetPath);
+      }
     },
     [navigate, onOpenChange],
   );
@@ -183,9 +198,9 @@ export const SearchDialog = memo(function SearchDialog({
                     </span>
                   </button>
                   <div className="divide-y divide-border/30">
-                    {visibleItems.map((r, i) => (
+                    {visibleItems.map((r) => (
                       <div
-                        key={i}
+                        key={`${r.caseId}-${r.field}-${r.value}`}
                         className="px-3 py-1.5 text-xs cursor-pointer hover:bg-muted/30 transition-colors"
                         onClick={() => handleSelect(r)}
                         onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); handleSelect(r); } }}

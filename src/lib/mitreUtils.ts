@@ -10,7 +10,6 @@ import {
   type MitreStixBundle,
 } from "@/lib/validationSchemas";
 import { debugWarn, debugError } from "@/lib/debugLogger";
-import { truncate } from "@/lib/utils";
 
 const MITRE_STIX_URL = "https://raw.githubusercontent.com/mitre-attack/attack-stix-data/master/enterprise-attack/enterprise-attack.json";
 const MITRE_STIX_PROXY_URL = "https://corsproxy.io/?https://raw.githubusercontent.com/mitre-attack/attack-stix-data/master/enterprise-attack/enterprise-attack.json";
@@ -228,7 +227,7 @@ export async function fetchMitreData(): Promise<{ tactics: MitreTactic[]; versio
 /**
  * Parses MITRE STIX bundle data into our format
  */
-export function parseMitreStixData(bundle: MitreStixBundle): { tactics: MitreTactic[]; version: string } {
+function parseMitreStixData(bundle: MitreStixBundle): { tactics: MitreTactic[]; version: string } {
   const objects = bundle.objects;
   
   // Extract version from x-mitre-collection object
@@ -365,23 +364,15 @@ import { STORAGE_KEYS } from "@/lib/storageKeys";
 
 const CACHE_DURATION_MS = 24 * 60 * 60 * 1000; // 24 hours
 
-// In-memory cache for technique lookup to avoid recreation on each call
-let cachedTechniqueLookup: Map<string, { tacticIds: string[]; name: string; fullName: string }> | null = null;
-let cachedTacticsHash: string | null = null;
-
-/**
- * Creates a simple hash of tactics for cache invalidation
- */
-function createTacticsHash(tactics: MitreTactic[]): string {
-  return tactics.map(t => `${t.id}:${t.techniques.length}`).join('|');
-}
-
 // In-memory cache to avoid repeated localStorage access and parsing
 let inMemoryMitreCache: { tactics: MitreTactic[]; version: string } | null = null;
 let inMemoryCacheValid = false;
 
 // Prevent concurrent fetches with a promise lock
 let fetchPromise: Promise<{ tactics: MitreTactic[]; version: string }> | null = null;
+
+// Generation counter to prevent stale fetches from overwriting fresh cache
+let mitreFetchGeneration = 0;
 
 /**
  * Loads MITRE data from memory cache, localStorage cache, or fetches from GitHub
@@ -408,7 +399,8 @@ export async function loadMitreData(): Promise<{ tactics: MitreTactic[]; version
       try {
         const parsed = JSON.parse(cachedData);
         // Treat version === "unknown" as invalid cache so we refetch fresh
-        if (parsed.tactics && parsed.version && parsed.version !== "unknown") {
+        // Also validate tactics is an array to guard against corrupted localStorage
+        if (Array.isArray(parsed.tactics) && parsed.version && parsed.version !== "unknown") {
           // Store in memory cache
           inMemoryMitreCache = parsed;
           inMemoryCacheValid = true;
@@ -421,36 +413,43 @@ export async function loadMitreData(): Promise<{ tactics: MitreTactic[]; version
   }
   
   // Create a fetch promise and store it to prevent concurrent fetches
-  fetchPromise = (async () => {
+  let currentPromise: Promise<{ tactics: MitreTactic[]; version: string }> | null = null;
+  fetchPromise = currentPromise = (async () => {
     try {
-      return await fetchAndCacheMitreData();
+      return await fetchAndCacheMitreData(mitreFetchGeneration);
     } finally {
-      // Clear the promise lock after completion (success or failure)
-      fetchPromise = null;
+      // Only clear the lock if we still own it (prevents forceRefresh from clearing loadMitreData's lock)
+      if (fetchPromise === currentPromise) fetchPromise = null;
     }
   })();
-  
+
   return fetchPromise;
 }
 
 /**
  * Internal: fetches fresh MITRE data and populates all cache tiers.
  * Shared by loadMitreData() and forceRefreshMitreData().
+ * Skips cache writes if a newer generation has started (prevents stale overwrites).
  */
-async function fetchAndCacheMitreData(): Promise<{ tactics: MitreTactic[]; version: string }> {
+async function fetchAndCacheMitreData(gen: number): Promise<{ tactics: MitreTactic[]; version: string }> {
   const { tactics, version } = await fetchMitreData();
+
+  // If a newer fetch started while we were in-flight, skip cache writes
+  if (gen !== mitreFetchGeneration) {
+    return { tactics, version };
+  }
 
   const cachePayload = { tactics, version };
   inMemoryMitreCache = cachePayload;
   inMemoryCacheValid = true;
 
-  localStorage.setItem(STORAGE_KEYS.MITRE_CACHE, JSON.stringify(cachePayload));
-  localStorage.setItem(STORAGE_KEYS.MITRE_VERSION, version);
-  localStorage.setItem(STORAGE_KEYS.MITRE_CACHE_EXPIRY, String(Date.now() + CACHE_DURATION_MS));
-
-  // Invalidate technique lookup cache when data changes
-  cachedTechniqueLookup = null;
-  cachedTacticsHash = null;
+  try {
+    localStorage.setItem(STORAGE_KEYS.MITRE_CACHE, JSON.stringify(cachePayload));
+    localStorage.setItem(STORAGE_KEYS.MITRE_VERSION, version);
+    localStorage.setItem(STORAGE_KEYS.MITRE_CACHE_EXPIRY, String(Date.now() + CACHE_DURATION_MS));
+  } catch {
+    // localStorage quota exceeded — in-memory cache still works
+  }
 
   return cachePayload;
 }
@@ -460,77 +459,25 @@ async function fetchAndCacheMitreData(): Promise<{ tactics: MitreTactic[]; versi
  * Returns the freshly fetched data.
  */
 export async function forceRefreshMitreData(): Promise<{ tactics: MitreTactic[]; version: string }> {
+  // Increment generation to invalidate any in-flight fetches
+  const gen = ++mitreFetchGeneration;
+
   // Clear all caches
   inMemoryMitreCache = null;
   inMemoryCacheValid = false;
-  fetchPromise = null;
   localStorage.removeItem(STORAGE_KEYS.MITRE_CACHE);
   localStorage.removeItem(STORAGE_KEYS.MITRE_CACHE_EXPIRY);
 
-  return fetchAndCacheMitreData();
-}
-
-/**
- * Returns info about the current MITRE cache state.
- * Useful for displaying version and last-fetch time in the UI.
- */
-export function getMitreCacheInfo(): { version: string | null; lastFetchTime: number | null; cacheExpiry: number | null } {
-  const version = localStorage.getItem(STORAGE_KEYS.MITRE_VERSION);
-  const cacheExpiryStr = localStorage.getItem(STORAGE_KEYS.MITRE_CACHE_EXPIRY);
-  const cacheExpiry = cacheExpiryStr ? parseInt(cacheExpiryStr, 10) : null;
-
-  // lastFetchTime = cacheExpiry - CACHE_DURATION_MS
-  const lastFetchTime = cacheExpiry ? cacheExpiry - CACHE_DURATION_MS : null;
-
-  return { version, lastFetchTime, cacheExpiry };
-}
-
-/**
- * Creates a lookup map for quick technique/sub-technique searches
- * Uses in-memory caching to avoid recreation on each call
- */
-export function createTechniqueLookup(tactics: MitreTactic[]): Map<string, { tacticIds: string[]; name: string; fullName: string }> {
-  // Check if we can use cached lookup
-  const currentHash = createTacticsHash(tactics);
-  if (cachedTechniqueLookup && cachedTacticsHash === currentHash) {
-    return cachedTechniqueLookup;
-  }
-  
-  const lookup = new Map<string, { tacticIds: string[]; name: string; fullName: string }>();
-  
-  for (const tactic of tactics) {
-    for (const tech of tactic.techniques) {
-      // Add main technique
-      const existing = lookup.get(tech.id);
-      if (existing) {
-        existing.tacticIds.push(tactic.id);
-      } else {
-        lookup.set(tech.id, {
-          tacticIds: [tactic.id],
-          name: truncate(tech.name, 25),
-          fullName: tech.name,
-        });
-      }
-      
-      // Add sub-techniques
-      for (const sub of tech.subtechniques) {
-        const subExisting = lookup.get(sub.id);
-        if (subExisting) {
-          subExisting.tacticIds.push(tactic.id);
-        } else {
-          lookup.set(sub.id, {
-            tacticIds: [tactic.id],
-            name: truncate(sub.name, 25),
-            fullName: `${tech.name}: ${sub.name}`,
-          });
-        }
-      }
+  // Reuse the fetch lock to prevent concurrent fetches
+  let currentPromise: Promise<{ tactics: MitreTactic[]; version: string }> | null = null;
+  fetchPromise = currentPromise = (async () => {
+    try {
+      return await fetchAndCacheMitreData(gen);
+    } finally {
+      if (fetchPromise === currentPromise) fetchPromise = null;
     }
-  }
-  
-  // Cache the lookup
-  cachedTechniqueLookup = lookup;
-  cachedTacticsHash = currentHash;
-  
-  return lookup;
+  })();
+
+  return fetchPromise;
 }
+

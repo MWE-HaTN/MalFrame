@@ -85,6 +85,8 @@ export const TimelineTable = memo(function TimelineTable({ events, onEventsChang
   });
 
   const parentRef = useRef<HTMLDivElement>(null);
+  const eventsRef = useRef(events);
+  eventsRef.current = events;
   const shouldVirtualize = events.length > MAX_VISIBLE_ROWS;
 
   const rowVirtualizer = useVirtualizer({
@@ -102,19 +104,19 @@ export const TimelineTable = memo(function TimelineTable({ events, onEventsChang
 
   const addEvent = useCallback(() => {
     if (!newEvent.time || !newEvent.content) return;
-    
+
     const event: TimelineEvent = {
       id: generateId(),
       ...newEvent,
     };
-    
-    onEventsChange([...events, event]);
+
+    onEventsChange([...eventsRef.current, event]);
     setNewEvent({ time: "", content: "", severity: "info" });
-  }, [newEvent, events, onEventsChange]);
+  }, [newEvent, onEventsChange]);
 
   const removeEvent = useCallback((id: string) => {
-    onEventsChange(events.filter((event) => event.id !== id));
-  }, [events, onEventsChange]);
+    onEventsChange(eventsRef.current.filter((event) => event.id !== id));
+  }, [onEventsChange]);
 
   const containerHeight = useMemo(() => {
     if (!shouldVirtualize) return "auto";

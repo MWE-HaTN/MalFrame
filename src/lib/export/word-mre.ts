@@ -57,7 +57,7 @@ function extractCodeAnalysis(codeAnalysis: CodeAnalysisData): Record<string, str
     const filtered = staticCodeData.interestingFunctions
       .filter((e: InterestingFunction) => hasContentInKeys(e, ['functionName', 'rvaAddress', 'role', 'notes']))
       .map((funcEntry: InterestingFunction) => {
-        let formattedLine = `${funcEntry.functionName} @ ${funcEntry.rvaAddress}`;
+        let formattedLine = `${funcEntry.functionName || ""} @ ${funcEntry.rvaAddress || ""}`;
         if (funcEntry.role) formattedLine += ` [Role: ${funcEntry.role}]`;
         if (funcEntry.notes) formattedLine += `: ${funcEntry.notes}`;
         return formattedLine;
@@ -67,43 +67,49 @@ function extractCodeAnalysis(codeAnalysis: CodeAnalysisData): Record<string, str
   }
   if (staticCodeData?.controlFlow?.length > 0) {
     const filtered = staticCodeData.controlFlow
-      .filter((e: ControlFlowEntry) => hasContentInKeys(e, ['loopBranchNotes', 'cfgObservations']))
-      .map((cfEntry: ControlFlowEntry) => `Loops/Branch: ${cfEntry.loopBranchNotes}, CFG: ${cfEntry.cfgObservations}`)
-      .filter((lineText: string) => lineText.replace(/Loops\/Branch: , CFG: /g, "").trim());
+      .filter((e: ControlFlowEntry) => hasContentInKeys(e, ['loopBranchNotes', 'cfgObservations', 'stringDecryptionRoutines']))
+      .map((cfEntry: ControlFlowEntry) => {
+        const parts: string[] = [];
+        if (cfEntry.loopBranchNotes?.trim()) parts.push(`Loops/Branch: ${cfEntry.loopBranchNotes}`);
+        if (cfEntry.cfgObservations?.trim()) parts.push(`CFG: ${cfEntry.cfgObservations}`);
+        if (cfEntry.stringDecryptionRoutines?.trim()) parts.push(`String Decryption: ${cfEntry.stringDecryptionRoutines}`);
+        return parts.join(", ");
+      })
+      .filter((lineText: string) => lineText.trim());
     if (filtered.length) extractedResult.controlFlow = filtered.join("\n");
   }
   if (staticCodeData?.apiUsage?.length > 0) {
     const filtered = staticCodeData.apiUsage
       .filter((e: APIUsageEntry) => hasContentInKeys(e, ['apiName', 'purposeBehavior']))
-      .map((apiEntry: APIUsageEntry) => `${apiEntry.apiName}: ${apiEntry.purposeBehavior}`)
+      .map((apiEntry: APIUsageEntry) => `${apiEntry.apiName || ""}: ${apiEntry.purposeBehavior || ""}`)
       .filter((lineText: string) => lineText.trim() !== ":");
     if (filtered.length) extractedResult.apiUsage = filtered.join("\n");
   }
   if (staticCodeData?.obfuscation?.length > 0) {
     const filtered = staticCodeData.obfuscation
       .filter((e: ObfuscationEntry) => hasContentInKeys(e, ['technique', 'evidence']))
-      .map((obfEntry: ObfuscationEntry) => `${obfEntry.technique}: ${obfEntry.evidence}`)
+      .map((obfEntry: ObfuscationEntry) => `${obfEntry.technique || ""}: ${obfEntry.evidence || ""}`)
       .filter((lineText: string) => lineText.trim() !== ":");
     if (filtered.length) extractedResult.obfuscation = filtered.join("\n");
   }
   if (dynamicCodeData?.breakpointEvents?.length > 0) {
     const filtered = dynamicCodeData.breakpointEvents
       .filter((e: BreakpointEvent) => hasContentInKeys(e, ['eventType', 'whereTriggered', 'notes']))
-      .map((bpEntry: BreakpointEvent) => `[${bpEntry.eventType}] ${bpEntry.whereTriggered}: ${bpEntry.notes}`)
+      .map((bpEntry: BreakpointEvent) => `[${bpEntry.eventType || ""}] ${bpEntry.whereTriggered || ""}: ${bpEntry.notes || ""}`)
       .filter((lineText: string) => lineText.trim() !== "[] :");
     if (filtered.length) extractedResult.breakpointEvents = filtered.join("\n");
   }
   if (dynamicCodeData?.memoryRegions?.length > 0) {
     const filtered = dynamicCodeData.memoryRegions
       .filter((e: MemoryRegion) => hasContentInKeys(e, ['allocation', 'address', 'behavior']))
-      .map((memEntry: MemoryRegion) => `[${memEntry.allocation}] ${memEntry.address}: ${memEntry.behavior}`)
+      .map((memEntry: MemoryRegion) => `[${memEntry.allocation || ""}] ${memEntry.address || ""}: ${memEntry.behavior || ""}`)
       .filter((lineText: string) => lineText.trim() !== "[] :");
     if (filtered.length) extractedResult.memoryRegions = filtered.join("\n");
   }
   if (dynamicCodeData?.runtimeApiTrace?.length > 0) {
     const filtered = dynamicCodeData.runtimeApiTrace
       .filter((e: RuntimeAPITrace) => hasContentInKeys(e, ['api', 'arguments', 'returnValue']))
-      .map((traceEntry: RuntimeAPITrace) => `${traceEntry.api}(${traceEntry.arguments}) → ${traceEntry.returnValue}`)
+      .map((traceEntry: RuntimeAPITrace) => `${traceEntry.api || ""}(${traceEntry.arguments || ""}) → ${traceEntry.returnValue || ""}`)
       .filter((lineText: string) => lineText.trim() !== "() →");
     if (filtered.length) extractedResult.runtimeAPITrace = filtered.join("\n");
   }
@@ -140,6 +146,10 @@ function extractDeepDive(deepDive: DeepDiveData & { microBehaviors?: { id: strin
         if (stageEntry.failureAbortBehavior?.trim()) stageParts.push(`  Failure/Abort: ${stageEntry.failureAbortBehavior}`);
         if (stageEntry.entryPoint?.trim()) stageParts.push(`  Entry Point: ${stageEntry.entryPoint}`);
         if (stageEntry.purpose?.trim()) stageParts.push(`  Purpose: ${stageEntry.purpose}`);
+        if (stageEntry.transitionMethod?.trim()) stageParts.push(`  Transition Method: ${stageEntry.transitionMethod}`);
+        if (stageEntry.apisUsed?.trim()) stageParts.push(`  APIs Used: ${stageEntry.apisUsed}`);
+        if (stageEntry.artifacts?.trim()) stageParts.push(`  Artifacts: ${stageEntry.artifacts}`);
+        if (stageEntry.ioc?.trim()) stageParts.push(`  IOC: ${stageEntry.ioc}`);
         return stageParts.join("\n");
       })
       .filter((lineText: string) => Boolean(lineText?.trim()))
@@ -191,7 +201,7 @@ function extractRuntimeBehaviorWithEffect(runtimeBehavior: RuntimeBehaviorData):
   if (runtimeBehavior.triggersEnabled && runtimeBehavior.triggers?.length > 0) {
     const filtered = runtimeBehavior.triggers
       .filter((e: TriggerEntry) => hasContentInKeys(e, ['name', 'description']))
-      .map((triggerEntry: TriggerEntry) => `${triggerEntry.name}: ${triggerEntry.description}`)
+      .map((triggerEntry: TriggerEntry) => `${triggerEntry.name || ""}: ${triggerEntry.description || ""}`)
       .filter((lineText: string) => lineText.trim() !== ":");
     if (filtered.length) extractedResult.triggers = filtered.join("\n");
   }
@@ -199,7 +209,7 @@ function extractRuntimeBehaviorWithEffect(runtimeBehavior: RuntimeBehaviorData):
     const filtered = runtimeBehavior.antiDebug
       .filter((e: AntiDebugEntry) => hasContentInKeys(e, ['categoryTags', 'apis', 'effect', 'notes']))
       .map((debugEntry: AntiDebugEntry) => {
-        let formattedLine = `[${debugEntry.categoryTags?.join(", ")}] APIs: ${debugEntry.apis?.join(", ")}`;
+        let formattedLine = `[${(debugEntry.categoryTags ?? []).join(", ")}] APIs: ${(debugEntry.apis ?? []).join(", ")}`;
         if (debugEntry.effect) formattedLine += ` | Effect: ${debugEntry.effect}`;
         if (debugEntry.notes) formattedLine += ` - ${debugEntry.notes}`;
         return formattedLine;
@@ -211,7 +221,7 @@ function extractRuntimeBehaviorWithEffect(runtimeBehavior: RuntimeBehaviorData):
     const filtered = runtimeBehavior.antiVM
       .filter((e: AntiVMEntry) => hasContentInKeys(e, ['methodTags', 'indicator', 'effect', 'notes']))
       .map((vmEntry: AntiVMEntry) => {
-        let formattedLine = `[${vmEntry.methodTags?.join(", ")}] ${vmEntry.indicator}`;
+        let formattedLine = `[${(vmEntry.methodTags ?? []).join(", ")}] ${vmEntry.indicator || ""}`;
         if (vmEntry.effect) formattedLine += ` | Effect: ${vmEntry.effect}`;
         if (vmEntry.notes) formattedLine += ` - ${vmEntry.notes}`;
         return formattedLine;
@@ -222,42 +232,42 @@ function extractRuntimeBehaviorWithEffect(runtimeBehavior: RuntimeBehaviorData):
   if (runtimeBehavior.executionFlowEnabled && runtimeBehavior.executionFlow?.length > 0) {
     const filtered = runtimeBehavior.executionFlow
       .filter((e: ExecutionFlowEntry) => hasContentInKeys(e, ['stepName', 'description']))
-      .map((flowEntry: ExecutionFlowEntry) => `${flowEntry.stepName}: ${flowEntry.description}`)
+      .map((flowEntry: ExecutionFlowEntry) => `${flowEntry.stepName || ""}: ${flowEntry.description || ""}`)
       .filter((lineText: string) => lineText.trim() !== ":");
     if (filtered.length) extractedResult.executionFlow = filtered.join("\n");
   }
   if (runtimeBehavior.systemArtifactsEnabled && runtimeBehavior.systemArtifacts?.length > 0) {
     const filtered = runtimeBehavior.systemArtifacts
       .filter((e: SystemArtifactEntry) => hasContentInKeys(e, ['typeTags', 'path', 'notes']))
-      .map((artifactEntry: SystemArtifactEntry) => `[${artifactEntry.typeTags?.join(", ")}] ${artifactEntry.path} - ${artifactEntry.notes}`)
+      .map((artifactEntry: SystemArtifactEntry) => `[${(artifactEntry.typeTags ?? []).join(", ")}] ${artifactEntry.path || ""} - ${artifactEntry.notes || ""}`)
       .filter((lineText: string) => lineText.trim() && lineText !== "[]  - ");
     if (filtered.length) extractedResult.systemArtifacts = filtered.join("\n");
   }
   if (runtimeBehavior.persistenceEnabled && runtimeBehavior.persistence?.length > 0) {
     const filtered = runtimeBehavior.persistence
       .filter((e: PersistenceEntry) => hasContentInKeys(e, ['typeTags', 'path', 'notes']))
-      .map((persistEntry: PersistenceEntry) => `[${persistEntry.typeTags?.join(", ")}] ${persistEntry.path} - ${persistEntry.notes}`)
+      .map((persistEntry: PersistenceEntry) => `[${(persistEntry.typeTags ?? []).join(", ")}] ${persistEntry.path || ""} - ${persistEntry.notes || ""}`)
       .filter((lineText: string) => lineText.trim() && lineText !== "[]  - ");
     if (filtered.length) extractedResult.persistence = filtered.join("\n");
   }
   if (runtimeBehavior.networkEnabled && runtimeBehavior.network?.length > 0) {
     const filtered = runtimeBehavior.network
       .filter((e: NetworkBehaviorEntry) => hasContentInKeys(e, ['behaviorTags', 'indicator', 'notes']))
-      .map((netEntry: NetworkBehaviorEntry) => `[${netEntry.behaviorTags?.join(", ")}] ${netEntry.indicator} - ${netEntry.notes}`)
+      .map((netEntry: NetworkBehaviorEntry) => `[${(netEntry.behaviorTags ?? []).join(", ")}] ${netEntry.indicator || ""} - ${netEntry.notes || ""}`)
       .filter((lineText: string) => lineText.trim() && lineText !== "[]  - ");
     if (filtered.length) extractedResult.networkBehavior = filtered.join("\n");
   }
   if (runtimeBehavior.memoryEnabled && runtimeBehavior.memory?.length > 0) {
     const filtered = runtimeBehavior.memory
       .filter((e: MemoryBehaviorEntry) => hasContentInKeys(e, ['eventTags', 'region', 'notes']))
-      .map((memEntry: MemoryBehaviorEntry) => `[${memEntry.eventTags?.join(", ")}] ${memEntry.region} - ${memEntry.notes}`)
+      .map((memEntry: MemoryBehaviorEntry) => `[${(memEntry.eventTags ?? []).join(", ")}] ${memEntry.region || ""} - ${memEntry.notes || ""}`)
       .filter((lineText: string) => lineText.trim() && lineText !== "[]  - ");
     if (filtered.length) extractedResult.memoryBehavior = filtered.join("\n");
   }
   if (runtimeBehavior.processInjectionEnabled && runtimeBehavior.processInjection?.length > 0) {
     const filtered = runtimeBehavior.processInjection
       .filter((e: ProcessInjectionEntry) => hasContentInKeys(e, ['techniqueTags', 'targetProcess', 'apiChain', 'notes']))
-      .map((injectionEntry: ProcessInjectionEntry) => `[${injectionEntry.techniqueTags?.join(", ")}] Target: ${injectionEntry.targetProcess}, APIs: ${injectionEntry.apiChain?.join(" → ")} - ${injectionEntry.notes}`)
+      .map((injectionEntry: ProcessInjectionEntry) => `[${(injectionEntry.techniqueTags ?? []).join(", ")}] Target: ${injectionEntry.targetProcess || ""}, APIs: ${(injectionEntry.apiChain ?? []).join(" → ")} - ${injectionEntry.notes || ""}`)
       .filter((lineText: string) => lineText.trim() && lineText !== "[] Target: , APIs:  - ");
     if (filtered.length) extractedResult.processInjection = filtered.join("\n");
   }
@@ -267,18 +277,11 @@ function extractRuntimeBehaviorWithEffect(runtimeBehavior: RuntimeBehaviorData):
 // Roman numeral conversion
 const ROMAN_NUMERALS = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X", "XI", "XII"];
 
-// Section counter for Roman numerals
-let sectionCounter = 0;
-
-function resetSectionCounter() {
-  sectionCounter = 0;
-}
-
 // Create section header paragraph with Roman numeral (like "I. BACKGROUND")
-function createSectionHeader(title: string): Paragraph {
-  const romanNumeral = ROMAN_NUMERALS[sectionCounter] || String(sectionCounter + 1);
-  sectionCounter++;
-  
+function createSectionHeader(title: string, counter: { value: number }): Paragraph {
+  const romanNumeral = ROMAN_NUMERALS[counter.value] || String(counter.value + 1);
+  counter.value++;
+
   return new Paragraph({
     children: [
       new TextRun({ text: `${romanNumeral}. ${title.toUpperCase()}`, bold: true, color: HEADER_COLOR, size: 26 }),
@@ -498,7 +501,7 @@ function createPESectionsTable(sections: PESectionData[]): Table {
       children: [new Paragraph({
         children: [new TextRun({ text: headerText, bold: true, color: "000000", size: 18 })],
       })],
-      width: { size: columnIndex === 0 ? 5 : columnIndex === 1 ? 20 : 15, type: WidthType.PERCENTAGE },
+      width: { size: columnIndex === 0 ? 5 : columnIndex === 1 ? 20 : columnIndex === 5 ? 25 : 15, type: WidthType.PERCENTAGE },
       borders: { top: cellBorder, bottom: cellBorder, left: cellBorder, right: cellBorder },
     })
   );
@@ -528,7 +531,7 @@ function createPESectionsTable(sections: PESectionData[]): Table {
             bold: cellConfig.bold,
           })],
         })],
-        width: { size: columnIndex === 0 ? 5 : columnIndex === 1 ? 20 : 15, type: WidthType.PERCENTAGE },
+        width: { size: columnIndex === 0 ? 5 : columnIndex === 1 ? 20 : columnIndex === 5 ? 25 : 15, type: WidthType.PERCENTAGE },
         borders: { top: cellBorder, bottom: cellBorder, left: cellBorder, right: cellBorder },
       })
     );
@@ -579,7 +582,8 @@ function createKeyValueParagraphs(content: Record<string, string>): Paragraph[] 
     if (!fieldValue?.trim()) return;
     
     const formattedLabel = fieldKey
-      .replace(/([A-Z])/g, " $1")
+      .replace(/([A-Z]+)([A-Z][a-z])/g, "$1 $2")
+      .replace(/([a-z\d])([A-Z])/g, "$1 $2")
       .replace(/^./, charStr => charStr.toUpperCase())
       .trim();
     
@@ -618,8 +622,7 @@ function createKeyValueParagraphs(content: Record<string, string>): Paragraph[] 
 }
 
 export async function exportREWord(reportData: REData, analystName: string, fileName: string, fileHash: string): Promise<void> {
-  // Reset section counter for Roman numerals
-  resetSectionCounter();
+  const sectionCounter = { value: 0 };
   
   const documentChildren: (Paragraph | Table)[] = [];
   documentChildren.push(new Paragraph({
@@ -642,7 +645,7 @@ export async function exportREWord(reportData: REData, analystName: string, file
   ];
 
   if (hasAnyMeaningfulValue(backgroundFields)) {
-    documentChildren.push(createSectionHeader("Background"));
+    documentChildren.push(createSectionHeader("Background", sectionCounter));
     const bgTable = createTwoColumnFields(backgroundFields);
     if (bgTable) documentChildren.push(bgTable);
   }
@@ -695,7 +698,7 @@ export async function exportREWord(reportData: REData, analystName: string, file
   const hasAnyStaticAnalysis = hasOsint || hasBasicInfo || hasSecurityPosture || hasPacking || meaningfulPeSections.length > 0;
 
   if (hasAnyStaticAnalysis) {
-    documentChildren.push(createSectionHeader("Static Analysis"));
+    documentChildren.push(createSectionHeader("Static Analysis", sectionCounter));
     
     // OSINT LOOKUP
     if (hasOsint) {
@@ -734,21 +737,21 @@ export async function exportREWord(reportData: REData, analystName: string, file
   // ===== RUNTIME BEHAVIOR =====
   const runtimeBehaviorData = extractRuntimeBehaviorWithEffect(reportData.codeBehavior?.runtimeBehavior);
   if (Object.keys(runtimeBehaviorData).length > 0) {
-    documentChildren.push(createSectionHeader("Runtime Behavior"));
+    documentChildren.push(createSectionHeader("Runtime Behavior", sectionCounter));
     documentChildren.push(...createKeyValueParagraphs(runtimeBehaviorData));
   }
 
   // ===== CODE ANALYSIS =====
   const codeAnalysisData = extractCodeAnalysis(reportData.codeBehavior?.codeAnalysis);
   if (Object.keys(codeAnalysisData).length > 0) {
-    documentChildren.push(createSectionHeader("Code Analysis"));
+    documentChildren.push(createSectionHeader("Code Analysis", sectionCounter));
     documentChildren.push(...createKeyValueParagraphs(codeAnalysisData));
   }
 
   // ===== DEEP DIVE =====
   const deepDiveExtracted = extractDeepDive(reportData.deepDive, reportData.staticAnalysis?.unpackLayers);
   if (Object.keys(deepDiveExtracted).length > 0) {
-    documentChildren.push(createSectionHeader("Deep Dive"));
+    documentChildren.push(createSectionHeader("Deep Dive", sectionCounter));
     documentChildren.push(...createKeyValueParagraphs(deepDiveExtracted));
   }
 
@@ -760,7 +763,7 @@ export async function exportREWord(reportData: REData, analystName: string, file
   });
 
   if (meaningfulMbc.length > 0) {
-    documentChildren.push(createSectionHeader("MBC Mapping"));
+    documentChildren.push(createSectionHeader("MBC Mapping", sectionCounter));
     const groupedByObjective: Record<string, { id: string; name: string; objectiveName: string; pathToMd?: string }[]> = {};
     meaningfulMbc.forEach((mbcItem: { id: string; name: string; objectiveName: string; pathToMd?: string }) => {
       const objectiveKey = mbcItem.objectiveName || "Other";
@@ -804,7 +807,7 @@ export async function exportREWord(reportData: REData, analystName: string, file
   // ===== YARA SIGNATURE =====
   const yaraContent = reportData.detection?.yaraSignature?.trim();
   if (yaraContent && yaraContent !== '-') {
-    documentChildren.push(createSectionHeader("YARA Signature"));
+    documentChildren.push(createSectionHeader("YARA Signature", sectionCounter));
     documentChildren.push(new Paragraph({
       children: [new TextRun({ text: yaraContent, size: 20 })],
     }));
@@ -819,7 +822,7 @@ export async function exportREWord(reportData: REData, analystName: string, file
   });
 
   if (meaningfulIocs.length > 0) {
-    documentChildren.push(createSectionHeader("Indicators of Compromise"));
+    documentChildren.push(createSectionHeader("Indicators of Compromise", sectionCounter));
     meaningfulIocs.forEach((iocEntry: { type: string; value: string; description: string }) => {
       documentChildren.push(new Paragraph({
         children: [new TextRun({ text: `[${iocEntry.type || '-'}] ${iocEntry.value || '-'} - ${iocEntry.description || '-'}`, size: 20 })],
@@ -841,7 +844,7 @@ export async function exportREWord(reportData: REData, analystName: string, file
   };
   const hasSummaryContent = Object.values(summaryFieldsData).some(fieldValue => fieldValue && fieldValue.trim());
   if (hasSummaryContent) {
-    documentChildren.push(createSectionHeader("Summary"));
+    documentChildren.push(createSectionHeader("Summary", sectionCounter));
     documentChildren.push(...createKeyValueParagraphs(summaryFieldsData));
   }
 

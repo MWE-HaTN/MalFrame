@@ -7,8 +7,8 @@ import { ActivityDataSchema, safeJsonParse } from "@/lib/validationSchemas";
 import { useLanguage } from "@/hooks/useLanguage";
 
 // Lazy import debug logger to reduce initial bundle
-const debugWarn = (message: string) => 
-  import("@/lib/debugLogger").then(m => m.debugWarn(message));
+const debugWarn = (message: string) =>
+  import("@/lib/debugLogger").then(m => m.debugWarn(message)).catch(() => {});
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
@@ -68,10 +68,13 @@ export const ActivityTracker = memo(function ActivityTracker() {
     setActivityData(data);
   };
 
-  // Get today's date string
+  // Get today's date string (local time, not UTC)
   const getTodayString = () => {
     const today = new Date();
-    return today.toISOString().split('T')[0];
+    const y = today.getFullYear();
+    const m = String(today.getMonth() + 1).padStart(2, "0");
+    const d = String(today.getDate()).padStart(2, "0");
+    return `${y}-${m}-${d}`;
   };
 
   // Check if today is already tracked
@@ -83,18 +86,20 @@ export const ActivityTracker = memo(function ActivityTracker() {
     toggleDateActivity(today);
   };
 
-  // Toggle activity for a specific date
+  // Toggle activity for a specific date (compute new state, then persist)
   const toggleDateActivity = (dateString: string) => {
-    const hasActivity = activityData.activities.includes(dateString);
-    if (hasActivity) {
-      const filteredActivities = activityData.activities.filter(activityDate => activityDate !== dateString);
-      saveData({ activities: filteredActivities });
-      toast.success(`Activity removed for ${dateString}`);
-    } else {
-      const updatedActivities = [...activityData.activities, dateString];
-      saveData({ activities: updatedActivities });
-      toast.success(`Activity tracked for ${dateString}!`);
-    }
+    let wasTracked = false;
+    let newData: ActivityData = { activities: [] };
+    setActivityData(prev => {
+      wasTracked = prev.activities.includes(dateString);
+      const updated = wasTracked
+        ? prev.activities.filter(activityDate => activityDate !== dateString)
+        : [...prev.activities, dateString];
+      newData = { activities: updated };
+      return newData;
+    });
+    localStorage.setItem(STORAGE_KEYS.ACTIVITY_DATA, JSON.stringify(newData));
+    toast.success(wasTracked ? `Activity removed for ${dateString}` : `Activity tracked for ${dateString}!`);
   };
 
   // Export activity data as JSON file
@@ -108,7 +113,7 @@ export const ActivityTracker = memo(function ActivityTracker() {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
     toast.success(t("activity.exportSuccess"));
   }, [activityData, t]);
 
@@ -119,7 +124,12 @@ export const ActivityTracker = memo(function ActivityTracker() {
     const reader = new FileReader();
     reader.onload = (event) => {
       try {
-        const parsed = JSON.parse(event.target?.result as string);
+        const fileContent = event.target?.result;
+        if (typeof fileContent !== "string") {
+          toast.error(t("activity.importError"));
+          return;
+        }
+        const parsed = JSON.parse(fileContent);
         const result = ActivityDataSchema.safeParse(parsed);
         if (!result.success) {
           toast.error(t("activity.importError"));
@@ -147,7 +157,8 @@ export const ActivityTracker = memo(function ActivityTracker() {
   }), []);
 
   const formatDateForTooltip = useCallback((dateString: string, count: number) => {
-    const date = new Date(dateString);
+    const [y, m, d] = dateString.split("-").map(Number);
+    const date = new Date(y, m - 1, d);
     const formattedDate = date.toLocaleDateString('en-US', dateFormatOptions);
     const activityText = count === 0
       ? t("activity.noSessions")
@@ -171,7 +182,10 @@ export const ActivityTracker = memo(function ActivityTracker() {
     const current = new Date(startDate);
     
     while (current <= endDate || currentWeek.length > 0) {
-      const dateString = current.toISOString().split('T')[0];
+      const y = current.getFullYear();
+      const m = String(current.getMonth() + 1).padStart(2, "0");
+      const d = String(current.getDate()).padStart(2, "0");
+      const dateString = `${y}-${m}-${d}`;
       currentWeek.push({ date: new Date(current), dateString });
       
       if (currentWeek.length === 7) {
@@ -188,7 +202,10 @@ export const ActivityTracker = memo(function ActivityTracker() {
     // Add remaining days if any
     if (currentWeek.length > 0) {
       while (currentWeek.length < 7) {
-        const dateString = current.toISOString().split('T')[0];
+        const y = current.getFullYear();
+        const m = String(current.getMonth() + 1).padStart(2, "0");
+        const d = String(current.getDate()).padStart(2, "0");
+        const dateString = `${y}-${m}-${d}`;
         currentWeek.push({ date: new Date(current), dateString });
         current.setDate(current.getDate() + 1);
       }
@@ -272,7 +289,7 @@ export const ActivityTracker = memo(function ActivityTracker() {
               {t("activity.title")}
             </h3>
             <p className="text-sm text-muted-foreground">
-              {yearContributions} {language === "vn" ? "ngày trong" : "day(s) in"} {selectedYear}
+              {yearContributions} {t("activity.daysIn")} {selectedYear}
             </p>
           </div>
         </div>
@@ -285,7 +302,7 @@ export const ActivityTracker = memo(function ActivityTracker() {
           }`}
         >
           <CheckCircle className={`w-4 h-4 transition-transform duration-300 ${isTodayTracked ? "scale-110" : ""}`} />
-          <span>{isTodayTracked ? (language === "vn" ? "Đã theo dõi" : "Tracked") : (language === "vn" ? "Theo dõi" : "Track Today")}</span>
+          <span>{isTodayTracked ? t("activity.trackedToday") : t("activity.trackToday")}</span>
         </button>
       </div>
 
@@ -370,7 +387,7 @@ export const ActivityTracker = memo(function ActivityTracker() {
         {/* Year selector - always visible */}
         <div className="flex flex-col border-l border-border pl-3 w-[70px]">
           <span className="text-xs text-muted-foreground uppercase tracking-wider font-medium mb-2">
-            {language === "vn" ? "Năm" : "Year"}
+            {t("activity.year")}
           </span>
           <div className="flex flex-col gap-1">
             {years.map(year => (

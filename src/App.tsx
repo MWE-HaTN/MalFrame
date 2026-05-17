@@ -1,4 +1,4 @@
-import { Suspense, useEffect, useState, useCallback, memo } from "react";
+import { Suspense, lazy, useEffect, useState, useCallback, useMemo, memo } from "react";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
@@ -9,17 +9,12 @@ import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { useLanguage } from "@/hooks/useLanguage";
 import { useTheme } from "@/hooks/useTheme";
 import { trackTodayActivity } from "@/lib/activityUtils";
-import { STORAGE_KEYS } from "@/lib/storageKeys";
+import { STORAGE_KEYS, SCALE_OPTIONS } from "@/lib/storageKeys";
 import { toast } from "sonner";
 import { PageLoadingSkeleton } from "@/components/ui/dashboard-skeleton";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { SkipLink } from "@/components/ui/skip-link";
-import { ReloadPrompt } from "@/components/ReloadPrompt";
-import { ShortcutsDialog } from "@/components/ShortcutsDialog";
 import { ShortcutsHintBar } from "@/components/ShortcutsHintBar";
-import { SearchDialog } from "@/components/SearchDialog";
-import { CommandPalette } from "@/components/CommandPalette";
-import { IOCCrossReferenceDialog } from "@/components/IOCCrossReferenceDialog";
 import {
   Index,
   NotFound,
@@ -28,6 +23,11 @@ import {
   Tools,
   Settings,
 } from "@/lib/preloadRoutes";
+
+const LazyShortcutsDialog = lazy(() => import("@/components/ShortcutsDialog").then(m => ({ default: m.ShortcutsDialog })));
+const LazySearchDialog = lazy(() => import("@/components/SearchDialog").then(m => ({ default: m.SearchDialog })));
+const LazyCommandPalette = lazy(() => import("@/components/CommandPalette").then(m => ({ default: m.CommandPalette })));
+const LazyIOCCrossReferenceDialog = lazy(() => import("@/components/IOCCrossReferenceDialog").then(m => ({ default: m.IOCCrossReferenceDialog })));
 
 // Memoized routes to prevent unnecessary re-renders
 const AppRoutes = memo(function AppRoutes() {
@@ -57,11 +57,13 @@ const AppRoutes = memo(function AppRoutes() {
   }, [theme, setTheme, t]);
 
   const handleCycleScale = useCallback(() => {
-    const scales = [75, 100, 125, 150];
     const current = parseInt(localStorage.getItem(STORAGE_KEYS.DISPLAY_SCALE) || "100", 10);
-    const next = scales[(scales.indexOf(current) + 1) % scales.length];
+    const safeCurrent = Number.isFinite(current) ? current : 100;
+    const idx = SCALE_OPTIONS.indexOf(safeCurrent as typeof SCALE_OPTIONS[number]);
+    const next = SCALE_OPTIONS[idx >= 0 ? (idx + 1) % SCALE_OPTIONS.length : 0];
     document.documentElement.style.fontSize = `${next}%`;
     localStorage.setItem(STORAGE_KEYS.DISPLAY_SCALE, String(next));
+    window.dispatchEvent(new CustomEvent("display-scale-change", { detail: next }));
     toast.success(`${t("settings.displayScale")}: ${next}%`);
   }, [t]);
 
@@ -70,12 +72,14 @@ const AppRoutes = memo(function AppRoutes() {
     toast.success(t("activity.tracked") || "Activity tracked for today!");
   }, [t]);
 
-  useKeyboardShortcuts({
+  const shortcutCallbacks = useMemo(() => ({
     onShowHelp: handleShowHelp,
     onSearch: handleSearch,
     onCommandPalette: handleCommandPalette,
     onIOCCrossRef: handleIOCCrossRef,
-  });
+  }), [handleShowHelp, handleSearch, handleCommandPalette, handleIOCCrossRef]);
+
+  useKeyboardShortcuts(shortcutCallbacks);
 
   // Prevent browser from navigating to dropped files outside designated drop zones
   useEffect(() => {
@@ -95,24 +99,32 @@ const AppRoutes = memo(function AppRoutes() {
           <Route path="/" element={<Index />} />
           <Route path="/mia" element={<ErrorBoundary><MIADashboard /></ErrorBoundary>} />
           <Route path="/mre" element={<ErrorBoundary><MREDashboard /></ErrorBoundary>} />
-          <Route path="/tools" element={<Tools />} />
-          <Route path="/settings" element={<Settings />} />
+          <Route path="/tools" element={<ErrorBoundary><Tools /></ErrorBoundary>} />
+          <Route path="/settings" element={<ErrorBoundary><Settings /></ErrorBoundary>} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </Suspense>
-      <ShortcutsDialog open={shortcutsOpen} onOpenChange={setShortcutsOpen} />
-      <SearchDialog open={searchOpen} onOpenChange={setSearchOpen} />
-      <CommandPalette
-        open={commandPaletteOpen}
-        onOpenChange={setCommandPaletteOpen}
-        onSearch={handleSearch}
-        onShowHelp={handleShowHelp}
-        onToggleLanguage={handleToggleLanguage}
-        onToggleTheme={handleToggleTheme}
-        onCycleScale={handleCycleScale}
-        onTrackToday={handleTrackToday}
-      />
-      <IOCCrossReferenceDialog open={iocXrefOpen} onOpenChange={setIocXrefOpen} />
+      <Suspense fallback={null}>
+        <LazyShortcutsDialog open={shortcutsOpen} onOpenChange={setShortcutsOpen} />
+      </Suspense>
+      <Suspense fallback={null}>
+        <LazySearchDialog open={searchOpen} onOpenChange={setSearchOpen} />
+      </Suspense>
+      <Suspense fallback={null}>
+        <LazyCommandPalette
+          open={commandPaletteOpen}
+          onOpenChange={setCommandPaletteOpen}
+          onSearch={handleSearch}
+          onShowHelp={handleShowHelp}
+          onToggleLanguage={handleToggleLanguage}
+          onToggleTheme={handleToggleTheme}
+          onCycleScale={handleCycleScale}
+          onTrackToday={handleTrackToday}
+        />
+      </Suspense>
+      <Suspense fallback={null}>
+        <LazyIOCCrossReferenceDialog open={iocXrefOpen} onOpenChange={setIocXrefOpen} />
+      </Suspense>
       <ShortcutsHintBar
         onCommandPalette={handleCommandPalette}
         onSearch={handleSearch}
@@ -130,7 +142,6 @@ const App = () => (
           <TooltipProvider>
             <SkipLink />
             <Toaster />
-            <ReloadPrompt />
             <BrowserRouter>
               <AppRoutes />
             </BrowserRouter>

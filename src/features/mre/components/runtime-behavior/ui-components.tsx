@@ -4,9 +4,9 @@ import { Plus, Trash2, ChevronRight, Image, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { ImageGrid } from "@/components/ui/image-grid";
+import { useLanguage } from "@/hooks/useLanguage";
 
-import { inputStyles, textareaBaseStyles } from "@/features/mre/components/runtime-behavior/styles";
-export { inputStyles, textareaBaseStyles };
+import { textareaBaseStyles } from "@/features/mre/components/runtime-behavior/styles";
 
 // ============================================
 // ActionIcon - Standardized action button component
@@ -70,6 +70,7 @@ interface TagListProps {
 }
 
 export function TagList({ tags, availableTags, onChange, placeholder = "Add API..." }: TagListProps) {
+  const { t } = useLanguage();
   const [isOpen, setIsOpen] = useState(false);
   const [customInput, setCustomInput] = useState("");
   const [showCustomInput, setShowCustomInput] = useState(false);
@@ -78,6 +79,7 @@ export function TagList({ tags, availableTags, onChange, placeholder = "Add API.
   const unusedTags = availableTags.filter(tag => !tags.includes(tag));
   const buttonRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
+  const customInputId = useId();
 
   const updatePosition = useCallback(() => {
     if (!buttonRef.current) return;
@@ -164,14 +166,14 @@ export function TagList({ tags, availableTags, onChange, placeholder = "Add API.
       {showCustomInput ? (
         <div className="flex gap-2">
           <input
-            id="custom-api-input"
-            name="custom-api-input"
+            id={customInputId}
+            name={customInputId}
             type="text"
             value={customInput}
             onChange={(e) => setCustomInput(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleAddCustom()}
-            placeholder="Enter custom API name..."
-            aria-label="Enter custom API name"
+            placeholder={t("aria.enterCustomApiPlaceholder")}
+            aria-label={t("aria.enterCustomApiName")}
             className={cn(
               "flex-1 h-10 bg-background/50 border border-border/60 rounded-md px-3",
               "text-sm font-mono text-foreground placeholder:text-muted-foreground/50",
@@ -363,7 +365,13 @@ export function SubItemRow({ title, icon, isExpanded, onExpandToggle, count, onA
             role="button"
             tabIndex={0}
             onClick={handleAdd}
-            onKeyDown={(e) => e.key === 'Enter' && handleAdd(e as unknown as React.MouseEvent)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.stopPropagation();
+                e.preventDefault();
+                onAdd?.();
+              }
+            }}
             className={cn(
               "flex items-center gap-1.5 px-3 py-1.5 text-xs font-mono text-primary",
               "border border-primary/30 rounded-sm uppercase tracking-wider",
@@ -410,13 +418,15 @@ export function EntryCard({
   isDragging,
   isDragOver
 }: EntryCardProps) {
+  const { t } = useLanguage();
   const isDraggable = typeof index === 'number' && !!onDragStart && !!onDragOver && !!onDragEnd;
+  const dragIndex = isDraggable ? index : undefined;
 
   return (
-    <div 
+    <div
       draggable={isDraggable ? true : undefined}
-      onDragStart={isDraggable ? () => onDragStart(index) : undefined}
-      onDragOver={isDraggable ? (e) => { e.preventDefault(); onDragOver(index); } : undefined}
+      onDragStart={isDraggable ? () => onDragStart(dragIndex!) : undefined}
+      onDragOver={isDraggable ? (e) => { e.preventDefault(); onDragOver(dragIndex!); } : undefined}
       onDragEnd={isDraggable ? onDragEnd : undefined}
       className={cn(
         "relative group p-3 bg-background/50 border border-border/50 rounded-sm",
@@ -434,7 +444,7 @@ export function EntryCard({
         <ActionIcon
           icon={<Trash2 className="w-4 h-4" />}
           onClick={onDelete}
-          title="Delete"
+          title={t("common.delete")}
           variant="delete"
           showOnHover
           className="absolute top-2 right-2"
@@ -508,10 +518,10 @@ interface AutoTextareaProps {
   inEntryCard?: boolean;
 }
 
-export function AutoTextarea({ 
-  value, 
-  onChange, 
-  placeholder, 
+export function AutoTextarea({
+  value,
+  onChange,
+  placeholder,
   minHeight = 56,
   images = [],
   onImagesChange,
@@ -519,10 +529,13 @@ export function AutoTextarea({
   label,
   inEntryCard = false
 }: AutoTextareaProps) {
+  const { t } = useLanguage();
   const ref = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaId = useId();
   const fileInputId = useId();
+  const imagesRef = useRef(images);
+  imagesRef.current = images;
 
   const adjustHeight = useCallback(() => {
     const textarea = ref.current;
@@ -545,7 +558,7 @@ export function AutoTextarea({
 
   const handlePaste = (pasteEvent: ClipboardEvent<HTMLTextAreaElement>) => {
     if (!allowImages || !onImagesChange) return;
-    
+
     const clipboardItems = pasteEvent.clipboardData?.items;
     if (!clipboardItems) return;
 
@@ -557,8 +570,13 @@ export function AutoTextarea({
         if (imageFile) {
           const fileReader = new FileReader();
           fileReader.onload = (loadEvent) => {
-            const base64Data = loadEvent.target?.result as string;
-            onImagesChange([...images, base64Data]);
+            const base64Data = loadEvent.target?.result;
+            if (typeof base64Data === "string" && base64Data.length > 0) {
+              onImagesChange([...imagesRef.current, base64Data]);
+            }
+          };
+          fileReader.onerror = () => {
+            import("sonner").then(({ toast }) => toast.error(t("error.failedToReadImage")));
           };
           fileReader.readAsDataURL(imageFile);
         }
@@ -579,15 +597,23 @@ export function AutoTextarea({
       (imageFile) =>
         new Promise<string>((resolve) => {
           const fileReader = new FileReader();
-          fileReader.onload = (loadEvent) => resolve(loadEvent.target?.result as string);
+          fileReader.onload = (loadEvent) => {
+            const result = loadEvent.target?.result;
+            resolve(typeof result === "string" ? result : "");
+          };
+          fileReader.onerror = () => {
+            import("sonner").then(({ toast }) => toast.error(t("error.failedToReadImage")));
+            resolve("");
+          };
           fileReader.readAsDataURL(imageFile);
         })
     );
 
     Promise.all(reads).then((base64s) => {
-      onImagesChange([...images, ...base64s]);
-    }).catch(() => {
-      // Image read failed silently — partial results are acceptable
+      const validImages = base64s.filter((img) => img.length > 0);
+      if (validImages.length > 0) {
+        onImagesChange([...imagesRef.current, ...validImages]);
+      }
     });
 
     if (fileInputRef.current) {
@@ -597,7 +623,7 @@ export function AutoTextarea({
 
   const removeImage = (imageIndex: number) => {
     if (!onImagesChange) return;
-    const remainingImages = images.filter((_, filterIndex) => filterIndex !== imageIndex);
+    const remainingImages = imagesRef.current.filter((_, filterIndex) => filterIndex !== imageIndex);
     onImagesChange(remainingImages);
   };
 
@@ -618,7 +644,7 @@ export function AutoTextarea({
             <ActionIcon
               icon={<Image className="w-3.5 h-3.5" />}
               onClick={() => fileInputRef.current?.click()}
-              title="Add Image"
+              title={t("common.addImage")}
               className={cn(
                 "absolute top-0",
                 // Position: when inside EntryCard (has delete button), place left of delete
@@ -661,7 +687,7 @@ export function AutoTextarea({
           accept="image/*"
           multiple
           onChange={handleFileSelect}
-          aria-label="Upload images"
+          aria-label={t("aria.uploadImages")}
           className="hidden"
         />
       )}

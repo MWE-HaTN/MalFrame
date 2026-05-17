@@ -87,6 +87,18 @@ export const STORAGE_KEYS = {
   UNPACKING_STAGES: "unpacking-stages-expanded",
 
   // ============================================
+  // Multi-Case Registries (IndexedDB keys)
+  // ============================================
+  MIA_CASES: "mia-cases",
+  MRE_CASES: "mre-cases",
+
+  // ============================================
+  // Active Case (localStorage)
+  // ============================================
+  MIA_ACTIVE_CASE: "mia-active-case",
+  MRE_ACTIVE_CASE: "mre-active-case",
+
+  // ============================================
   // Export Reminder
   // ============================================
   LAST_EXPORT_PREFIX: "malframe:last-export:",
@@ -94,4 +106,7 @@ export const STORAGE_KEYS = {
 
 // Type for storage keys
 export type StorageKey = typeof STORAGE_KEYS[keyof typeof STORAGE_KEYS];
+
+// Shared display scale options (used by Settings and App cycle shortcut)
+export const SCALE_OPTIONS = [75, 90, 100, 110, 125, 150, 175, 200] as const;
 

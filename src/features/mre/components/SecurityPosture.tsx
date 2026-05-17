@@ -1,5 +1,6 @@
 import { memo, useMemo, useCallback } from "react";
 import { Shield, Check, X, Minus } from "lucide-react";
+import { useLanguage } from "@/hooks/useLanguage";
 import {
   Select,
   SelectContent,
@@ -92,16 +93,17 @@ interface SecurityPostureProps {
 const SignatureDropdown = memo(function SignatureDropdown({ 
   value, 
   onChange 
-}: { 
-  value: string; 
+}: {
+  value: string;
   onChange?: (value: string) => void;
 }) {
+  const { t } = useLanguage();
   const currentOption = SIGNATURE_OPTIONS.find(signatureOption => signatureOption.value === value) || SIGNATURE_OPTIONS[2]; // default to "unknown"
   
   return (
     <Select value={value || "unknown"} onValueChange={onChange}>
       <SelectTrigger className="w-48 h-9 font-mono text-sm bg-muted/50 border-border">
-        <SelectValue placeholder="Select status">{currentOption.label}</SelectValue>
+        <SelectValue placeholder={t("common.selectStatus")}>{currentOption.label}</SelectValue>
       </SelectTrigger>
       <SelectContent className="bg-popover border-border">
         {SIGNATURE_OPTIONS.map((option) => (
@@ -203,34 +205,35 @@ const MitigationIndicator = memo(function MitigationIndicator({
 });
 
 // Posture summary - neutral RE language
-const PostureSummary = memo(function PostureSummary({ 
-  enabledCount, 
-  totalApplicable 
-}: { 
-  enabledCount: number; 
+const PostureSummary = memo(function PostureSummary({
+  enabledCount,
+  totalApplicable
+}: {
+  enabledCount: number;
   totalApplicable: number;
 }) {
+  const { t } = useLanguage();
   const ratio = totalApplicable > 0 ? enabledCount / totalApplicable : 0;
-  
+
   let summary: string;
   if (ratio >= 0.8) {
-    summary = "High Hardening";
+    summary = t("securityPosture.highHardening");
   } else if (ratio >= 0.4) {
-    summary = "Standard Hardening";
+    summary = t("securityPosture.standardHardening");
   } else {
-    summary = "Low Hardening";
+    summary = t("securityPosture.lowHardening");
   }
 
   return (
     <div className="flex items-center gap-3 pt-2 border-t border-border/50">
       <span className="text-xs text-muted-foreground font-mono uppercase tracking-wider">
-        PE Hardening Posture
+        {t("securityPosture.peHardeningPosture")}
       </span>
       <span className="inline-flex items-center px-2.5 py-1 text-xs font-mono rounded bg-muted/50 text-foreground border border-border">
         {summary}
       </span>
       <span className="text-xs text-muted-foreground font-mono">
-        ({enabledCount}/{totalApplicable} applicable mitigations enabled)
+        {t("securityPosture.applicableMitigations").replace("{enabled}", String(enabledCount)).replace("{total}", String(totalApplicable))}
       </span>
     </div>
   );
@@ -243,6 +246,7 @@ export const SecurityPosture = memo(function SecurityPosture({
   onSignatureChange,
   onMitigationsChange,
 }: SecurityPostureProps) {
+  const { t } = useLanguage();
   // Normalize mitigations for comparison
   const normalizedSelected = useMemo(() => 
     dllMitigations.map(mitigation => mitigation.toLowerCase()), 
@@ -260,19 +264,18 @@ export const SecurityPosture = memo(function SecurityPosture({
     // Check if enabled
     const isEnabled = normalizedSelected.some(selectedMitigation =>
       selectedMitigation === mitigation.label.toLowerCase() ||
-      selectedMitigation.includes(mitigation.key.toLowerCase()) ||
-      selectedMitigation.includes(mitigation.label.toLowerCase().split(" ")[0])
+      selectedMitigation === mitigation.key.toLowerCase()
     );
 
     return isEnabled ? "enabled" : "disabled";
   }, [architecture, normalizedSelected]);
 
   // Get custom mitigations (ones not in the standard list)
-  const customMitigations = useMemo(() => 
-    dllMitigations.filter(userMitigation => 
-      !DLL_MITIGATIONS.some(standardMitigation => 
+  const customMitigations = useMemo(() =>
+    dllMitigations.filter(userMitigation =>
+      !DLL_MITIGATIONS.some(standardMitigation =>
         standardMitigation.label.toLowerCase() === userMitigation.toLowerCase() ||
-        userMitigation.toLowerCase().includes(standardMitigation.key.toLowerCase())
+        standardMitigation.key.toLowerCase() === userMitigation.toLowerCase()
       )
     ),
     [dllMitigations]
@@ -303,7 +306,7 @@ export const SecurityPosture = memo(function SecurityPosture({
       <div className="flex items-center gap-2 mb-3">
         <Shield className="w-4 h-4 text-muted-foreground" />
         <span className="text-xs text-muted-foreground font-mono uppercase tracking-wider">
-          Security Posture
+          {t("securityPosture.title")}
         </span>
       </div>
       <div className="border border-border rounded-md bg-card/30 p-4 space-y-4">
@@ -312,7 +315,7 @@ export const SecurityPosture = memo(function SecurityPosture({
           {/* Digital Signature - Dropdown */}
           <div className="space-y-2 shrink-0">
             <span className="text-xs text-muted-foreground font-mono uppercase tracking-wider">
-              Digital Signature
+              {t("securityPosture.digitalSignature")}
             </span>
             <SignatureDropdown value={signatureStatus} onChange={onSignatureChange} />
           </div>
@@ -323,7 +326,7 @@ export const SecurityPosture = memo(function SecurityPosture({
           {/* DLL Mitigations - Tri-state, inline */}
           <div className="space-y-2 flex-1 min-w-0">
             <span className="text-xs text-muted-foreground font-mono uppercase tracking-wider">
-              DLL Characteristics / Mitigations
+              {t("securityPosture.dllMitigations")}
             </span>
             <TooltipProvider delayDuration={200}>
               <div className="flex flex-wrap gap-2">
@@ -334,10 +337,10 @@ export const SecurityPosture = memo(function SecurityPosture({
                     
                     const isCurrentlyEnabled = state === "enabled";
                     if (isCurrentlyEnabled) {
-                      // Remove from list
-                      onMitigationsChange(dllMitigations.filter(existingMitigation => 
+                      // Remove from list (exact match only to avoid stripping unrelated custom mitigations)
+                      onMitigationsChange(dllMitigations.filter(existingMitigation =>
                         existingMitigation.toLowerCase() !== mitigation.label.toLowerCase() &&
-                        !existingMitigation.toLowerCase().includes(mitigation.key.toLowerCase())
+                        existingMitigation.toLowerCase() !== mitigation.key.toLowerCase()
                       ));
                     } else {
                       // Add to list

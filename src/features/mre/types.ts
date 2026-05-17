@@ -2,7 +2,7 @@
  * Type definitions for MRE (Malware Reverse Engineering) Dashboard
  */
 
-import type { UnpackLayer, PESectionData } from "@/types/dashboard";
+import type { UnpackLayer, PESectionData, IOC } from "@/types/dashboard";
 import type { RuntimeBehaviorData } from "@/features/mre/components/runtime-behavior";
 import type { CodeAnalysisData, DeepDiveData } from "@/features/mre/components/CodeAnalysisGroups";
 
@@ -10,23 +10,12 @@ import type { CodeAnalysisData, DeepDiveData } from "@/features/mre/components/C
 // MBC Mapping Item
 // ============================================
 
-export interface MBCMappingItem {
+interface MBCMappingItem {
   id: string;
   name: string;
   objectiveId: string;
   objectiveName: string;
   type: 'behavior' | 'micro' | 'enhanced' | 'sub-technique';
-}
-
-// ============================================
-// IOC Item
-// ============================================
-
-export interface IOCItem {
-  id: string;
-  type: string;
-  value: string;
-  description: string;
 }
 
 // ============================================
@@ -65,7 +54,7 @@ export interface BackgroundData {
 // Static Analysis Data
 // ============================================
 
-export interface StaticAnalysisData {
+interface StaticAnalysisData {
   // Hashes & Signature
   sha256: string;
   impHash: string;
@@ -106,7 +95,7 @@ export interface StaticAnalysisData {
 // Code Behavior Data
 // ============================================
 
-export interface CodeBehaviorData {
+interface CodeBehaviorData {
   runtimeBehavior: RuntimeBehaviorData;
   codeAnalysis: CodeAnalysisData;
 }
@@ -115,10 +104,10 @@ export interface CodeBehaviorData {
 // Detection Data
 // ============================================
 
-export interface DetectionData {
+interface DetectionData {
   mbcMapping: MBCMappingItem[];
   yaraSignature: string;
-  iocs: IOCItem[];
+  iocs: IOC[];
   summary: SummaryData;
 }
 

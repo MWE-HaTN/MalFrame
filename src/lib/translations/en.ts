@@ -14,8 +14,74 @@ export const en: Record<string, string> = {
   "common.select": "Select...",
   "common.notes": "Notes",
   "common.cancel": "Cancel",
-  
+  "common.confirm": "Confirm",
+  "common.addRow": "Add row",
+  "common.deleteRow": "Delete row",
+  "common.copy": "Copy",
+  "common.search": "Search",
+  "common.close": "Close",
+  "common.toggle": "Toggle",
+  "common.expand": "Expand",
+  "common.collapse": "Collapse",
+  "common.previous": "Previous",
+  "common.next": "Next",
+  "common.upload": "Upload",
+  "common.remove": "Remove",
+  "common.edit": "Edit",
+  "common.clearAll": "Clear all",
+  "common.download": "Download",
+  "common.refresh": "Refresh",
+  "common.filter": "Filter",
+  "common.sort": "Sort",
+  "common.moreActions": "More actions",
+  "common.noResults": "No results found",
+  "common.addImage": "Add image",
+  "common.additionalNotes": "Additional notes",
+  "common.clearSearch": "Clear search",
+  "common.closePreview": "Close preview",
+  "common.copyName": "Copy name",
+  "common.copySha256": "Copy SHA-256",
+  "common.deleteFromCase": "Delete from case",
+  "common.nextImage": "Next image",
+  "common.previousImage": "Previous image",
+  "common.selectStatus": "Select status",
+
+  // Aria / Accessibility
+  "aria.addToSection": "Add to section",
+  "aria.removeFromSection": "Remove from section",
+  "aria.dragToReorder": "Drag to reorder",
+  "aria.selectItem": "Select item",
+  "aria.openMenu": "Open menu",
+  "aria.closeMenu": "Close menu",
+  "aria.loadingContent": "Loading content",
+  "aria.noData": "No data available",
+  "aria.addImageAttachment": "Add image attachment",
+  "aria.artifactType": "Artifact type",
+  "aria.developerProfileInfo": "Developer profile information",
+  "aria.enterCustomApiName": "Enter custom API name",
+  "aria.enterCustomApiPlaceholder": "Enter custom API",
+  "aria.entropy": "Entropy",
+  "aria.entryName": "Entry name",
+  "aria.externalProfile": "External profile",
+  "aria.moveEntryDown": "Move entry down",
+  "aria.moveEntryUp": "Move entry up",
+  "aria.namePlaceholder": "Name",
+  "aria.nextMonth": "Next month",
+  "aria.permissions": "Permissions",
+  "aria.previousMonth": "Previous month",
+  "aria.removeParsedIoc": "Remove parsed IOC",
+  "aria.searchMbcBehaviors": "Search MBC behaviors",
+  "aria.searchMitreTechniques": "Search MITRE techniques",
+  "aria.sectionHash": "Section hash",
+  "aria.sectionName": "Section name",
+  "aria.selectFilesForHash": "Select files for hash",
+  "aria.size": "Size",
+  "aria.uploadImageFiles": "Upload image files",
+  "aria.uploadImages": "Upload images",
+  "aria.visitProjectPage": "Visit project page",
+
   // Export
+  "export.reminder": "Data hasn't been exported in {days} days. Consider backing up.",
   "export.json": "JSON (Data)",
   "export.pdf": "PDF (Report)",
   "export.word": "Word (Doc)",
@@ -58,6 +124,21 @@ export const en: Record<string, string> = {
   "clear.confirm": "Yes, Clear All",
   "clear.success": "Data cleared!",
   
+  // Error messages
+  "error.failedToLoad": "Failed to load saved data. Starting with a clean state.",
+  "error.failedToSave": "Failed to save data. Your changes may not persist.",
+  "error.fileTooLarge": "File is too large (max 5MB)",
+  "error.failedToReadFile": "Failed to read file",
+  "error.failedToProcessFiles": "Failed to process files",
+  "error.imageTooLarge": "Image too large (max 10MB)",
+  "error.failedToProcessImage": "Failed to process image",
+  "error.failedToProcessImages": "Failed to process images",
+  "error.failedToCopy": "Failed to copy to clipboard",
+  "error.failedToReadImage": "Failed to read image",
+  "error.dataMigrationFailed": "Data migration failed. Starting with a fresh template.",
+  "error.dataCorrupted": "Saved data appears corrupted. Starting with a fresh template.",
+  "error.limitedStorage": "Running in limited storage mode. Data may not persist across sessions.",
+
   // MIA Dashboard
   "mia.title": "Malware Incident Analysis Dashboard",
   "mia.subtitle": "Malware incident investigation and response.",
@@ -207,6 +288,34 @@ export const en: Record<string, string> = {
   "mre.stringsDetection": "Strings Detection",
   "mre.importsExports": "Imports / Exports",
   "mre.peSections": "PE Sections",
+  "mre.fileTypePlaceholder": "e.g., PE32 executable, ELF binary",
+  "mre.impHashPlaceholder": "e.g., 0x12345678",
+
+  // PE Section Entry Table
+  "peSection.number": "#",
+  "peSection.name": "Name",
+  "peSection.size": "Size",
+  "peSection.entropy": "Entropy",
+  "peSection.rwx": "RWX",
+  "peSection.hash": "Hash",
+  "peSection.noSections": "No PE sections added",
+  "peSection.addSection": "Add Section",
+
+  // MRE Static Analysis Cards
+  "mre.basicFileInfo": "Basic File Info",
+  "mre.peInfo": "Portable Executable Info",
+  "mre.sha256": "SHA256",
+  "mre.impHash": "ImpHash",
+  "mre.fileType": "File Type",
+  "mre.fileSize": "File Size",
+  "mre.compileTime": "Compile Time",
+  "mre.fileEntropy": "Overall Entropy",
+  "mre.entryPoint": "Entry Point",
+  "mre.imageBase": "Image Base",
+  "mre.architecture": "Architecture",
+  "mre.numberOfSections": "Num of Sections",
+  "mre.characteristics": "Characteristics",
+  "mre.subsystem": "Subsystem",
   // MRE Malware Behavior Mapping
   "mre.mbcMapping": "Malware Behavior Mapping",
   // MRE Summary fields
@@ -232,16 +341,30 @@ export const en: Record<string, string> = {
   "mre.placeholder.tiNotes": "Threat intelligence notes...",
   "mre.placeholder.stringsDetection": "Notable strings, suspicious patterns...",
   "mre.placeholder.importsExports": "Key imports and exported functions...",
-  
+
+  // Security Posture
+  "securityPosture.title": "Security Posture",
+  "securityPosture.digitalSignature": "Digital Signature",
+  "securityPosture.dllMitigations": "DLL Characteristics / Mitigations",
+  "securityPosture.highHardening": "High Hardening",
+  "securityPosture.standardHardening": "Standard Hardening",
+  "securityPosture.lowHardening": "Low Hardening",
+  "securityPosture.peHardeningPosture": "PE Hardening Posture",
+  "securityPosture.applicableMitigations": "({enabled}/{total} applicable mitigations enabled)",
+
   // MBC Mapping
   "mbc.description": "Select relevant malware behaviors observed in this analysis.",
   "mbc.loading": "Loading MBC data...",
+  "mbc.loadError": "Failed to load MBC data",
   "mbc.update": "Update",
   "mbc.export": "Export",
   "mbc.search": "Search behaviors, methods, IDs...",
   "mbc.selectedBehaviors": "Selected Behaviors",
   "mbc.clickToRemove": "Click to remove",
   "mbc.exportSuccess": "Malware Behavior Mapping exported successfully",
+  "mbc.checkForUpdates": "Check for updates",
+  "mbc.exportSelected": "Export selected",
+  "mbc.viewOnMitre": "View on MITRE",
 
   // MITRE ATT&CK
   "mitre.description": "Click to select relevant MITRE ATT&CK techniques observed in this analysis.",
@@ -264,6 +387,7 @@ export const en: Record<string, string> = {
   "timeline.warning": "Warning",
   "timeline.critical": "Critical",
   "timeline.empty": "No timeline events yet. Add your first event above.",
+  "timeline.noEvents": "No timeline events",
   "timeline.placeholder.time": "2024-01-15 08:00",
   "timeline.placeholder.content": "Describe the event...",
   
@@ -276,8 +400,10 @@ export const en: Record<string, string> = {
   "ioc.copyAll": "Copy All",
   "ioc.copied": "IOC copied to clipboard!",
   "ioc.copiedAll": "All IOCs copied to clipboard!",
+  "ioc.copyFailed": "Failed to copy to clipboard",
   "ioc.added": "IOC added!",
   "ioc.removed": "IOC removed",
+  "ioc.remove": "Remove",
   "ioc.enterValue": "Please enter an IOC value",
   
   // Notes
@@ -293,11 +419,15 @@ export const en: Record<string, string> = {
   "settings.profileGithub": "GitHub URL",
   "settings.profileSaved": "Profile saved!",
   "settings.language": "Language",
-  "settings.languageDesc": "Switch between EN/VN",
+  "settings.languageDesc": "Switch between English/Vietnamese",
+  "settings.languageEn": "English",
+  "settings.languageVn": "Vietnamese",
   "settings.theme": "Theme",
   "settings.themeDesc": "Switch between Dark/Light mode",
   "settings.themeDark": "Switched to Dark mode",
   "settings.themeLight": "Switched to Light mode",
+  "settings.dark": "Dark",
+  "settings.light": "Light",
   "settings.displayScale": "Display Scale",
   "settings.displayScaleDesc": "Adjust interface size",
   "settings.restoreScale": "Restore to 100%",
@@ -310,14 +440,15 @@ export const en: Record<string, string> = {
   "home.mreCardDesc": "Malware Reverse Engineering with static/dynamic analysis, unpacking notes, and YARA signatures.",
   "home.localStorage": "Local Storage",
   "home.localStorageDesc": "All data is stored locally in your browser. No server required, your data stays private.",
-  "home.exportOptions": "Export Options",
+  "home.exportOptions": "Export Report Options",
   "home.exportOptionsDesc": "Export your reports as JSON for easy sharing and archiving of your analysis.",
   "home.mitreCard": "MITRE ATT&CK",
-  "home.mitreCardDesc": "Map techniques to all 14 MITRE ATT&CK tactics for comprehensive threat documentation.",
+  "home.mitreCardDesc": "Map techniques to all {count} MITRE ATT&CK tactics for comprehensive threat documentation.",
   "home.behaviorCard": "Malware Behavior",
   "home.behaviorCardDesc": "Map malware behaviors and micro-behaviors to reveal execution logic and evasion patterns.",
   "home.statsTitle": "DESIGNED FOR MALWARE ANALYST PROFESSIONALS",
   "home.mitreTactics": "MITRE Tactics",
+  "home.mbcBehaviors": "Malware Behaviors",
   "home.analysisWorkflows": "Analysis Workflows",
   "home.casesSupported": "Cases Supported",
   "home.localPrivate": "Local & Private",
@@ -381,6 +512,7 @@ export const en: Record<string, string> = {
   "activity.noSessions": "No sessions",
   "activity.session": "session",
   "activity.sessions": "sessions",
+  "activity.tracked": "Activity tracked for today!",
   
   // Section Hints — inline guidance for analysts
   "hint.mia.background": "Fill in: Case ID (e.g. INC-2026-001), analyst name, hostname of infected machine, and how the infection started (phishing, USB, drive-by). These fields appear in the report header.",
@@ -531,8 +663,11 @@ export const en: Record<string, string> = {
   "codeAnalysis.stages.transitionMethod": "Transition Method",
   "codeAnalysis.stages.transitionPlaceholder": "e.g., Shellcode transfer via JMP EAX",
   "codeAnalysis.stages.apisUsed": "APIs Used",
+  "codeAnalysis.stages.apisPlaceholder": "e.g., VirtualAlloc, WriteProcessMemory",
   "codeAnalysis.stages.artifacts": "Artifacts",
   "codeAnalysis.stages.ioc": "IOC",
+  "codeAnalysis.static.apiPlaceholder": "e.g., CreateRemoteThread",
+  "codeAnalysis.dynamic.apiPlaceholder": "e.g., NtReadVirtualMemory",
 
   // Runtime behavior component keys (runtime.*.title etc used by components)
   "runtime.antiAnalysis.title": "Anti-Analysis & Evasion",
@@ -558,6 +693,8 @@ export const en: Record<string, string> = {
   "runtime.antiAnalysis.notesImpact": "Notes / Impact",
   "runtime.antiAnalysis.notesImpactPlaceholder": "e.g., Bypassed by patching RDTSC handler in ScyllaHide",
   "runtime.antiAnalysis.noAntiVM": "No anti-VM methods documented yet.",
+  "runtime.antiAnalysis.antiDebugging": "Anti-Debugging",
+  "runtime.antiAnalysis.antiVM": "Anti-VM",
 
   "runtime.execution.title": "Execution Behavior",
   "runtime.execution.executionFlow": "Execution Flow",
@@ -675,22 +812,6 @@ export const en: Record<string, string> = {
   "timeline.tableView": "Table",
   "timeline.visualView": "Timeline",
 
-  // Case Templates
-  "template.title": "Choose Case Template",
-  "template.description": "Select a template to pre-fill your case",
-  "template.blank": "Blank",
-  "template.blankDesc": "Start with an empty case",
-  "template.ransomware": "Ransomware",
-  "template.ransomwareDesc": "Pre-fills impact, timeline, and recommendations for ransomware incidents",
-  "template.phishing": "Phishing",
-  "template.phishingDesc": "Pre-fills infection vector, MITRE techniques, and IOCs for phishing cases",
-  "template.apt": "APT",
-  "template.aptDesc": "Pre-fills MITRE techniques and impact for advanced persistent threats",
-  "template.infoStealer": "Info-Stealer",
-  "template.infoStealerDesc": "Pre-fills summary and MBC mappings for credential stealers",
-  "template.custom": "Custom",
-  "template.customDesc": "Start with a blank case, customized later",
-
   // Clipboard IOC Parser
   "ioc.pasteExtract": "Paste & Extract",
   "ioc.pasteTitle": "Paste & Extract IOCs",
@@ -710,8 +831,7 @@ export const en: Record<string, string> = {
   "iocXref.noResults": "No shared IOCs found across cases.",
   "iocXref.foundIn": "Found in {count} cases",
 
-  // Command Palette — IOC XRef
-  "commandPalette.actions.iocCrossRef": "IOC Cross-Reference",
+  // Command Palette
   "commandPalette.group.tools": "Tools",
 
   // Shortcuts — IOC XRef
@@ -762,4 +882,61 @@ export const en: Record<string, string> = {
   "mbc.versionCheck.upToDate": "MBC is up to date",
   "mbc.versionCheck.error": "Failed to check for updates",
   "mbc.noSuggestions": "No suggestions based on current runtime behavior data.",
+
+  // 404 Page
+  "notFound.title": "Oops! Page not found",
+  "notFound.returnHome": "Return to Home",
+
+  // Dashboard Header
+  "dashboard.saving": "Saving...",
+  "dashboard.saved": "Saved",
+  "dashboard.saveFailed": "Save failed",
+
+  // Scroll to Top
+  "common.scrollUp": "Scroll to top",
+
+  // Shortcuts Bar
+  "common.closeShortcutsBar": "Close shortcuts bar",
+
+  // Header
+  "common.goToHome": "Go to home",
+
+  // Collapsible Section
+  "common.toggleGuidance": "Toggle guidance",
+  "common.dismissGuidance": "Dismiss guidance",
+
+  // File Hash Dropzone
+  "dropzone.fileAdded": "File added to evidence!",
+  "dropzone.processFailed": "Failed to process file",
+
+  // Notes Log
+  "notes.imageTooLarge": "Image too large (max 10MB)",
+  "notes.writeHere": "Write notes here...",
+  "notes.writeHereWithImages": "Write notes here... (Ctrl+V to paste images)",
+
+  // Evidence Artifacts
+  "evidence.artifactRemoved": "Artifact removed.",
+  "evidence.undo": "Undo",
+  "evidence.noArtifacts": "No artifacts added to this case",
+  "evidence.addArtifactHint": "Click \"Add Artifact\" to attach evidence files",
+  "evidence.sampleInfoCleared": "Sample Info cleared",
+
+  // Date Picker
+  "common.selectDate": "Select date",
+
+  // Activity Tracker
+  "activity.daysIn": "day(s) in",
+  "activity.trackToday": "Track Today",
+  "activity.trackedToday": "Tracked",
+
+  // Settings
+  "settings.languageChangedEn": "Language changed to English",
+  "settings.languageChangedVn": "Language changed to Vietnamese",
+
+  // Date Picker
+  "common.today": "Today",
+  "common.clearSelection": "Clear",
+
+  // Activity Tracker
+  "activity.year": "Year",
 };

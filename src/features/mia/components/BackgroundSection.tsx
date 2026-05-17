@@ -9,6 +9,18 @@ import { CollapsibleSection } from "@/components/CollapsibleSection";
 import { PortalDropdown } from "@/components/ui/portal-dropdown";
 import { useLanguage } from "@/hooks/useLanguage";
 import type { BackgroundData } from "@/features/mia/types";
+import type { DropdownOption } from "@/components/ui/portal-dropdown";
+
+const getInfectionVectorOptions = (t: (key: string) => string): DropdownOption[] => [
+  { value: "", label: t("common.select") },
+  { value: "email", label: t("mia.vector.email") },
+  { value: "web", label: t("mia.vector.web") },
+  { value: "usb", label: t("mia.vector.usb") },
+  { value: "exploit", label: t("mia.vector.exploit") },
+  { value: "supply_chain", label: t("mia.vector.supplyChain") },
+  { value: "insider", label: t("mia.vector.insider") },
+  { value: "unknown", label: t("mia.vector.unknown") },
+];
 
 interface BackgroundSectionProps {
   data: BackgroundData;
@@ -74,16 +86,7 @@ export const BackgroundSection = memo(function BackgroundSection({
           label={t("mia.infectionVector")}
           value={data.infectionVector}
           onChange={(v) => updateField("infectionVector", v)}
-          options={[
-            { value: "", label: t("common.select") },
-            { value: "email", label: t("mia.vector.email") },
-            { value: "web", label: t("mia.vector.web") },
-            { value: "usb", label: t("mia.vector.usb") },
-            { value: "exploit", label: t("mia.vector.exploit") },
-            { value: "supply_chain", label: t("mia.vector.supplyChain") },
-            { value: "insider", label: t("mia.vector.insider") },
-            { value: "unknown", label: t("mia.vector.unknown") },
-          ]}
+          options={getInfectionVectorOptions(t)}
         />
       </div>
     </CollapsibleSection>

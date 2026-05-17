@@ -121,7 +121,20 @@ export function extractLogText(value: LogEntry[] | string | unknown, separator =
  * Convert array/string to LogEntry array (for data migration)
  */
 export function toLogEntries(value: unknown): LogEntry[] {
-  if (Array.isArray(value)) return value;
+  if (Array.isArray(value)) {
+    return value.map((item: unknown) => {
+      if (item && typeof item === "object" && "text" in item) {
+        const obj = item as Record<string, unknown>;
+        return {
+          id: typeof obj.id === "string" ? obj.id : generateId(),
+          text: typeof obj.text === "string" ? obj.text : "",
+          images: Array.isArray(obj.images) ? obj.images as string[] : [],
+          timestamp: typeof obj.timestamp === "string" ? obj.timestamp : new Date().toISOString(),
+        };
+      }
+      return { id: generateId(), text: String(item ?? ""), images: [], timestamp: new Date().toISOString() };
+    });
+  }
   if (typeof value === "string" && value.trim()) {
     return [{ id: generateId(), text: value, images: [], timestamp: new Date().toISOString() }];
   }
@@ -144,16 +157,6 @@ export function extractUnpackLayers(layers: UnpackLayer[] | undefined): string {
 // ============================================
 // LABEL FORMATTING HELPERS
 // ============================================
-
-/** Format camelCase key to readable label */
-export function formatFieldLabel(key: string): string {
-  return key
-    .replace(/([A-Z])/g, " $1")
-    .trim()
-    .split(" ")
-    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-    .join(" ");
-}
 
 /** Format label with colon and non-breaking space (for PDF) */
 export function formatLabelWithColon(label: string): string {
@@ -193,11 +196,6 @@ export function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value));
 }
 
-/** Check if all values in an object are empty */
-export function isAllEmpty(obj: Record<string, unknown>): boolean {
-  return Object.values(obj).every(value => !value || (typeof value === "string" && !value.trim()));
-}
-
 // ============================================
 // SHARED VALUE HELPERS
 // ============================================
@@ -233,7 +231,8 @@ export function downloadBlob(blob: Blob, filename: string): void {
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
-  URL.revokeObjectURL(url);
+  // Defer revocation to allow older browsers/WebView to begin the download
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
 // ============================================
@@ -253,7 +252,9 @@ export function recordExportTime(storageKey: string): void {
 export function getLastExportTime(storageKey: string): number {
   try {
     const raw = localStorage.getItem(`${STORAGE_KEYS.LAST_EXPORT_PREFIX}${storageKey}`);
-    return raw ? Number(raw) : 0;
+    if (!raw) return 0;
+    const n = Number(raw);
+    return isNaN(n) ? 0 : n;
   } catch {
     return 0;
   }

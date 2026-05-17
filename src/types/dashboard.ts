@@ -10,7 +10,7 @@
 export interface LogEntry {
   id: string;
   text: string;
-  images: string[];
+  images?: string[];
   timestamp: string;
   imageName?: string;
 }

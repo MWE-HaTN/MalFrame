@@ -12,18 +12,11 @@ const LABEL_COLOR = "000000"; // Black
 // Roman numeral conversion
 const ROMAN_NUMERALS = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X", "XI", "XII"];
 
-// Section counter for Roman numerals
-let sectionCounter = 0;
-
-function resetSectionCounter() {
-  sectionCounter = 0;
-}
-
 // Create section header paragraph with Roman numeral (like "I. BACKGROUND")
-function createSectionHeader(title: string): Paragraph {
-  const romanNumeral = ROMAN_NUMERALS[sectionCounter] || String(sectionCounter + 1);
-  sectionCounter++;
-  
+function createSectionHeader(title: string, counter: { value: number }): Paragraph {
+  const romanNumeral = ROMAN_NUMERALS[counter.value] || String(counter.value + 1);
+  counter.value++;
+
   return new Paragraph({
     children: [
       new TextRun({ text: `${romanNumeral}. ${title.toUpperCase()}`, bold: true, color: HEADER_COLOR, size: 26 }),
@@ -219,9 +212,7 @@ function createSingleColumnTable(fields: Array<{ label: string; value: string }>
 }
 
 export async function exportDFIRWord(data: DFIRData, analyst: string, fileName: string, hash: string): Promise<void> {
-  // Reset section counter for Roman numerals
-  resetSectionCounter();
-  
+  const sectionCounter = { value: 0 };
   const paragraphs: (Paragraph | Table)[] = [];
 
   // Title
@@ -248,13 +239,13 @@ export async function exportDFIRWord(data: DFIRData, analyst: string, fileName: 
   ];
   
   if (bgLeft.some(f => isMeaningful(f.value)) || bgRight.some(f => isMeaningful(f.value))) {
-    paragraphs.push(createSectionHeader("Background"));
+    paragraphs.push(createSectionHeader("Background", sectionCounter));
     const table = createTwoColumnTable(bgLeft, bgRight);
     if (table) paragraphs.push(table);
   }
 
   // 2. Sample Information - two column layout
-  const sampleInfo = data.sampleInfo;
+  const sampleInfo = data.sampleInfo ?? {};
   const sampleLeft = [
     { label: "File Name", value: sampleInfo.fileName || "" },
     { label: "File Path", value: sampleInfo.filePath || "" },
@@ -269,7 +260,7 @@ export async function exportDFIRWord(data: DFIRData, analyst: string, fileName: 
   ];
   
   if (sampleLeft.some(f => isMeaningful(f.value)) || sampleRight.some(f => isMeaningful(f.value))) {
-    paragraphs.push(createSectionHeader("Sample Information"));
+    paragraphs.push(createSectionHeader("Sample Information", sectionCounter));
     const table = createTwoColumnTable(sampleLeft, sampleRight);
     if (table) paragraphs.push(table);
   }
@@ -284,7 +275,7 @@ export async function exportDFIRWord(data: DFIRData, analyst: string, fileName: 
   ];
   
   if (staticFields.some(f => isMeaningful(f.value))) {
-    paragraphs.push(createSectionHeader("Static Analysis"));
+    paragraphs.push(createSectionHeader("Static Analysis", sectionCounter));
     const table = createSingleColumnTable(staticFields);
     if (table) paragraphs.push(table);
   }
@@ -300,7 +291,7 @@ export async function exportDFIRWord(data: DFIRData, analyst: string, fileName: 
   ];
   
   if (behaviorFields.some(f => isMeaningful(f.value))) {
-    paragraphs.push(createSectionHeader("Behavior Analysis"));
+    paragraphs.push(createSectionHeader("Behavior Analysis", sectionCounter));
     const table = createSingleColumnTable(behaviorFields);
     if (table) paragraphs.push(table);
   }
@@ -311,9 +302,10 @@ export async function exportDFIRWord(data: DFIRData, analyst: string, fileName: 
   );
 
   if (hasMeaningfulMitre) {
-    paragraphs.push(createSectionHeader("MITRE ATT&CK Mapping"));
+    paragraphs.push(createSectionHeader("MITRE ATT&CK Mapping", sectionCounter));
 
     Object.entries(data.mitreMapping).forEach(([tactic, techniques]: [string, { id: string; name: string }[]]) => {
+      if (!techniques) return;
       const meaningfulTechniques = techniques.filter((t: { id: string; name: string }) => isMeaningful(t.id) || isMeaningful(t.name));
       if (meaningfulTechniques.length === 0) return;
       
@@ -352,7 +344,7 @@ export async function exportDFIRWord(data: DFIRData, analyst: string, fileName: 
   ];
   
   if (impactLeft.some(f => isMeaningful(f.value)) || impactRight.some(f => isMeaningful(f.value))) {
-    paragraphs.push(createSectionHeader("Impact Assessment"));
+    paragraphs.push(createSectionHeader("Impact Assessment", sectionCounter));
     const table = createTwoColumnTable(impactLeft, impactRight);
     if (table) paragraphs.push(table);
   }
@@ -362,7 +354,7 @@ export async function exportDFIRWord(data: DFIRData, analyst: string, fileName: 
   const hasLongTerm = isMeaningful(data.recommendations?.longTerm);
   
   if (hasShortTerm || hasLongTerm) {
-    paragraphs.push(createSectionHeader("Recommendations"));
+    paragraphs.push(createSectionHeader("Recommendations", sectionCounter));
     
     if (hasShortTerm) {
       paragraphs.push(createSubsectionHeader("Short-term (Immediate Response)"));
@@ -391,7 +383,7 @@ export async function exportDFIRWord(data: DFIRData, analyst: string, fileName: 
   );
 
   if (meaningfulIocs.length > 0) {
-    paragraphs.push(createSectionHeader("Indicators of Compromise (IOCs)"));
+    paragraphs.push(createSectionHeader("Indicators of Compromise (IOCs)", sectionCounter));
 
     const iocFields = meaningfulIocs.map((ioc: { type: string; value: string; description: string }) => ({
       label: ioc.type || "Unknown",
@@ -407,7 +399,7 @@ export async function exportDFIRWord(data: DFIRData, analyst: string, fileName: 
   );
 
   if (validTimelineEvents.length > 0) {
-    paragraphs.push(createSectionHeader("Attack Timeline"));
+    paragraphs.push(createSectionHeader("Attack Timeline", sectionCounter));
 
     const timelineFields = validTimelineEvents.map((event: { time: string; content: string; severity: string }) => ({
       label: `[${event.time || "N/A"}] (${event.severity || '-'})`,
@@ -423,7 +415,7 @@ export async function exportDFIRWord(data: DFIRData, analyst: string, fileName: 
   );
 
   if (meaningfulArtifacts.length > 0) {
-    paragraphs.push(createSectionHeader("Evidence Artifacts"));
+    paragraphs.push(createSectionHeader("Evidence Artifacts", sectionCounter));
 
     meaningfulArtifacts.forEach((artifact: { type: string; name: string; sha256: string; md5: string; size?: string; usedIn?: string[] }) => {
       const artifactLeft = [

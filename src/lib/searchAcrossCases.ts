@@ -1,4 +1,5 @@
 import { dbGet } from "@/lib/db";
+import { STORAGE_KEYS } from "@/lib/storageKeys";
 import type { CaseMeta } from "@/types/cases";
 
 export interface SearchResult {
@@ -22,7 +23,9 @@ function searchObject(
   caseId: string,
   caseName: string,
   caseType: "mia" | "mre",
+  depth = 0,
 ): void {
+  if (depth > 20) return;
   if (obj == null || typeof obj === "number" || typeof obj === "boolean") return;
 
   if (typeof obj === "string") {
@@ -34,7 +37,7 @@ function searchObject(
 
   if (Array.isArray(obj)) {
     for (let i = 0; i < obj.length; i++) {
-      searchObject(obj[i], `${path}[${i}]`, query, results, caseId, caseName, caseType);
+      searchObject(obj[i], `${path}[${i}]`, query, results, caseId, caseName, caseType, depth + 1);
     }
     return;
   }
@@ -42,7 +45,7 @@ function searchObject(
   if (typeof obj === "object") {
     for (const [key, val] of Object.entries(obj as Record<string, unknown>)) {
       const nextPath = path ? `${path}.${key}` : key;
-      searchObject(val, nextPath, query, results, caseId, caseName, caseType);
+      searchObject(val, nextPath, query, results, caseId, caseName, caseType, depth + 1);
     }
   }
 }
@@ -53,12 +56,14 @@ function searchObject(
  */
 export async function searchAcrossCases(query: string): Promise<SearchResult[]> {
   const q = query.toLowerCase().trim();
-  if (!q) return [];
+  if (q.length < 2) return [];
 
-  const [miaCases, mreCases] = await Promise.all([
-    dbGet<CaseMeta[]>("dashboard", "mia-cases"),
-    dbGet<CaseMeta[]>("dashboard", "mre-cases"),
+  const registryResults = await Promise.allSettled([
+    dbGet<CaseMeta[]>("dashboard", STORAGE_KEYS.MIA_CASES),
+    dbGet<CaseMeta[]>("dashboard", STORAGE_KEYS.MRE_CASES),
   ]);
+  const miaCases = registryResults[0].status === "fulfilled" ? registryResults[0].value : null;
+  const mreCases = registryResults[1].status === "fulfilled" ? registryResults[1].value : null;
 
   const allCases: CaseMeta[] = [
     ...(miaCases ?? []),
@@ -67,15 +72,17 @@ export async function searchAcrossCases(query: string): Promise<SearchResult[]> 
 
   const results: SearchResult[] = [];
 
-  // Fetch all case data in parallel
+  // Fetch all case data in parallel (allSettled so one bad case doesn't abort the search)
   const caseDataPromises = allCases.map(async (c) => {
     const data = await dbGet<Record<string, unknown>>("dashboard", `${c.type}-case-${c.id}`);
     return { meta: c, data };
   });
 
-  const caseDataList = await Promise.all(caseDataPromises);
+  const caseDataList = await Promise.allSettled(caseDataPromises);
 
-  for (const { meta, data } of caseDataList) {
+  for (const result of caseDataList) {
+    if (result.status !== "fulfilled") continue;
+    const { meta, data } = result.value;
     if (!data) continue;
     searchObject(data, "", q, results, meta.id, meta.name, meta.type);
   }

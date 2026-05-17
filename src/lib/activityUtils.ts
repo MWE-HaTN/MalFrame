@@ -18,15 +18,21 @@ const MILESTONES = [7, 30, 100, 365, 10000] as const;
 const SHOWN_MILESTONES_KEY = "mad-shown-milestones";
 
 /**
- * Get activity data from localStorage
+ * Get activity data from localStorage with validation
  */
 function getActivityData(): ActivityData {
   try {
     const stored = localStorage.getItem(STORAGE_KEYS.ACTIVITY_DATA);
-    return stored ? JSON.parse(stored) : { activities: [] };
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      if (parsed && Array.isArray(parsed.activities)) {
+        return parsed;
+      }
+    }
   } catch {
-    return { activities: [] };
+    // fall through
   }
+  return { activities: [] };
 }
 
 /**
@@ -39,8 +45,8 @@ export function getCurrentMonthActivityCount(): number {
   const currentMonth = now.getMonth();
 
   return data.activities.filter((dateStr) => {
-    const date = new Date(dateStr);
-    return date.getFullYear() === currentYear && date.getMonth() === currentMonth;
+    const [y, m] = dateStr.split("-").map(Number);
+    return y === currentYear && (m - 1) === currentMonth;
   }).length;
 }
 
@@ -49,9 +55,16 @@ export function getCurrentMonthActivityCount(): number {
  */
 export function calculateStreakInfo(): StreakInfo {
   const data = getActivityData();
-  const activities = data.activities
-    .map((d) => new Date(d))
-    .sort((a, b) => a.getTime() - b.getTime());
+  // Deduplicate by date string to avoid inflating streak/totalDays
+  const uniqueDates = [...new Set(data.activities)];
+  const activities = uniqueDates
+    .map((d) => {
+      const [y, m, day] = d.split("-").map(Number);
+      return { raw: d, date: new Date(y, m - 1, day) };
+    })
+    .filter(({ date }) => !isNaN(date.getTime()))
+    .sort((a, b) => a.date.getTime() - b.date.getTime())
+    .map(({ date }) => date);
 
   if (activities.length === 0) {
     return { currentStreak: 0, longestStreak: 0, totalDays: 0 };
@@ -65,7 +78,7 @@ export function calculateStreakInfo(): StreakInfo {
   for (let i = 1; i < activities.length; i++) {
     const prev = activities[i - 1];
     const curr = activities[i];
-    const diffDays = Math.floor(
+    const diffDays = Math.round(
       (curr.getTime() - prev.getTime()) / (1000 * 60 * 60 * 24)
     );
 
@@ -82,14 +95,14 @@ export function calculateStreakInfo(): StreakInfo {
   // Calculate current streak (from today backwards)
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  
+
   const sortedDesc = [...activities].sort((a, b) => b.getTime() - a.getTime());
-  
+
   // Check if today or yesterday is in the list
-  const latestDate = sortedDesc[0];
+  const latestDate = new Date(sortedDesc[0]);
   latestDate.setHours(0, 0, 0, 0);
-  
-  const diffFromToday = Math.floor(
+
+  const diffFromToday = Math.round(
     (today.getTime() - latestDate.getTime()) / (1000 * 60 * 60 * 24)
   );
 
@@ -101,7 +114,7 @@ export function calculateStreakInfo(): StreakInfo {
       curr.setHours(0, 0, 0, 0);
       prev.setHours(0, 0, 0, 0);
       
-      const diff = Math.floor(
+      const diff = Math.round(
         (curr.getTime() - prev.getTime()) / (1000 * 60 * 60 * 24)
       );
 
@@ -116,7 +129,7 @@ export function calculateStreakInfo(): StreakInfo {
   return {
     currentStreak,
     longestStreak,
-    totalDays: activities.length,
+    totalDays: uniqueDates.length,
   };
 }
 
@@ -210,7 +223,8 @@ function getMilestoneMessage(days: number): string {
  * Also checks for milestone achievements.
  */
 export function trackTodayActivity(): void {
-  const today = new Date().toISOString().split("T")[0];
+  const now = new Date();
+  const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
 
   try {
     const stored = localStorage.getItem(STORAGE_KEYS.ACTIVITY_DATA);

@@ -118,12 +118,16 @@ export function PortalDropdown({
     }
 
     updatePosition();
-    const initialIndex = selectedIndex >= 0 ? selectedIndex : 0;
-    setFocusedIndex(initialIndex);
+    // Respect keyboard nav intent: if ArrowUp/End already set focusedIndex, don't override
+    const defaultIndex = selectedIndex >= 0 ? selectedIndex : 0;
+    if (!isKeyboardNavRef.current) {
+      setFocusedIndex(defaultIndex);
+    }
+    const targetIndex = isKeyboardNavRef.current ? focusedIndex : defaultIndex;
 
     // Focus-follows-open: reliably focus the initial option (works with virtual lists too)
     const focusInitialOption = () => {
-      const el = optionRefs.current[initialIndex];
+      const el = optionRefs.current[targetIndex];
       if (el) {
         el.focus();
         return true;
@@ -134,17 +138,18 @@ export function PortalDropdown({
     // Ensure the initial option is rendered (virtual) then focus it (retry a few frames)
     if (useVirtual) {
       requestAnimationFrame(() => {
-        virtualizer.scrollToIndex(initialIndex, { align: "center" });
+        virtualizer.scrollToIndex(targetIndex, { align: "center" });
       });
     }
 
+    let rafId = 0;
     let tries = 0;
     const tryFocus = () => {
       tries += 1;
       if (focusInitialOption()) return;
-      if (tries < 12) requestAnimationFrame(tryFocus);
+      if (tries < 12) rafId = requestAnimationFrame(tryFocus);
     };
-    requestAnimationFrame(tryFocus);
+    rafId = requestAnimationFrame(tryFocus);
 
     const onScroll = () => updatePosition();
     const onResize = () => updatePosition();
@@ -165,10 +170,12 @@ export function PortalDropdown({
     document.addEventListener("mousedown", handleClickOutside);
 
     return () => {
+      cancelAnimationFrame(rafId);
       window.removeEventListener("scroll", onScroll, true);
       window.removeEventListener("resize", onResize);
       document.removeEventListener("mousedown", handleClickOutside);
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- focusedIndex intentionally excluded: effect should not re-run on keyboard nav
   }, [isOpen, updatePosition, selectedIndex, useVirtual, virtualizer]);
 
   // Type-to-search: find option starting with typed characters
@@ -576,6 +583,7 @@ export function PortalDropdown({
           >
             {virtualizer.getVirtualItems().map((virtualRow) => {
               const option = options[virtualRow.index];
+              if (!option) return null;
               return (
                 <div
                   key={virtualRow.key}

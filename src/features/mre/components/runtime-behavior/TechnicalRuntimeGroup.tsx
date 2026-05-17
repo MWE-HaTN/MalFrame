@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { Wifi, MemoryStick, Syringe } from "lucide-react";
 import { generateId } from "@/lib/utils";
 import { RuntimeBehaviorData } from "./types";
@@ -9,8 +10,8 @@ import {
   FieldLabel,
   TagList,
   AutoTextarea,
-  inputStyles,
 } from "./ui-components";
+import { inputStyles } from "./styles";
 import { AnimatedCollapse } from "@/components/ui/skeleton";
 import { useLanguage } from "@/hooks/useLanguage";
 
@@ -22,37 +23,33 @@ interface TechnicalRuntimeGroupProps {
   onToggleSubItem: (key: string) => void;
   update: <K extends keyof RuntimeBehaviorData>(key: K, value: RuntimeBehaviorData[K]) => void;
   updateMany: (patch: Partial<RuntimeBehaviorData>) => void;
+  updateField: <K extends keyof RuntimeBehaviorData>(key: K, updater: (current: RuntimeBehaviorData[K]) => RuntimeBehaviorData[K]) => void;
 }
 
-export function TechnicalRuntimeGroup({
+export const TechnicalRuntimeGroup = memo(function TechnicalRuntimeGroup({
   data,
   isExpanded,
   onToggleGroup,
   expandedSubItems,
   onToggleSubItem,
-  update,
+  update: _update,
   updateMany,
+  updateField,
 }: TechnicalRuntimeGroupProps) {
   const { t } = useLanguage();
 
   const addNetworkEntry = () => {
-    const next = [...data.network, { id: generateId(), behaviorTags: [], indicator: "", notes: "", images: [] }];
-    updateMany({ network: next, networkEnabled: true });
+    updateMany({ network: [...data.network, { id: generateId(), behaviorTags: [], indicator: "", notes: "", images: [] }], networkEnabled: true });
     if (!expandedSubItems["network"]) onToggleSubItem("network");
   };
 
   const addMemoryEntry = () => {
-    const next = [...data.memory, { id: generateId(), eventTags: [], region: "", notes: "", images: [] }];
-    updateMany({ memory: next, memoryEnabled: true });
+    updateMany({ memory: [...data.memory, { id: generateId(), eventTags: [], region: "", notes: "", images: [] }], memoryEnabled: true });
     if (!expandedSubItems["memory"]) onToggleSubItem("memory");
   };
 
   const addInjectionEntry = () => {
-    const next = [
-      ...data.processInjection,
-      { id: generateId(), techniqueTags: [], targetProcess: "", apiChain: [], notes: "", images: [] },
-    ];
-    updateMany({ processInjection: next, processInjectionEnabled: true });
+    updateMany({ processInjection: [...data.processInjection, { id: generateId(), techniqueTags: [], targetProcess: "", apiChain: [], notes: "", images: [] }], processInjectionEnabled: true });
     if (!expandedSubItems["injection"]) onToggleSubItem("injection");
   };
 
@@ -65,7 +62,7 @@ export function TechnicalRuntimeGroup({
         isExpanded={isExpanded}
         onToggle={onToggleGroup}
       />
-      
+
       <AnimatedCollapse isOpen={isExpanded} className="ml-6 space-y-2">
         {/* Network Behavior */}
         <SubItemRow
@@ -81,9 +78,9 @@ export function TechnicalRuntimeGroup({
             <p className="text-xs text-muted-foreground font-mono italic">{t("runtime.technical.noNetwork")}</p>
           ) : (
             data.network.map((networkEntry, entryIndex) => (
-              <EntryCard 
+              <EntryCard
                 key={networkEntry.id}
-                onDelete={() => update("network", data.network.filter((_, filterIndex) => filterIndex !== entryIndex))}
+                onDelete={() => updateField("network", (current) => current.filter((_, i) => i !== entryIndex))}
                 canDelete={data.network.length > 0}
               >
                 <div className="space-y-1.5">
@@ -92,9 +89,7 @@ export function TechnicalRuntimeGroup({
                     tags={networkEntry.behaviorTags}
                     availableTags={NETWORK_TYPES}
                     onChange={(newTags) => {
-                      const updatedNetwork = [...data.network];
-                      updatedNetwork[entryIndex] = { ...networkEntry, behaviorTags: newTags };
-                      update("network", updatedNetwork);
+                      updateField("network", (current) => current.map((item, i) => i === entryIndex ? { ...item, behaviorTags: newTags } : item));
                     }}
                     placeholder={t("runtime.technical.addBehavior")}
                   />
@@ -105,9 +100,7 @@ export function TechnicalRuntimeGroup({
                     type="text"
                     value={networkEntry.indicator}
                     onChange={(changeEvent) => {
-                      const updatedNetwork = [...data.network];
-                      updatedNetwork[entryIndex] = { ...networkEntry, indicator: changeEvent.target.value };
-                      update("network", updatedNetwork);
+                      updateField("network", (current) => current.map((item, i) => i === entryIndex ? { ...item, indicator: changeEvent.target.value } : item));
                     }}
                     placeholder={t("runtime.technical.indicatorPlaceholder")}
                     className={inputStyles}
@@ -117,9 +110,7 @@ export function TechnicalRuntimeGroup({
                   label={t("runtime.technical.trafficPattern")}
                   value={networkEntry.notes}
                   onChange={(changeEvent) => {
-                    const updatedNetwork = [...data.network];
-                    updatedNetwork[entryIndex] = { ...networkEntry, notes: changeEvent.target.value };
-                    update("network", updatedNetwork);
+                    updateField("network", (current) => current.map((item, i) => i === entryIndex ? { ...item, notes: changeEvent.target.value } : item));
                   }}
                   placeholder={t("runtime.technical.trafficPlaceholder")}
                 />
@@ -142,9 +133,9 @@ export function TechnicalRuntimeGroup({
             <p className="text-xs text-muted-foreground font-mono italic">{t("runtime.technical.noMemory")}</p>
           ) : (
             data.memory.map((memoryEntry, entryIndex) => (
-              <EntryCard 
+              <EntryCard
                 key={memoryEntry.id}
-                onDelete={() => update("memory", data.memory.filter((_, filterIndex) => filterIndex !== entryIndex))}
+                onDelete={() => updateField("memory", (current) => current.filter((_, i) => i !== entryIndex))}
                 canDelete={data.memory.length > 0}
               >
                 <div className="space-y-1.5">
@@ -153,9 +144,7 @@ export function TechnicalRuntimeGroup({
                     tags={memoryEntry.eventTags}
                     availableTags={MEMORY_TYPES}
                     onChange={(newTags) => {
-                      const updatedMemory = [...data.memory];
-                      updatedMemory[entryIndex] = { ...memoryEntry, eventTags: newTags };
-                      update("memory", updatedMemory);
+                      updateField("memory", (current) => current.map((item, i) => i === entryIndex ? { ...item, eventTags: newTags } : item));
                     }}
                     placeholder={t("runtime.technical.addEventType")}
                   />
@@ -166,9 +155,7 @@ export function TechnicalRuntimeGroup({
                     type="text"
                     value={memoryEntry.region}
                     onChange={(changeEvent) => {
-                      const updatedMemory = [...data.memory];
-                      updatedMemory[entryIndex] = { ...memoryEntry, region: changeEvent.target.value };
-                      update("memory", updatedMemory);
+                      updateField("memory", (current) => current.map((item, i) => i === entryIndex ? { ...item, region: changeEvent.target.value } : item));
                     }}
                     placeholder={t("runtime.technical.addressPlaceholder")}
                     className={inputStyles}
@@ -178,9 +165,7 @@ export function TechnicalRuntimeGroup({
                   label={t("common.notes")}
                   value={memoryEntry.notes}
                   onChange={(changeEvent) => {
-                    const updatedMemory = [...data.memory];
-                    updatedMemory[entryIndex] = { ...memoryEntry, notes: changeEvent.target.value };
-                    update("memory", updatedMemory);
+                    updateField("memory", (current) => current.map((item, i) => i === entryIndex ? { ...item, notes: changeEvent.target.value } : item));
                   }}
                   placeholder={t("runtime.technical.memoryPlaceholder")}
                 />
@@ -203,9 +188,9 @@ export function TechnicalRuntimeGroup({
             <p className="text-xs text-muted-foreground font-mono italic">{t("runtime.technical.noInjection")}</p>
           ) : (
             data.processInjection.map((injectionEntry, entryIndex) => (
-              <EntryCard 
+              <EntryCard
                 key={injectionEntry.id}
-                onDelete={() => update("processInjection", data.processInjection.filter((_, filterIndex) => filterIndex !== entryIndex))}
+                onDelete={() => updateField("processInjection", (current) => current.filter((_, i) => i !== entryIndex))}
                 canDelete={data.processInjection.length > 0}
               >
                 <div className="space-y-1.5">
@@ -214,9 +199,7 @@ export function TechnicalRuntimeGroup({
                     tags={injectionEntry.techniqueTags}
                     availableTags={INJECTION_TECHNIQUES}
                     onChange={(newTags) => {
-                      const updatedInjection = [...data.processInjection];
-                      updatedInjection[entryIndex] = { ...injectionEntry, techniqueTags: newTags };
-                      update("processInjection", updatedInjection);
+                      updateField("processInjection", (current) => current.map((item, i) => i === entryIndex ? { ...item, techniqueTags: newTags } : item));
                     }}
                     placeholder={t("runtime.technical.addTechnique")}
                   />
@@ -227,9 +210,7 @@ export function TechnicalRuntimeGroup({
                     type="text"
                     value={injectionEntry.targetProcess}
                     onChange={(changeEvent) => {
-                      const updatedInjection = [...data.processInjection];
-                      updatedInjection[entryIndex] = { ...injectionEntry, targetProcess: changeEvent.target.value };
-                      update("processInjection", updatedInjection);
+                      updateField("processInjection", (current) => current.map((item, i) => i === entryIndex ? { ...item, targetProcess: changeEvent.target.value } : item));
                     }}
                     placeholder={t("runtime.technical.targetPlaceholder")}
                     className={inputStyles}
@@ -241,9 +222,7 @@ export function TechnicalRuntimeGroup({
                     tags={injectionEntry.apiChain}
                     availableTags={INJECTION_APIS}
                     onChange={(newTags) => {
-                      const updatedInjection = [...data.processInjection];
-                      updatedInjection[entryIndex] = { ...injectionEntry, apiChain: newTags };
-                      update("processInjection", updatedInjection);
+                      updateField("processInjection", (current) => current.map((item, i) => i === entryIndex ? { ...item, apiChain: newTags } : item));
                     }}
                   />
                 </div>
@@ -251,9 +230,7 @@ export function TechnicalRuntimeGroup({
                   label={t("runtime.technical.notesPayload")}
                   value={injectionEntry.notes}
                   onChange={(changeEvent) => {
-                    const updatedInjection = [...data.processInjection];
-                    updatedInjection[entryIndex] = { ...injectionEntry, notes: changeEvent.target.value };
-                    update("processInjection", updatedInjection);
+                    updateField("processInjection", (current) => current.map((item, i) => i === entryIndex ? { ...item, notes: changeEvent.target.value } : item));
                   }}
                   placeholder={t("runtime.technical.injectionPlaceholder")}
                 />
@@ -264,5 +241,4 @@ export function TechnicalRuntimeGroup({
       </AnimatedCollapse>
     </div>
   );
-}
-
+});

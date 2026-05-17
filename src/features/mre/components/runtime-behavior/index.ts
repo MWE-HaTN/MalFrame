@@ -1,4 +1,4 @@
-// Runtime Behavior Module - Explicit exports for better tree-shaking
+// Runtime Behavior Module
 
 // Types
 export type {
@@ -13,20 +13,7 @@ export type {
   ProcessInjectionEntry,
   RuntimeBehaviorData,
 } from "./types";
-export { initialRuntimeBehavior } from "./types";
-
-// Constants
-export {
-  ANTI_DEBUG_CATEGORIES,
-  ANTI_DEBUG_APIS,
-  ANTI_VM_METHODS,
-  ARTIFACT_TYPES,
-  PERSISTENCE_TYPES,
-  NETWORK_TYPES,
-  MEMORY_TYPES,
-  INJECTION_TECHNIQUES,
-  INJECTION_APIS,
-} from "./constants";
+export { createInitialRuntimeBehavior } from "./types";
 
 // Component
 export { RuntimeBehavior } from "./RuntimeBehavior";

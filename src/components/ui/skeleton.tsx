@@ -108,10 +108,8 @@ function AnimatedCollapse({
   );
 }
 
-export { 
-  Skeleton, 
-  ShimmerBar, 
+export {
+  Skeleton,
+  ShimmerBar,
   AnimatedCollapse,
-  type ShimmerBarProps,
-  type AnimatedCollapseProps
 };

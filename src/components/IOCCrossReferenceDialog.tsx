@@ -1,4 +1,4 @@
-import { memo, useState, useCallback } from "react";
+import { memo, useState, useCallback, useEffect, useRef } from "react";
 import { Link, Search, Loader2, FolderOpen, ExternalLink } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import {
@@ -25,19 +25,33 @@ export const IOCCrossReferenceDialog = memo(function IOCCrossReferenceDialog({
   const [results, setResults] = useState<IOCCrossRefResult[]>([]);
   const [loading, setLoading] = useState(false);
   const [scanned, setScanned] = useState(false);
+  const scanSeqRef = useRef(0);
+
+  // Reset state when dialog reopens
+  useEffect(() => {
+    if (open) {
+      scanSeqRef.current++;
+      setResults([]);
+      setLoading(false);
+      setScanned(false);
+    }
+  }, [open]);
 
   const handleScan = useCallback(async () => {
+    const seq = ++scanSeqRef.current;
     setLoading(true);
     setScanned(false);
     try {
       const res = await crossReferenceIOCs();
+      if (seq !== scanSeqRef.current) return;
       setResults(res);
       setScanned(true);
     } catch {
+      if (seq !== scanSeqRef.current) return;
       setResults([]);
       setScanned(true);
     } finally {
-      setLoading(false);
+      if (seq === scanSeqRef.current) setLoading(false);
     }
   }, []);
 

@@ -25,8 +25,8 @@ import { STORAGE_KEYS } from "@/lib/storageKeys";
 import { ToolsDataSchema, safeJsonParse } from "@/lib/validationSchemas";
 
 // Lazy import debug logger to reduce initial bundle
-const debugWarn = (message: string) => 
-  import("@/lib/debugLogger").then(m => m.debugWarn(message));
+const debugWarn = (message: string) =>
+  import("@/lib/debugLogger").then(m => m.debugWarn(message)).catch(() => {});
 
 export default function Tools() {
   const { t } = useLanguage();
@@ -45,6 +45,7 @@ export default function Tools() {
           return result.data;
         }
         debugWarn("Tools data validation failed, using default");
+        localStorage.removeItem(STORAGE_KEYS.TOOLS_DATA);
       } catch {
         debugWarn("Invalid tools data JSON, using default");
         localStorage.removeItem(STORAGE_KEYS.TOOLS_DATA);
@@ -64,7 +65,7 @@ export default function Tools() {
   const currentVersion = latestVersion ?? "1.0";
 
   // Check if update is available
-  const hasUpdate = storedVersion !== currentVersion;
+  const hasUpdate = storedVersion !== null && storedVersion !== currentVersion;
 
   // Initialize tools data from default when loaded
   useEffect(() => {
@@ -297,7 +298,7 @@ export default function Tools() {
                                 rel="noopener noreferrer"
                                 onClick={(e) => e.stopPropagation()}
                                 className="p-1 text-muted-foreground/50 hover:text-primary opacity-0 group-hover:opacity-100 transition-opacity"
-                                title="Visit project page"
+                                title={t("aria.visitProjectPage")}
                               >
                                 <Globe className="w-3 h-3" />
                               </a>
@@ -341,24 +342,20 @@ export default function Tools() {
               <RefreshCw className="w-5 h-5" />
               {t("tools.updateTitle")}
             </DialogTitle>
-            <DialogDescription asChild>
-              <div className="space-y-2 text-sm text-muted-foreground">
-                <p>
-                  {t("tools.updateDesc")}
-                </p>
-                <div className="flex items-center gap-2 text-xs">
-                  <span className="text-muted-foreground">{t("tools.current")}:</span>
-                  <span className="font-mono text-foreground">{storedVersion || t("tools.notSet")}</span>
-                  <span className="text-muted-foreground">→</span>
-                  <span className="font-mono text-accent">{currentVersion}</span>
-                </div>
-                {hasUpdate && (
-                  <p className="text-accent text-sm font-medium">
-                    {t("tools.newVersion")}
-                  </p>
-                )}
-              </div>
+            <DialogDescription className="text-sm text-muted-foreground">
+              {t("tools.updateDesc")}
             </DialogDescription>
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <span>{t("tools.current")}:</span>
+              <span className="font-mono text-foreground">{storedVersion || t("tools.notSet")}</span>
+              <span>→</span>
+              <span className="font-mono text-accent">{currentVersion}</span>
+            </div>
+            {hasUpdate && (
+              <p className="text-accent text-sm font-medium">
+                {t("tools.newVersion")}
+              </p>
+            )}
           </DialogHeader>
           <div className="py-2 space-y-2 text-sm text-muted-foreground">
             <p>{t("tools.updateWillDo")}</p>

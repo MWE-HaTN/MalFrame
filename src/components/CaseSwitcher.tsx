@@ -15,11 +15,9 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
-type Props = Omit<UseCaseManagerReturn, "activeStorageKey"> & {
-  onNewCaseClick?: () => void;
-};
+type Props = Omit<UseCaseManagerReturn, "activeStorageKey">;
 
-export const CaseSwitcher = memo(function CaseSwitcher({ cases, activeCaseId, createCase, switchCase, deleteCase, renameCase, onNewCaseClick }: Props) {
+export const CaseSwitcher = memo(function CaseSwitcher({ cases, activeCaseId, createCase, switchCase, deleteCase, renameCase }: Props) {
   const { t } = useLanguage();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState("");
@@ -40,7 +38,12 @@ export const CaseSwitcher = memo(function CaseSwitcher({ cases, activeCaseId, cr
   };
 
   const commitRename = () => {
-    if (editingId) renameCase(editingId, editingName);
+    if (editingId) {
+      const trimmed = editingName.trim();
+      if (trimmed) {
+        renameCase(editingId, trimmed);
+      }
+    }
     setEditingId(null);
   };
 
@@ -133,7 +136,7 @@ export const CaseSwitcher = memo(function CaseSwitcher({ cases, activeCaseId, cr
 
         {/* New case button */}
         <button
-          onClick={() => onNewCaseClick ? onNewCaseClick() : createCase()}
+          onClick={() => createCase()}
           className="flex items-center gap-1 rounded border border-dashed border-border/40 px-2 py-0.5 text-xs text-muted-foreground hover:border-primary/40 hover:text-primary transition-colors shrink-0 select-none"
           title={t("cases.new")}
         >

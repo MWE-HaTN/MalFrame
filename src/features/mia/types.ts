@@ -2,7 +2,7 @@
  * Type definitions for MIA (Malware Incident Analysis) Dashboard
  */
 
-import type { LogEntry, Artifact } from "@/types/dashboard";
+import type { LogEntry, Artifact, IOC, TimelineEvent } from "@/types/dashboard";
 
 export interface BackgroundData {
   caseId: string;
@@ -66,20 +66,6 @@ export interface RecommendationsData {
   longTerm: string;
 }
 
-export interface IOCEntry {
-  id: string;
-  type: string;
-  value: string;
-  description: string;
-}
-
-export interface TimelineEntry {
-  id: string;
-  time: string;
-  content: string;
-  severity: "info" | "warning" | "critical";
-}
-
 export interface DFIRData {
   background: BackgroundData;
   sampleInfo: SampleInfoData;
@@ -87,8 +73,8 @@ export interface DFIRData {
   behaviorAnalysis: BehaviorAnalysisData;
   mitreMapping: Record<string, { id: string; name: string }[]>;
   impact: ImpactData;
-  iocs: IOCEntry[];
+  iocs: IOC[];
   recommendations: RecommendationsData;
-  timeline: TimelineEntry[];
+  timeline: TimelineEvent[];
   artifacts: Artifact[];
 }

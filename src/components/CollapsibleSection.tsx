@@ -4,10 +4,11 @@ import { cn } from "@/lib/utils";
 import { STORAGE_KEYS } from "@/lib/storageKeys";
 import { SectionSkeleton } from "@/components/ui/section-skeleton";
 import { SectionErrorBoundary } from "@/components/SectionErrorBoundary";
+import { useLanguage } from "@/hooks/useLanguage";
 
 interface CollapsibleSectionProps {
   title: string;
-  icon: React.ReactNode;
+  icon: React.ReactElement;
   children: React.ReactNode;
   defaultOpen?: boolean;
   className?: string;
@@ -88,6 +89,21 @@ function saveHintState(key: string, isOpen: boolean) {
 }
 
 
+// Custom comparator: shallow-compare all props except `icon` and `children`,
+// which are typically new JSX element references on every parent render and
+// would otherwise defeat the memo.
+function areSectionPropsEqual(
+  prev: CollapsibleSectionProps,
+  next: CollapsibleSectionProps
+): boolean {
+  const keys = Object.keys(next) as (keyof CollapsibleSectionProps)[];
+  for (const key of keys) {
+    if (key === "icon" || key === "children") continue;
+    if (prev[key] !== next[key]) return false;
+  }
+  return true;
+}
+
 // Memoized component to prevent unnecessary re-renders
 export const CollapsibleSection = memo(function CollapsibleSection({
   title,
@@ -104,6 +120,7 @@ export const CollapsibleSection = memo(function CollapsibleSection({
   skeletonRows = 3,
   onPrefetch,
 }: CollapsibleSectionProps) {
+  const { t } = useLanguage();
   const key = storageKey || title;
   const sectionRef = useRef<HTMLDivElement>(null);
   const [hasBeenVisible, setHasBeenVisible] = useState(!lazy);
@@ -117,14 +134,18 @@ export const CollapsibleSection = memo(function CollapsibleSection({
     return hintKey in states ? states[hintKey] : false;
   });
 
-  const handleHintToggle = useCallback((e: React.MouseEvent) => {
-    e.stopPropagation();
+  const toggleHint = useCallback(() => {
     setHintOpen(prev => {
       const next = !prev;
       saveHintState(`hint-${key}`, next);
       return next;
     });
   }, [key]);
+
+  const handleHintToggle = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    toggleHint();
+  }, [toggleHint]);
   
   const [isOpen, setIsOpen] = useState(() => {
     if (storageKey) {
@@ -167,22 +188,26 @@ export const CollapsibleSection = memo(function CollapsibleSection({
     return () => observer.disconnect();
   }, [lazy, hasBeenVisible]);
 
-  // Handle force close
+  // Handle force close — only react to increments, not initial mount
+  const prevForceCloseRef = useRef(forceClose);
   useEffect(() => {
-    if (forceClose > 0) {
+    if (forceClose > prevForceCloseRef.current) {
       setIsOpen(false);
     }
+    prevForceCloseRef.current = forceClose;
   }, [forceClose]);
 
   // Save state when it changes - memoized to prevent re-renders
   const handleToggle = useCallback(() => {
-    const newState = !isOpen;
-    setIsOpen(newState);
-    markVisited(); // Mark that user has interacted
-    if (storageKey) {
-      saveSectionState(key, newState);
-    }
-  }, [isOpen, storageKey, key]);
+    setIsOpen(prev => {
+      const next = !prev;
+      if (storageKey) {
+        saveSectionState(key, next);
+      }
+      return next;
+    });
+    markVisited();
+  }, [storageKey, key]);
 
   // Determine if we should render children
   // Render if: (not lazy OR hasBeenVisible) AND (isOpen OR hasEverOpened)
@@ -213,10 +238,10 @@ export const CollapsibleSection = memo(function CollapsibleSection({
           {hint && (
             <div
               onClick={handleHintToggle}
-              onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.stopPropagation(); setHintOpen(prev => { const next = !prev; saveHintState(`hint-${key}`, next); return next; }); } }}
+              onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.stopPropagation(); toggleHint(); } }}
               role="button"
               tabIndex={0}
-              aria-label="Toggle guidance"
+              aria-label={t("common.toggleGuidance")}
               className={cn(
                 "p-1 rounded transition-colors duration-150",
                 hintOpen
@@ -259,7 +284,7 @@ export const CollapsibleSection = memo(function CollapsibleSection({
                 <button
                   onClick={handleHintToggle}
                   className="text-muted-foreground/40 hover:text-muted-foreground transition-colors shrink-0 mt-0.5"
-                  aria-label="Dismiss guidance"
+                  aria-label={t("common.dismissGuidance")}
                 >
                   <X className="w-3 h-3" />
                 </button>
@@ -277,4 +302,4 @@ export const CollapsibleSection = memo(function CollapsibleSection({
       </div>
     </div>
   );
-});
+}, areSectionPropsEqual);

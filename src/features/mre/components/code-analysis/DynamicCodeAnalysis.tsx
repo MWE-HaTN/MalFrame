@@ -1,7 +1,8 @@
-import { useMemo, memo } from "react";
+import { useMemo, memo, useRef, useCallback } from "react";
 import { Target, HardDrive, Activity, Cpu } from "lucide-react";
 import { PortalDropdown, DropdownOption } from "@/components/ui/portal-dropdown";
-import { EntryCard, FieldLabel, AutoTextarea, inputStyles, AccessibleField } from "@/features/mre/components/runtime-behavior/ui-components";
+import { EntryCard, FieldLabel, AutoTextarea, AccessibleField } from "@/features/mre/components/runtime-behavior/ui-components";
+import { inputStyles } from "@/features/mre/components/runtime-behavior/styles";
 import { AnimatedCollapse } from "@/components/ui/skeleton";
 import { SubSectionHeader, useExpandedSections, useListManager } from "./shared";
 import { useDragReorder } from "@/hooks/useDragReorder";
@@ -29,29 +30,49 @@ interface DynamicCodeAnalysisProps {
 export const DynamicCodeAnalysis = memo(function DynamicCodeAnalysis({ data, onChange }: DynamicCodeAnalysisProps) {
   const { t } = useLanguage();
   const { isExpanded, toggle, expand } = useExpandedSections(STORAGE_KEYS.CODE_ANALYSIS_DYNAMIC);
+  const dataRef = useRef(data);
+  dataRef.current = data;
+
+  // Stable onChange wrappers — only recreate when onChange prop changes
+  const onBreakpointsChange = useCallback(
+    (items: BreakpointEvent[]) => onChange({ ...dataRef.current, breakpointEvents: items }),
+    [onChange]
+  );
+  const onMemoryChange = useCallback(
+    (items: MemoryRegion[]) => onChange({ ...dataRef.current, memoryRegions: items }),
+    [onChange]
+  );
+  const onApiTraceChange = useCallback(
+    (items: RuntimeAPITrace[]) => onChange({ ...dataRef.current, runtimeApiTrace: items }),
+    [onChange]
+  );
+  const onRegisterStackChange = useCallback(
+    (items: RegisterStackEntry[]) => onChange({ ...dataRef.current, registerStack: items }),
+    [onChange]
+  );
 
   // List managers for each section
   const breakpoints = useListManager<BreakpointEvent>(
     data.breakpointEvents,
-    (items) => onChange({ ...data, breakpointEvents: items }),
+    onBreakpointsChange,
     { createEmpty: createEmptyBreakpoint, onExpand: () => expand("breakpoints") }
   );
 
   const memory = useListManager<MemoryRegion>(
     data.memoryRegions,
-    (items) => onChange({ ...data, memoryRegions: items }),
+    onMemoryChange,
     { createEmpty: createEmptyMemoryRegion, onExpand: () => expand("memory") }
   );
 
   const apiTrace = useListManager<RuntimeAPITrace>(
     data.runtimeApiTrace,
-    (items) => onChange({ ...data, runtimeApiTrace: items }),
+    onApiTraceChange,
     { createEmpty: createEmptyAPITrace, onExpand: () => expand("apiTrace") }
   );
 
   const registerStack = useListManager<RegisterStackEntry>(
     data.registerStack,
-    (items) => onChange({ ...data, registerStack: items }),
+    onRegisterStackChange,
     { createEmpty: createEmptyRegisterStack, onExpand: () => expand("registerStack") }
   );
 
@@ -216,7 +237,7 @@ export const DynamicCodeAnalysis = memo(function DynamicCodeAnalysis({ data, onC
                       type="text"
                       value={traceEntry.api}
                       onChange={(changeEvent) => apiTrace.update(traceEntry.id, { api: changeEvent.target.value })}
-                      placeholder="VirtualAlloc"
+                      placeholder={t("codeAnalysis.dynamic.apiPlaceholder")}
                       className={inputStyles}
                     />
                   )}

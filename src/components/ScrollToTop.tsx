@@ -1,9 +1,11 @@
 import { useState, useEffect, memo } from "react";
 import { ArrowUp } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useLanguage } from "@/hooks/useLanguage";
 
 export const ScrollToTop = memo(function ScrollToTop() {
   const [isVisible, setIsVisible] = useState(false);
+  const { t } = useLanguage();
 
   useEffect(() => {
     const toggleVisibility = () => {
@@ -31,8 +33,8 @@ export const ScrollToTop = memo(function ScrollToTop() {
         "border border-primary/50",
         isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4 pointer-events-none"
       )}
-      title="Scroll to top"
-      aria-label="Scroll to top"
+      title={t("common.scrollUp")}
+      aria-label={t("common.scrollUp")}
     >
       <ArrowUp className="w-5 h-5" />
     </button>

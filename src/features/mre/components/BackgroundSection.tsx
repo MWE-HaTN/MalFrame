@@ -9,6 +9,17 @@ import { CollapsibleSection } from "@/components/CollapsibleSection";
 import { PortalDropdown } from "@/components/ui/portal-dropdown";
 import { useLanguage } from "@/hooks/useLanguage";
 import type { BackgroundData } from "@/features/mre/types";
+import type { DropdownOption } from "@/components/ui/portal-dropdown";
+
+const getNotificationVectorOptions = (t: (key: string) => string): DropdownOption[] => [
+  { value: "", label: t("common.select") },
+  { value: "av_alert", label: t("mre.vector.avAlert") },
+  { value: "edr_detection", label: t("mre.vector.edrDetection") },
+  { value: "threat_intel", label: t("mre.vector.threatIntel") },
+  { value: "incident_response", label: t("mre.vector.incidentResponse") },
+  { value: "customer_submission", label: t("mre.vector.customerSubmission") },
+  { value: "other", label: t("mre.vector.other") },
+];
 
 interface BackgroundSectionProps {
   data: BackgroundData;
@@ -106,15 +117,7 @@ export const BackgroundSection = memo(function BackgroundSection({
           label={t("mre.notificationVector")}
           value={data.notificationVector}
           onChange={(v) => updateField("notificationVector", v)}
-          options={[
-            { value: "", label: t("common.select") },
-            { value: "av_alert", label: t("mre.vector.avAlert") },
-            { value: "edr_detection", label: t("mre.vector.edrDetection") },
-            { value: "threat_intel", label: t("mre.vector.threatIntel") },
-            { value: "incident_response", label: t("mre.vector.incidentResponse") },
-            { value: "customer_submission", label: t("mre.vector.customerSubmission") },
-            { value: "other", label: t("mre.vector.other") },
-          ]}
+          options={getNotificationVectorOptions(t)}
         />
       </div>
     </CollapsibleSection>

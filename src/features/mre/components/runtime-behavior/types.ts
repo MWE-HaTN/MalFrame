@@ -104,7 +104,7 @@ export type RuntimeEntry =
   | MemoryBehaviorEntry
   | ProcessInjectionEntry;
 
-export const initialRuntimeBehavior: RuntimeBehaviorData = {
+export const initialRuntimeBehavior: Readonly<RuntimeBehaviorData> = Object.freeze({
   triggers: [],
   triggersEnabled: false,
   antiDebugEnabled: false,
@@ -123,4 +123,28 @@ export const initialRuntimeBehavior: RuntimeBehaviorData = {
   memory: [],
   processInjectionEnabled: false,
   processInjection: [],
-};
+});
+
+/** Returns a fresh RuntimeBehaviorData with new array references (safe for mutation) */
+export function createInitialRuntimeBehavior(): RuntimeBehaviorData {
+  return {
+    triggers: [],
+    triggersEnabled: false,
+    antiDebugEnabled: false,
+    antiDebug: [],
+    antiVMEnabled: false,
+    antiVM: [],
+    executionFlow: [],
+    executionFlowEnabled: false,
+    systemArtifacts: [],
+    systemArtifactsEnabled: false,
+    persistenceEnabled: false,
+    persistence: [],
+    networkEnabled: false,
+    network: [],
+    memoryEnabled: false,
+    memory: [],
+    processInjectionEnabled: false,
+    processInjection: [],
+  };
+}

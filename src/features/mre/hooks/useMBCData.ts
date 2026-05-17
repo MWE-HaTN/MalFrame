@@ -15,6 +15,9 @@ export async function loadMBCData(): Promise<MBCData> {
     loadingPromise = import("@/lib/mbcData").then(module => {
       mbcDataCache = module.mbcData;
       return mbcDataCache;
+    }).catch((err) => {
+      loadingPromise = null;
+      throw err;
     });
   }
   
@@ -28,28 +31,25 @@ export async function loadMBCData(): Promise<MBCData> {
 export function useMBCData() {
   const [data, setData] = useState<MBCData | null>(mbcDataCache);
   const [isLoading, setIsLoading] = useState(!mbcDataCache);
+  const [error, setError] = useState(false);
 
   useEffect(() => {
     if (!mbcDataCache) {
+      let cancelled = false;
       loadMBCData()
         .then(loaded => {
+          if (cancelled) return;
           setData(loaded);
         })
         .catch(() => {
-          // Data unavailable — component renders without MBC data
+          if (!cancelled) setError(true);
         })
         .finally(() => {
-          setIsLoading(false);
+          if (!cancelled) setIsLoading(false);
         });
+      return () => { cancelled = true; };
     }
   }, []);
 
-  return { mbcData: data, isLoading };
-}
-
-/**
- * Get cached MBC data synchronously (returns null if not loaded yet).
- */
-export function getCachedMBCData(): MBCData | null {
-  return mbcDataCache;
+  return { mbcData: data, isLoading, error };
 }

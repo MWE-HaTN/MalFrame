@@ -4,7 +4,6 @@ import path from "path";
 import { visualizer } from "rollup-plugin-visualizer";
 import viteCompression from "vite-plugin-compression";
 import basicSsl from "@vitejs/plugin-basic-ssl";
-import { VitePWA } from "vite-plugin-pwa";
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
@@ -12,7 +11,17 @@ export default defineConfig(({ mode }) => ({
 
   server: {
     host: "::",
-    port: 8088
+    port: 8088,
+    warmup: {
+      // Pre-transform these pages on server start
+      clientFiles: [
+        "./src/pages/Index.tsx",
+        "./src/pages/MIADashboard.tsx",
+        "./src/pages/MREDashboard.tsx",
+        "./src/App.tsx",
+        "./src/components/Header.tsx",
+      ],
+    },
   },
   plugins: [
     mode !== "production" && basicSsl(),
@@ -38,62 +47,6 @@ export default defineConfig(({ mode }) => ({
       ext: ".br",
       threshold: 1024,
       deleteOriginFile: false,
-    }),
-    VitePWA({
-      registerType: "prompt",
-      workbox: {
-        globPatterns: ["**/*.{js,css,html,svg,woff2,ttf}"],
-        navigateFallback: "index.html",
-        navigateFallbackDenylist: [/^\/MalFrame\/api/],
-        runtimeCaching: [
-          {
-            urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
-            handler: "StaleWhileRevalidate",
-            options: {
-              cacheName: "google-fonts-stylesheets",
-            },
-          },
-          {
-            urlPattern: /^https:\/\/fonts\.gstatic\.com\/.*/i,
-            handler: "CacheFirst",
-            options: {
-              cacheName: "google-fonts-webfonts",
-              expiration: {
-                maxEntries: 30,
-                maxAgeSeconds: 60 * 60 * 24 * 365,
-              },
-              cacheableResponse: {
-                statuses: [0, 200],
-              },
-            },
-          },
-          {
-            urlPattern: /^https:\/\/raw\.githubusercontent\.com\/.*/i,
-            handler: "StaleWhileRevalidate",
-            options: {
-              cacheName: "mitre-external-data",
-            },
-          },
-        ],
-      },
-      manifest: {
-        name: "MalFrame — Malware Analyst Dashboard",
-        short_name: "MalFrame",
-        description: "Professional dashboard for Malware Incident Analysis (MIA) and Malware Reverse Engineering (MRE) workflows",
-        theme_color: "#0a0f14",
-        background_color: "#0a0f14",
-        display: "standalone",
-        scope: mode === "production" ? "/MalFrame/" : "/",
-        start_url: mode === "production" ? "/MalFrame/" : "/",
-        icons: [
-          {
-            src: "favicon.svg",
-            sizes: "any",
-            type: "image/svg+xml",
-            purpose: "any maskable",
-          },
-        ],
-      },
     }),
   ].filter(Boolean),
   resolve: {
@@ -295,8 +248,23 @@ export default defineConfig(({ mode }) => ({
     include: [
       "react",
       "react-dom",
+      "react-dom/client",
       "react-router-dom",
       "lucide-react",
+      "sonner",
+      "zod",
+      "clsx",
+      "tailwind-merge",
+      "class-variance-authority",
+      "@radix-ui/react-dialog",
+      "@radix-ui/react-dropdown-menu",
+      "@radix-ui/react-alert-dialog",
+      "@radix-ui/react-tooltip",
+      "@radix-ui/react-progress",
+      "@radix-ui/react-slot",
+      "@radix-ui/react-checkbox",
+      "@radix-ui/react-select",
+      "@tanstack/react-virtual",
     ],
     exclude: [
       "jspdf",
@@ -308,5 +276,12 @@ export default defineConfig(({ mode }) => ({
       "@codemirror/view",
       "@lezer/highlight",
     ],
+    esbuildOptions: {
+      target: "esnext",
+    },
+  },
+  // File system caching for faster restarts
+  fs: {
+    cachedChecks: false,
   },
 }));

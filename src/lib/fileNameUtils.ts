@@ -18,8 +18,8 @@ export function generateFileName(
   reportType?: ReportType
 ): string {
   const date = new Date().toISOString().split("T")[0].replace(/-/g, "");
-  const safeName = analyst.replace(/[^a-zA-Z0-9]/g, "") || "Analyst";
-  const safeFileName = fileName.replace(/[^a-zA-Z0-9]/g, "") || "report";
+  const safeName = analyst.replace(/[^a-zA-Z0-9._-]/g, "") || "Analyst";
+  const safeFileName = fileName.replace(/[^a-zA-Z0-9._-]/g, "") || "report";
   const shortHash = hash.slice(0, 8) || "nohash";
   
   // For JSON exports, include report type suffix

@@ -42,12 +42,12 @@ const CONFIDENCE_RANK: Record<string, number> = { high: 3, medium: 2, low: 1 };
 const ANTI_DEBUG_RULES: MBCRule[] = [
   // Category-based
   { tag: "API-based", behaviorId: "B0001.005", behaviorName: "IsDebuggerPresent", objectiveId: "OB0001", objectiveName: "Anti-Behavioral Analysis", confidence: "high" },
-  { tag: "Exception-based", behaviorId: "B0001.014", behaviorName: "Self-Debugging", objectiveId: "OB0001", objectiveName: "Anti-Behavioral Analysis", confidence: "high" },
+  { tag: "Exception-based", behaviorId: "B0001.014", behaviorName: "Process Environment Block ProcessHeap", objectiveId: "OB0001", objectiveName: "Anti-Behavioral Analysis", confidence: "high" },
   { tag: "Timing-based", behaviorId: "B0001.020", behaviorName: "Timing/Delay Check", objectiveId: "OB0001", objectiveName: "Anti-Behavioral Analysis", confidence: "high" },
   { tag: "Process/Thread-based", behaviorId: "B0001", behaviorName: "Debugger Detection", objectiveId: "OB0001", objectiveName: "Anti-Behavioral Analysis", confidence: "high" },
   { tag: "Hardware Breakpoint Detection", behaviorId: "B0001", behaviorName: "Debugger Detection", objectiveId: "OB0001", objectiveName: "Anti-Behavioral Analysis", confidence: "high" },
   { tag: "Memory Inspection", behaviorId: "B0001", behaviorName: "Debugger Detection", objectiveId: "OB0001", objectiveName: "Anti-Behavioral Analysis", confidence: "high" },
-  { tag: "PEB/NT Headers Check", behaviorId: "B0001.012", behaviorName: "PEB->BeingDebugged", objectiveId: "OB0001", objectiveName: "Anti-Behavioral Analysis", confidence: "high" },
+  { tag: "PEB/NT Headers Check", behaviorId: "B0001.012", behaviorName: "Process Environment Block BeingDebugged", objectiveId: "OB0001", objectiveName: "Anti-Behavioral Analysis", confidence: "high" },
   { tag: "Instruction-level Checks", behaviorId: "B0001", behaviorName: "Debugger Detection", objectiveId: "OB0001", objectiveName: "Anti-Behavioral Analysis", confidence: "high" },
   { tag: "Behavioral/Environment Checks", behaviorId: "B0001", behaviorName: "Debugger Detection", objectiveId: "OB0001", objectiveName: "Anti-Behavioral Analysis", confidence: "high" },
   // API-based
@@ -88,9 +88,9 @@ const PERSISTENCE_RULES: MBCRule[] = [
 
 const NETWORK_RULES: MBCRule[] = [
   { tag: "C2", behaviorId: "B0030", behaviorName: "C2 Communication", objectiveId: "OB0004", objectiveName: "Command and Control", confidence: "high" },
-  { tag: "DNS", behaviorId: "C0011", behaviorName: "DNS Communication", objectiveId: "OC0001", objectiveName: "Communication", confidence: "high" },
-  { tag: "TLS", behaviorId: "C0002", behaviorName: "HTTP Communication", objectiveId: "OC0001", objectiveName: "Communication", confidence: "medium" },
-  { tag: "HTTP POST", behaviorId: "C0002", behaviorName: "HTTP Communication", objectiveId: "OC0001", objectiveName: "Communication", confidence: "high" },
+  { tag: "DNS", behaviorId: "C0011", behaviorName: "DNS Communication", objectiveId: "OC0006", objectiveName: "Communication", confidence: "high" },
+  { tag: "TLS", behaviorId: "C0002", behaviorName: "HTTP Communication", objectiveId: "OC0006", objectiveName: "Communication", confidence: "medium" },
+  { tag: "HTTP POST", behaviorId: "C0002", behaviorName: "HTTP Communication", objectiveId: "OC0006", objectiveName: "Communication", confidence: "high" },
   { tag: "Exfil", behaviorId: "E1020", behaviorName: "Automated Exfiltration", objectiveId: "OB0010", objectiveName: "Exfiltration", confidence: "high" },
   { tag: "Beacon", behaviorId: "B0030", behaviorName: "C2 Communication", objectiveId: "OB0004", objectiveName: "Command and Control", confidence: "high" },
   { tag: "DGA", behaviorId: "B0031", behaviorName: "Domain Name Generation", objectiveId: "OB0004", objectiveName: "Command and Control", confidence: "high" },
@@ -99,12 +99,12 @@ const NETWORK_RULES: MBCRule[] = [
 // ── Memory rules ──────────────────────────────────────────────────────────
 
 const MEMORY_RULES: MBCRule[] = [
-  { tag: "RWX", behaviorId: "C0008", behaviorName: "Change Memory Protection", objectiveId: "OC0006", objectiveName: "Memory", confidence: "high" },
+  { tag: "RWX", behaviorId: "C0008", behaviorName: "Change Memory Protection", objectiveId: "OC0002", objectiveName: "Memory", confidence: "high" },
   { tag: "Shellcode", behaviorId: "E1055", behaviorName: "Process Injection", objectiveId: "OB0006", objectiveName: "Defense Evasion", confidence: "high" },
   { tag: "Unpacked Module", behaviorId: "F0001", behaviorName: "Software Packing", objectiveId: "OB0002", objectiveName: "Anti-Static Analysis", confidence: "high" },
   { tag: "Injection", behaviorId: "E1055", behaviorName: "Process Injection", objectiveId: "OB0006", objectiveName: "Defense Evasion", confidence: "high" },
-  { tag: "Heap Spray", behaviorId: "C0006", behaviorName: "Heap Spray", objectiveId: "OC0006", objectiveName: "Memory", confidence: "high" },
-  { tag: "ROP", behaviorId: "C0009", behaviorName: "Stack Pivot", objectiveId: "OC0006", objectiveName: "Memory", confidence: "medium" },
+  { tag: "Heap Spray", behaviorId: "C0006", behaviorName: "Heap Spray", objectiveId: "OC0002", objectiveName: "Memory", confidence: "high" },
+  { tag: "ROP", behaviorId: "C0009", behaviorName: "Stack Pivot", objectiveId: "OC0002", objectiveName: "Memory", confidence: "medium" },
 ];
 
 // ── Process Injection rules ───────────────────────────────────────────────
@@ -122,9 +122,9 @@ const INJECTION_RULES: MBCRule[] = [
 // ── System Artifact rules ─────────────────────────────────────────────────
 
 const ARTIFACT_RULES: MBCRule[] = [
-  { tag: "File", behaviorId: "C0016", behaviorName: "Create File", objectiveId: "OC0005", objectiveName: "File System", confidence: "medium" },
+  { tag: "File", behaviorId: "C0016", behaviorName: "Create File", objectiveId: "OC0001", objectiveName: "File System", confidence: "medium" },
   { tag: "Registry", behaviorId: "E1112", behaviorName: "Modify Registry", objectiveId: "OB0006", objectiveName: "Defense Evasion", confidence: "high" },
-  { tag: "Mutex", behaviorId: "C0042", behaviorName: "Create Mutex", objectiveId: "OC0009", objectiveName: "Process", confidence: "high" },
+  { tag: "Mutex", behaviorId: "C0042", behaviorName: "Create Mutex", objectiveId: "OC0003", objectiveName: "Process", confidence: "high" },
   { tag: "Service", behaviorId: "F0011", behaviorName: "Modify Existing Service", objectiveId: "OB0012", objectiveName: "Persistence", confidence: "high" },
   { tag: "Scheduled Task", behaviorId: "F0012", behaviorName: "Registry Run Keys / Startup Folder", objectiveId: "OB0012", objectiveName: "Persistence", confidence: "low" },
   { tag: "WMI", behaviorId: "F0012", behaviorName: "Registry Run Keys / Startup Folder", objectiveId: "OB0012", objectiveName: "Persistence", confidence: "low" },
@@ -260,24 +260,27 @@ export async function checkMBCVersion(): Promise<MBCVersionResult> {
   try {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 15000);
-    const response = await fetch(MBC_REPO_API, { signal: controller.signal });
-    clearTimeout(timeoutId);
-    if (!response.ok) {
-      return { current: MBC_LOCAL_VERSION, remote: null, newer: false };
+    try {
+      const response = await fetch(MBC_REPO_API, { signal: controller.signal });
+      if (!response.ok) {
+        return { current: MBC_LOCAL_VERSION, remote: null, newer: false };
+      }
+
+      const data = await response.json();
+      const remoteVersion: string = data.tag_name || data.name || "";
+
+      // Cache the result
+      localStorage.setItem(STORAGE_KEYS.MBC_REMOTE_VERSION, remoteVersion);
+      localStorage.setItem(STORAGE_KEYS.MBC_VERSION_CHECK_EXPIRY, String(Date.now() + VERSION_CHECK_CACHE_MS));
+
+      return {
+        current: MBC_LOCAL_VERSION,
+        remote: remoteVersion,
+        newer: isNewerVersion(remoteVersion, MBC_LOCAL_VERSION),
+      };
+    } finally {
+      clearTimeout(timeoutId);
     }
-
-    const data = await response.json();
-    const remoteVersion: string = data.tag_name || data.name || "";
-
-    // Cache the result
-    localStorage.setItem(STORAGE_KEYS.MBC_REMOTE_VERSION, remoteVersion);
-    localStorage.setItem(STORAGE_KEYS.MBC_VERSION_CHECK_EXPIRY, String(Date.now() + VERSION_CHECK_CACHE_MS));
-
-    return {
-      current: MBC_LOCAL_VERSION,
-      remote: remoteVersion,
-      newer: isNewerVersion(remoteVersion, MBC_LOCAL_VERSION),
-    };
   } catch {
     return { current: MBC_LOCAL_VERSION, remote: null, newer: false };
   }
@@ -288,16 +291,17 @@ export async function checkMBCVersion(): Promise<MBCVersionResult> {
  * "v3.2" vs "v3.3" → true (remote is newer)
  */
 function isNewerVersion(remote: string, local: string): boolean {
-  const parseVersion = (v: string) => {
-    const match = v.match(/(\d+)\.(\d+)/);
-    if (!match) return [0, 0];
-    return [parseInt(match[1], 10), parseInt(match[2], 10)];
+  const parseVersion = (v: string): [number, number, number] => {
+    const match = v.match(/(\d+)\.(\d+)(?:\.(\d+))?/);
+    if (!match) return [0, 0, 0];
+    return [parseInt(match[1], 10), parseInt(match[2], 10), parseInt(match[3] ?? "0", 10)];
   };
 
-  const [rMajor, rMinor] = parseVersion(remote);
-  const [lMajor, lMinor] = parseVersion(local);
+  const [rMajor, rMinor, rPatch] = parseVersion(remote);
+  const [lMajor, lMinor, lPatch] = parseVersion(local);
 
   if (rMajor > lMajor) return true;
   if (rMajor === lMajor && rMinor > lMinor) return true;
+  if (rMajor === lMajor && rMinor === lMinor && rPatch > lPatch) return true;
   return false;
 }

@@ -1,5 +1,6 @@
-import { useCallback, memo } from "react";
+import { useCallback, memo, useRef } from "react";
 import { cn, generateId } from "@/lib/utils";
+import { useLanguage } from "@/hooks/useLanguage";
 import { Plus, Trash2 } from "lucide-react";
 import type { PESectionData } from "@/types/dashboard";
 import { getEntropyColorClass, getRWXBadgeClass } from "@/lib/semanticColors";
@@ -19,6 +20,7 @@ interface PESectionRowProps {
 }
 
 const PESectionRow = memo(function PESectionRow({ entry, index, canDelete, onUpdate, onDelete }: PESectionRowProps) {
+  const { t } = useLanguage();
   return (
     <div 
       className="grid grid-cols-[40px_minmax(80px,1fr)_minmax(70px,0.8fr)_minmax(60px,0.6fr)_minmax(50px,0.5fr)_minmax(120px,2fr)_32px] gap-2 px-3 py-2 items-center border-b border-border/30 last:border-b-0 hover:bg-card/20 transition-colors"
@@ -31,7 +33,7 @@ const PESectionRow = memo(function PESectionRow({ entry, index, canDelete, onUpd
         value={entry.sectionName}
         onChange={(e) => onUpdate(entry.id, { sectionName: e.target.value })}
         placeholder=".text"
-        aria-label="Section Name"
+        aria-label={t("aria.sectionName")}
         className={cn(
           "w-full bg-transparent border-none text-sm font-mono text-foreground",
           "placeholder:text-muted-foreground/50 focus:outline-none"
@@ -44,7 +46,7 @@ const PESectionRow = memo(function PESectionRow({ entry, index, canDelete, onUpd
         value={entry.size}
         onChange={(e) => onUpdate(entry.id, { size: e.target.value })}
         placeholder="0 KB"
-        aria-label="Size"
+        aria-label={t("aria.size")}
         className={cn(
           "w-full bg-transparent border-none text-sm font-mono text-foreground",
           "placeholder:text-muted-foreground/50 focus:outline-none"
@@ -57,7 +59,7 @@ const PESectionRow = memo(function PESectionRow({ entry, index, canDelete, onUpd
         value={entry.entropy}
         onChange={(e) => onUpdate(entry.id, { entropy: e.target.value })}
         placeholder="0.00"
-        aria-label="Entropy"
+        aria-label={t("aria.entropy")}
         className={cn(
           "w-full bg-transparent border-none text-sm font-mono",
           "placeholder:text-muted-foreground/50 focus:outline-none",
@@ -71,7 +73,7 @@ const PESectionRow = memo(function PESectionRow({ entry, index, canDelete, onUpd
         value={entry.permissions}
         onChange={(e) => onUpdate(entry.id, { permissions: e.target.value })}
         placeholder="R-X"
-        aria-label="Permissions"
+        aria-label={t("aria.permissions")}
         className={cn(
           "w-full bg-transparent border-none text-sm font-mono font-medium",
           "placeholder:text-muted-foreground/50 focus:outline-none",
@@ -85,7 +87,7 @@ const PESectionRow = memo(function PESectionRow({ entry, index, canDelete, onUpd
         value={entry.sectionHash}
         onChange={(e) => onUpdate(entry.id, { sectionHash: e.target.value })}
         placeholder="hash..."
-        aria-label="Section Hash"
+        aria-label={t("aria.sectionHash")}
         className={cn(
           "w-full bg-transparent border-none text-sm font-mono text-foreground",
           "placeholder:text-muted-foreground/50 focus:outline-none"
@@ -111,7 +113,10 @@ const PESectionRow = memo(function PESectionRow({ entry, index, canDelete, onUpd
 });
 
 export const PESectionEntry = memo(function PESectionEntry({ entries, onEntriesChange, className }: PESectionEntryProps) {
+  const { t } = useLanguage();
   const createId = () => generateId("pe");
+  const entriesRef = useRef(entries);
+  entriesRef.current = entries;
 
   const addEntry = useCallback(() => {
     const newEntry: PESectionData = {
@@ -124,19 +129,19 @@ export const PESectionEntry = memo(function PESectionEntry({ entries, onEntriesC
       images: [],
       timestamp: new Date().toISOString(),
     };
-    onEntriesChange([...entries, newEntry]);
-  }, [entries, onEntriesChange]);
+    onEntriesChange([...entriesRef.current, newEntry]);
+  }, [onEntriesChange]);
 
   const updateEntry = useCallback((id: string, updates: Partial<PESectionData>) => {
     onEntriesChange(
-      entries.map((entry) => (entry.id === id ? { ...entry, ...updates } : entry))
+      entriesRef.current.map((entry) => (entry.id === id ? { ...entry, ...updates } : entry))
     );
-  }, [entries, onEntriesChange]);
+  }, [onEntriesChange]);
 
   const deleteEntry = useCallback((id: string) => {
-    if (entries.length <= 1) return;
-    onEntriesChange(entries.filter((entry) => entry.id !== id));
-  }, [entries, onEntriesChange]);
+    if (entriesRef.current.length <= 1) return;
+    onEntriesChange(entriesRef.current.filter((entry) => entry.id !== id));
+  }, [onEntriesChange]);
 
   return (
     <div className={cn("space-y-2", className)}>
@@ -144,12 +149,12 @@ export const PESectionEntry = memo(function PESectionEntry({ entries, onEntriesC
       <div className="border border-border rounded-sm bg-card/30 overflow-hidden">
         {/* Table header */}
         <div className="grid grid-cols-[40px_minmax(80px,1fr)_minmax(70px,0.8fr)_minmax(60px,0.6fr)_minmax(50px,0.5fr)_minmax(120px,2fr)_32px] gap-2 px-3 py-2.5 bg-card/50 border-b border-border text-[10px] text-muted-foreground font-mono uppercase tracking-wider">
-          <span className="text-center">#</span>
-          <span>Name</span>
-          <span>Size</span>
-          <span>Entropy</span>
-          <span>RWX</span>
-          <span>Hash</span>
+          <span className="text-center">{t("peSection.number")}</span>
+          <span>{t("peSection.name")}</span>
+          <span>{t("peSection.size")}</span>
+          <span>{t("peSection.entropy")}</span>
+          <span>{t("peSection.rwx")}</span>
+          <span>{t("peSection.hash")}</span>
           <span></span>
         </div>
 
@@ -168,7 +173,7 @@ export const PESectionEntry = memo(function PESectionEntry({ entries, onEntriesC
         {/* Empty state */}
         {entries.length === 0 && (
           <div className="px-4 py-4 text-center text-xs text-muted-foreground">
-            No PE sections added
+            {t("peSection.noSections")}
           </div>
         )}
       </div>
@@ -185,7 +190,7 @@ export const PESectionEntry = memo(function PESectionEntry({ entries, onEntriesC
         )}
       >
         <Plus className="w-4 h-4" />
-        <span>Add Section</span>
+        <span>{t("peSection.addSection")}</span>
       </button>
     </div>
   );

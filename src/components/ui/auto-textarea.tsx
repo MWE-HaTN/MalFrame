@@ -46,7 +46,7 @@ export const AutoTextarea = memo(function AutoTextarea({
 
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     onChange(e);
-    adjustHeight();
+    // adjustHeight is called by useEffect([value]) — no need to call here
   };
 
   return (

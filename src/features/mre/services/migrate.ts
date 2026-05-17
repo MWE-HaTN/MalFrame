@@ -6,10 +6,10 @@
 import { generateId } from "@/lib/utils";
 import { extractLogText } from "@/lib/export/helpers";
 import { createInitialCodeAnalysisData, createInitialDeepDiveData } from "@/features/mre/services/codeAnalysisDefaults";
-import { initialRuntimeBehavior, RuntimeBehaviorData } from "@/features/mre/components/runtime-behavior";
+import { createInitialRuntimeBehavior, RuntimeBehaviorData } from "@/features/mre/components/runtime-behavior";
 import type { UnpackLayer, PESectionData } from "@/types/dashboard";
 import type { REData } from "@/features/mre/types";
-import { initialREData } from "./constants";
+import { createInitialREData } from "./constants";
 
 /**
  * Migrate old unpackNotes to unpackLayers format
@@ -17,16 +17,16 @@ import { initialREData } from "./constants";
 function migrateUnpackLayers(layers: unknown): UnpackLayer[] {
   if (Array.isArray(layers) && layers.length > 0) {
     return layers.map((layer: Record<string, unknown>) => ({
-      id: (layer.id as string) || generateId(),
-      layerNumber: (layer.layerNumber as number) || 1,
-      packerType: (layer.packerType as string) || "",
-      oep: (layer.oep as string) || "",
-      unpackingMethod: (layer.unpackingMethod as string) || "",
-      outputType: (layer.outputType as string) || (layer.outputLocation as string) || "",
-      tools: (layer.tools as string) || "",
-      antiAnalysis: (layer.antiAnalysis as string) || "",
-      indicators: (layer.indicators as string) || "",
-      cleanedHash: (layer.cleanedHash as string) || "",
+      id: typeof layer.id === "string" ? layer.id : generateId(),
+      layerNumber: Number(layer.layerNumber) || 1,
+      packerType: typeof layer.packerType === "string" ? layer.packerType : "",
+      oep: typeof layer.oep === "string" ? layer.oep : "",
+      unpackingMethod: typeof layer.unpackingMethod === "string" ? layer.unpackingMethod : "",
+      outputType: typeof layer.outputType === "string" ? layer.outputType : typeof layer.outputLocation === "string" ? layer.outputLocation : "",
+      tools: typeof layer.tools === "string" ? layer.tools : "",
+      antiAnalysis: typeof layer.antiAnalysis === "string" ? layer.antiAnalysis : "",
+      indicators: typeof layer.indicators === "string" ? layer.indicators : "",
+      cleanedHash: typeof layer.cleanedHash === "string" ? layer.cleanedHash : "",
     }));
   }
   return [];
@@ -36,23 +36,24 @@ function migrateUnpackLayers(layers: unknown): UnpackLayer[] {
  * Migrate old peSections to new format
  */
 function migratePeSections(saved: Record<string, unknown>): PESectionData[] {
-  const staticAnalysis = saved.staticAnalysis as Record<string, unknown> | undefined;
-  
+  const rawSA = saved.staticAnalysis;
+  const staticAnalysis = (rawSA && typeof rawSA === "object" && !Array.isArray(rawSA)) ? rawSA as Record<string, unknown> : undefined;
+
   if (Array.isArray(staticAnalysis?.peSections)) {
     return staticAnalysis.peSections as PESectionData[];
   }
-  
+
   // Migrate from old peSectionsEntropyLog format
   if (Array.isArray(staticAnalysis?.peSectionsEntropyLog)) {
     return (staticAnalysis.peSectionsEntropyLog as Record<string, unknown>[]).map((entry) => ({
-      id: (entry.id as string) || generateId(),
+      id: (typeof entry.id === "string" ? entry.id : "") || generateId(),
       sectionName: "",
       size: "",
       entropy: "",
       permissions: "",
       sectionHash: "",
-      images: (entry.images as string[]) || [],
-      timestamp: (entry.timestamp as string) || new Date().toISOString(),
+      images: Array.isArray(entry.images) ? entry.images.filter((i): i is string => typeof i === "string") : [],
+      timestamp: (typeof entry.timestamp === "string" ? entry.timestamp : "") || new Date().toISOString(),
     }));
   }
   return [];
@@ -62,32 +63,48 @@ function migratePeSections(saved: Record<string, unknown>): PESectionData[] {
  * Migrate runtimeBehavior from nested format
  */
 function migrateRuntimeBehavior(rb: Record<string, unknown> | undefined): RuntimeBehaviorData {
-  if (!rb) return initialRuntimeBehavior;
-  
+  if (!rb) return createInitialRuntimeBehavior();
+
   // Check if it's the new nested format
-  const antiAnalysis = (rb.antiAnalysisEvasion || {}) as Record<string, unknown>;
-  const execBehavior = (rb.executionBehavior || {}) as Record<string, unknown>;
-  const techRuntime = (rb.technicalRuntime || {}) as Record<string, unknown>;
-  
+  const rawAA = rb.antiAnalysisEvasion;
+  const antiAnalysis = (rawAA && typeof rawAA === "object" && !Array.isArray(rawAA)) ? rawAA as Record<string, unknown> : {};
+  const rawEB = rb.executionBehavior;
+  const execBehavior = (rawEB && typeof rawEB === "object" && !Array.isArray(rawEB)) ? rawEB as Record<string, unknown> : {};
+  const rawTR = rb.technicalRuntime;
+  const techRuntime = (rawTR && typeof rawTR === "object" && !Array.isArray(rawTR)) ? rawTR as Record<string, unknown> : {};
+
+  const getArray = <T>(...sources: unknown[]): T[] => {
+    for (const s of sources) {
+      if (Array.isArray(s)) return s as T[];
+    }
+    return [];
+  };
+  const getBool = (...sources: unknown[]): boolean => {
+    for (const s of sources) {
+      if (typeof s === "boolean") return s;
+    }
+    return false;
+  };
+
   return {
-    triggers: (antiAnalysis.triggers || rb.triggers || []) as RuntimeBehaviorData['triggers'],
-    triggersEnabled: (antiAnalysis.triggersEnabled ?? rb.triggersEnabled ?? false) as boolean,
-    antiDebug: (antiAnalysis.antiDebug || rb.antiDebug || []) as RuntimeBehaviorData['antiDebug'],
-    antiDebugEnabled: (antiAnalysis.antiDebugEnabled ?? rb.antiDebugEnabled ?? false) as boolean,
-    antiVM: (antiAnalysis.antiVM || rb.antiVM || []) as RuntimeBehaviorData['antiVM'],
-    antiVMEnabled: (antiAnalysis.antiVMEnabled ?? rb.antiVMEnabled ?? false) as boolean,
-    executionFlow: (execBehavior.executionFlow || rb.executionFlow || []) as RuntimeBehaviorData['executionFlow'],
-    executionFlowEnabled: (execBehavior.executionFlowEnabled ?? rb.executionFlowEnabled ?? false) as boolean,
-    systemArtifacts: (execBehavior.systemArtifacts || rb.systemArtifacts || []) as RuntimeBehaviorData['systemArtifacts'],
-    systemArtifactsEnabled: (execBehavior.systemArtifactsEnabled ?? rb.systemArtifactsEnabled ?? false) as boolean,
-    persistence: (execBehavior.persistence || rb.persistence || []) as RuntimeBehaviorData['persistence'],
-    persistenceEnabled: (execBehavior.persistenceEnabled ?? rb.persistenceEnabled ?? false) as boolean,
-    network: (techRuntime.network || rb.network || []) as RuntimeBehaviorData['network'],
-    networkEnabled: (techRuntime.networkEnabled ?? rb.networkEnabled ?? false) as boolean,
-    memory: (techRuntime.memory || rb.memory || []) as RuntimeBehaviorData['memory'],
-    memoryEnabled: (techRuntime.memoryEnabled ?? rb.memoryEnabled ?? false) as boolean,
-    processInjection: (techRuntime.processInjection || rb.processInjection || []) as RuntimeBehaviorData['processInjection'],
-    processInjectionEnabled: (techRuntime.processInjectionEnabled ?? rb.processInjectionEnabled ?? false) as boolean,
+    triggers: getArray<RuntimeBehaviorData['triggers'][number]>(antiAnalysis.triggers, rb.triggers),
+    triggersEnabled: getBool(antiAnalysis.triggersEnabled, rb.triggersEnabled),
+    antiDebug: getArray<RuntimeBehaviorData['antiDebug'][number]>(antiAnalysis.antiDebug, rb.antiDebug),
+    antiDebugEnabled: getBool(antiAnalysis.antiDebugEnabled, rb.antiDebugEnabled),
+    antiVM: getArray<RuntimeBehaviorData['antiVM'][number]>(antiAnalysis.antiVM, rb.antiVM),
+    antiVMEnabled: getBool(antiAnalysis.antiVMEnabled, rb.antiVMEnabled),
+    executionFlow: getArray<RuntimeBehaviorData['executionFlow'][number]>(execBehavior.executionFlow, rb.executionFlow),
+    executionFlowEnabled: getBool(execBehavior.executionFlowEnabled, rb.executionFlowEnabled),
+    systemArtifacts: getArray<RuntimeBehaviorData['systemArtifacts'][number]>(execBehavior.systemArtifacts, rb.systemArtifacts),
+    systemArtifactsEnabled: getBool(execBehavior.systemArtifactsEnabled, rb.systemArtifactsEnabled),
+    persistence: getArray<RuntimeBehaviorData['persistence'][number]>(execBehavior.persistence, rb.persistence),
+    persistenceEnabled: getBool(execBehavior.persistenceEnabled, rb.persistenceEnabled),
+    network: getArray<RuntimeBehaviorData['network'][number]>(techRuntime.network, rb.network),
+    networkEnabled: getBool(techRuntime.networkEnabled, rb.networkEnabled),
+    memory: getArray<RuntimeBehaviorData['memory'][number]>(techRuntime.memory, rb.memory),
+    memoryEnabled: getBool(techRuntime.memoryEnabled, rb.memoryEnabled),
+    processInjection: getArray<RuntimeBehaviorData['processInjection'][number]>(techRuntime.processInjection, rb.processInjection),
+    processInjectionEnabled: getBool(techRuntime.processInjectionEnabled, rb.processInjectionEnabled),
   };
 }
 
@@ -161,17 +178,23 @@ function migrateCodeAnalysis(codeAnalysis: Record<string, unknown> | undefined) 
  * Main migration function - converts saved data to current format
  */
 export function migrateREData(saved: unknown): REData {
-  if (!saved) return initialREData;
-  
+  if (!saved || typeof saved !== "object" || Array.isArray(saved)) return createInitialREData();
+
   const savedData = saved as Record<string, unknown>;
 
   // Support both old flat format and new nested format
-  const sa = (savedData.staticAnalysis || {}) as Record<string, unknown>;
-  const osint = (sa.osintLookup || {}) as Record<string, string>;
-  const basicInfo = (sa.basicFileInfo || {}) as Record<string, string>;
-  const peInfo = (sa.portableExecutableInfo || {}) as Record<string, string>;
-  const security = (sa.securityPosture || {}) as Record<string, unknown>;
-  const packing = (sa.packingAnalysis || {}) as Record<string, unknown>;
+  const rawSA = savedData.staticAnalysis;
+  const sa = (rawSA && typeof rawSA === "object" && !Array.isArray(rawSA)) ? rawSA as Record<string, unknown> : {};
+  const rawOsint = sa.osintLookup;
+  const osint = (rawOsint && typeof rawOsint === "object" && !Array.isArray(rawOsint)) ? rawOsint as Record<string, string> : {};
+  const rawBI = sa.basicFileInfo;
+  const basicInfo = (rawBI && typeof rawBI === "object" && !Array.isArray(rawBI)) ? rawBI as Record<string, string> : {};
+  const rawPE = sa.portableExecutableInfo;
+  const peInfo = (rawPE && typeof rawPE === "object" && !Array.isArray(rawPE)) ? rawPE as Record<string, string> : {};
+  const rawSec = sa.securityPosture;
+  const security = (rawSec && typeof rawSec === "object" && !Array.isArray(rawSec)) ? rawSec as Record<string, unknown> : {};
+  const rawPack = sa.packingAnalysis;
+  const packing = (rawPack && typeof rawPack === "object" && !Array.isArray(rawPack)) ? rawPack as Record<string, unknown> : {};
 
   // Handle DLL mitigations migration
   let dllMitigations: string[] = [];
@@ -194,41 +217,44 @@ export function migrateREData(saved: unknown): REData {
       .map(([k]) => labels[k] || k);
   }
 
-  const background = (savedData.background || {}) as Record<string, string>;
-  const codeBehavior = savedData.codeBehavior as Record<string, unknown> | undefined;
-  const detection = savedData.detection as Record<string, unknown> | undefined;
+  const rawBg = savedData.background;
+  const background = (rawBg && typeof rawBg === "object" && !Array.isArray(rawBg)) ? rawBg as Record<string, string> : {};
+  const rawCB = savedData.codeBehavior;
+  const codeBehavior = (rawCB && typeof rawCB === "object" && !Array.isArray(rawCB)) ? rawCB as Record<string, unknown> : undefined;
+  const rawDet = savedData.detection;
+  const detection = (rawDet && typeof rawDet === "object" && !Array.isArray(rawDet)) ? rawDet as Record<string, unknown> : undefined;
 
   return {
-    background: { ...initialREData.background, ...background },
+    background: { ...createInitialREData().background, ...background },
     staticAnalysis: {
       // OSINT Lookup - support both nested and flat
-      virusTotal: osint.virusTotal || (sa.virusTotal as string) || "",
-      malwareBazaar: osint.malwareBazaar || (sa.malwareBazaar as string) || "",
-      anyRun: osint.anyRun || (sa.anyRun as string) || "",
-      tiNotes: osint.tiNotes || (sa.tiNotes as string) || extractLogText(sa.osintLookup || sa.osintLookupLog, "\n"),
+      virusTotal: osint.virusTotal ?? (sa.virusTotal as string) ?? "",
+      malwareBazaar: osint.malwareBazaar ?? (sa.malwareBazaar as string) ?? "",
+      anyRun: osint.anyRun ?? (sa.anyRun as string) ?? "",
+      tiNotes: osint.tiNotes ?? (sa.tiNotes as string) ?? extractLogText(sa.osintLookup || sa.osintLookupLog, "\n"),
       // Basic File Info - support both nested and flat
-      sha256: basicInfo.sha256 || (sa.sha256 as string) || "",
-      impHash: basicInfo.impHash || (sa.impHash as string) || "",
-      fileType: basicInfo.fileType || (sa.fileType as string) || ((sa.basicInfo as string)?.split('\n')[0]?.replace('File: ', '') || ""),
-      magicBytes: basicInfo.magicBytes || (sa.magicBytes as string) || "",
-      fileSize: basicInfo.fileSize || (sa.fileSize as string) || "",
-      fileEntropy: basicInfo.fileEntropy || (sa.fileEntropy as string) || "",
-      compileTime: basicInfo.compileTime || (sa.compileTime as string) || "",
-      fileProperties: basicInfo.fileProperties || (sa.fileProperties as string) || "",
+      sha256: basicInfo.sha256 ?? (sa.sha256 as string) ?? "",
+      impHash: basicInfo.impHash ?? (sa.impHash as string) ?? "",
+      fileType: basicInfo.fileType ?? (sa.fileType as string) ?? ((sa.basicInfo as string)?.split('\n')[0]?.replace('File: ', '') ?? ""),
+      magicBytes: basicInfo.magicBytes ?? (sa.magicBytes as string) ?? "",
+      fileSize: basicInfo.fileSize ?? (sa.fileSize as string) ?? "",
+      fileEntropy: basicInfo.fileEntropy ?? (sa.fileEntropy as string) ?? "",
+      compileTime: basicInfo.compileTime ?? (sa.compileTime as string) ?? "",
+      fileProperties: basicInfo.fileProperties ?? (sa.fileProperties as string) ?? "",
       // PE Info - support both nested and flat
-      entryPoint: peInfo.entryPoint || (sa.entryPoint as string) || "",
-      imageBase: peInfo.imageBase || (sa.imageBase as string) || "",
-      architecture: peInfo.architecture || (sa.architecture as string) || "",
-      numberOfSections: peInfo.numberOfSections || (sa.numberOfSections as string) || "",
-      machine: peInfo.machine || (sa.machine as string) || "",
-      characteristics: peInfo.characteristics || (sa.characteristics as string) || "",
-      subsystem: peInfo.subsystem || (sa.subsystem as string) || "",
+      entryPoint: peInfo.entryPoint ?? (sa.entryPoint as string) ?? "",
+      imageBase: peInfo.imageBase ?? (sa.imageBase as string) ?? "",
+      architecture: peInfo.architecture ?? (sa.architecture as string) ?? "",
+      numberOfSections: peInfo.numberOfSections ?? (sa.numberOfSections as string) ?? "",
+      machine: peInfo.machine ?? (sa.machine as string) ?? "",
+      characteristics: peInfo.characteristics ?? (sa.characteristics as string) ?? "",
+      subsystem: peInfo.subsystem ?? (sa.subsystem as string) ?? "",
       // Security Posture - support both nested and flat
-      signatureStatus: (security.signatureStatus as string) || (sa.signatureStatus as string) || "",
+      signatureStatus: (security.signatureStatus as string) ?? (sa.signatureStatus as string) ?? "",
       dllMitigations,
       // Packing Analysis - support both nested and flat
-      isPacked: (packing.isPacked as string) || (sa.isPacked as string) || "",
-      packerSuspected: (packing.packerSuspected as string) || (sa.packerSuspected as string) || "",
+      isPacked: (packing.isPacked as string) ?? (sa.isPacked as string) ?? "",
+      packerSuspected: (packing.packerSuspected as string) ?? (sa.packerSuspected as string) ?? "",
       unpackLayers: migrateUnpackLayers(packing.unpackLayers || sa.unpackLayers),
       // PE Sections
       peSections: migratePeSections(savedData),
@@ -248,9 +274,9 @@ export function migrateREData(saved: unknown): REData {
       ((savedData.codeAnalysis as Record<string, unknown>)?.deepDive || savedData.deepDive) as Record<string, unknown> | undefined
     ),
     detection: {
-      mbcMapping: ((savedData.malwareBehaviorMapping || detection?.mbcMapping) as REData['detection']['mbcMapping']) || [],
+      mbcMapping: ((savedData.malwareBehaviorMapping ?? detection?.mbcMapping) as REData['detection']['mbcMapping']) ?? [],
       yaraSignature: ((savedData.yaraSignature ?? detection?.yaraSignature) as string) ?? "",
-      iocs: ((savedData.iocTable || detection?.iocs) as REData['detection']['iocs']) || [],
+      iocs: ((savedData.iocTable ?? detection?.iocs) as REData['detection']['iocs']) ?? [],
       summary: ((savedData.summary || detection?.summary) as REData['detection']['summary']) || {
         malwareFamily: ((detection?.conclusionLog as unknown[])?.[0] as Record<string, string>)?.text || (detection?.conclusion as string) || "",
         keyFunctionality: "",

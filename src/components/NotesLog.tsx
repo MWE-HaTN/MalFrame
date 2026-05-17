@@ -2,7 +2,10 @@ import { useRef, useEffect, ClipboardEvent, memo } from "react";
 import { cn, generateId } from "@/lib/utils";
 import { Plus, Trash2, Image, ChevronUp, ChevronDown } from "lucide-react";
 import { useLanguage } from "@/hooks/useLanguage";
+import { toast } from "sonner";
 import type { LogEntry } from "@/types/dashboard";
+
+const MAX_IMAGE_SIZE = 10 * 1024 * 1024; // 10MB
 import { AutoTextarea } from "@/components/ui/auto-textarea";
 import { ImageGrid } from "@/components/ui/image-grid";
 
@@ -19,14 +22,15 @@ interface NotesLogProps {
 export const NotesLog = memo(function NotesLog({ entries, onEntriesChange, placeholder, className, hideAddButton = false, maxEntriesPerRow, allowImages = true }: NotesLogProps) {
   const { t } = useLanguage();
   const fileInputRefs = useRef<Map<string, HTMLInputElement>>(new Map());
+  const entriesRef = useRef(entries);
+  entriesRef.current = entries;
 
-  // Auto-create entry if empty and hideAddButton is true - sync once on mount
+  // Auto-create entry if empty and hideAddButton is true
   useEffect(() => {
     if (entries.length === 0 && hideAddButton) {
       onEntriesChange([{ id: generateId("entry"), text: "", images: [], timestamp: new Date().toLocaleString() }]);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hideAddButton]);
+  }, [entries.length, hideAddButton, onEntriesChange]);
 
   const addEntry = () => {
     const newEntry: LogEntry = {
@@ -35,34 +39,35 @@ export const NotesLog = memo(function NotesLog({ entries, onEntriesChange, place
       images: [],
       timestamp: new Date().toLocaleString(),
     };
-    onEntriesChange([...entries, newEntry]);
+    onEntriesChange([...entriesRef.current, newEntry]);
   };
 
   const updateEntry = (id: string, updates: Partial<LogEntry>) => {
     onEntriesChange(
-      entries.map((entry) => (entry.id === id ? { ...entry, ...updates } : entry))
+      entriesRef.current.map((entry) => (entry.id === id ? { ...entry, ...updates } : entry))
     );
   };
 
   const deleteEntry = (id: string) => {
-    onEntriesChange(entries.filter((entry) => entry.id !== id));
+    onEntriesChange(entriesRef.current.filter((entry) => entry.id !== id));
+    fileInputRefs.current.delete(id);
   };
 
   const moveEntry = (entryId: string, direction: "up" | "down") => {
-    const currentIndex = entries.findIndex((entry) => entry.id === entryId);
+    const currentIndex = entriesRef.current.findIndex((entry) => entry.id === entryId);
     if (currentIndex === -1) return;
-    
+
     const targetIndex = direction === "up" ? currentIndex - 1 : currentIndex + 1;
-    if (targetIndex < 0 || targetIndex >= entries.length) return;
-    
-    const reorderedEntries = [...entries];
+    if (targetIndex < 0 || targetIndex >= entriesRef.current.length) return;
+
+    const reorderedEntries = [...entriesRef.current];
     [reorderedEntries[currentIndex], reorderedEntries[targetIndex]] = [reorderedEntries[targetIndex], reorderedEntries[currentIndex]];
     onEntriesChange(reorderedEntries);
   };
 
   const handlePaste = (pasteEvent: ClipboardEvent<HTMLTextAreaElement>, entryId: string) => {
     if (!allowImages) return;
-    
+
     const clipboardItems = pasteEvent.clipboardData?.items;
     if (!clipboardItems) return;
 
@@ -71,17 +76,22 @@ export const NotesLog = memo(function NotesLog({ entries, onEntriesChange, place
       if (clipboardItem.type.startsWith("image/")) {
         pasteEvent.preventDefault();
         const imageFile = clipboardItem.getAsFile();
-        if (imageFile) {
-          const fileReader = new FileReader();
-          fileReader.onload = (loadEvent) => {
-            const base64Data = loadEvent.target?.result as string;
-            const targetEntry = entries.find((entry) => entry.id === entryId);
-            if (targetEntry) {
-              updateEntry(entryId, { images: [...targetEntry.images, base64Data] });
-            }
-          };
-          fileReader.readAsDataURL(imageFile);
+        if (!imageFile) break;
+        if (imageFile.size > MAX_IMAGE_SIZE) {
+          toast.error(t("notes.imageTooLarge"));
+          break;
         }
+        const fileReader = new FileReader();
+        fileReader.onload = (loadEvent) => {
+          const base64Data = loadEvent.target?.result;
+          if (typeof base64Data !== "string" || base64Data.length === 0) return;
+          const targetEntry = entriesRef.current.find((entry) => entry.id === entryId);
+          if (targetEntry) {
+            updateEntry(entryId, { images: [...(targetEntry.images ?? []), base64Data] });
+          }
+        };
+        fileReader.onerror = () => {};
+        fileReader.readAsDataURL(imageFile);
         break;
       }
     }
@@ -91,23 +101,30 @@ export const NotesLog = memo(function NotesLog({ entries, onEntriesChange, place
     const selectedFiles = changeEvent.target.files;
     if (!selectedFiles) return;
 
-    const targetEntry = entries.find((entry) => entry.id === entryId);
-    if (!targetEntry) return;
-
-    const imageFiles = Array.from(selectedFiles).filter((f) => f.type.startsWith("image/"));
+    const imageFiles = Array.from(selectedFiles).filter((f) => f.type.startsWith("image/") && f.size <= MAX_IMAGE_SIZE);
     if (imageFiles.length === 0) return;
 
     const reads = imageFiles.map(
       (imageFile) =>
         new Promise<string>((resolve) => {
           const fileReader = new FileReader();
-          fileReader.onload = (loadEvent) => resolve(loadEvent.target?.result as string);
+          fileReader.onload = (loadEvent) => {
+            const result = loadEvent.target?.result;
+            resolve(typeof result === "string" ? result : "");
+          };
+          fileReader.onerror = () => resolve("");
           fileReader.readAsDataURL(imageFile);
         })
     );
 
     Promise.all(reads).then((base64s) => {
-      updateEntry(entryId, { images: [...targetEntry.images, ...base64s] });
+      const validImages = base64s.filter((img) => img.length > 0);
+      if (validImages.length === 0) return;
+      // Read from ref inside async callback to avoid stale closure
+      const entry = entriesRef.current.find((e) => e.id === entryId);
+      if (entry) {
+        updateEntry(entryId, { images: [...(entry.images ?? []), ...validImages] });
+      }
     }).catch(() => {
       // Image read failed silently — partial results are acceptable
     });
@@ -118,10 +135,10 @@ export const NotesLog = memo(function NotesLog({ entries, onEntriesChange, place
   };
 
   const removeImage = (entryId: string, imageIndex: number) => {
-    const targetEntry = entries.find((entry) => entry.id === entryId);
+    const targetEntry = entriesRef.current.find((entry) => entry.id === entryId);
     if (!targetEntry) return;
     updateEntry(entryId, {
-      images: targetEntry.images.filter((_, index) => index !== imageIndex),
+      images: (targetEntry.images ?? []).filter((_, index) => index !== imageIndex),
     });
   };
 
@@ -155,8 +172,8 @@ export const NotesLog = memo(function NotesLog({ entries, onEntriesChange, place
                   type="text"
                   value={entry.imageName || ""}
                   onChange={(e) => updateEntry(entry.id, { imageName: e.target.value })}
-                  placeholder="Name..."
-                  aria-label="Entry name"
+                  placeholder={t("aria.namePlaceholder")}
+                  aria-label={t("aria.entryName")}
                   className="bg-transparent border-none text-sm text-muted-foreground font-mono placeholder:text-muted-foreground/50 focus:outline-none focus:text-foreground w-20 md:w-28"
                 />
               </div>
@@ -165,7 +182,7 @@ export const NotesLog = memo(function NotesLog({ entries, onEntriesChange, place
                   type="button"
                   onClick={() => moveEntry(entry.id, "up")}
                   disabled={index === 0}
-                  aria-label="Move entry up"
+                  aria-label={t("aria.moveEntryUp")}
                   className="p-0.5 text-muted-foreground hover:text-primary disabled:opacity-30 transition-colors"
                 >
                   <ChevronUp className="w-3.5 h-3.5" />
@@ -174,7 +191,7 @@ export const NotesLog = memo(function NotesLog({ entries, onEntriesChange, place
                   type="button"
                   onClick={() => moveEntry(entry.id, "down")}
                   disabled={index === entries.length - 1}
-                  aria-label="Move entry down"
+                  aria-label={t("aria.moveEntryDown")}
                   className="p-0.5 text-muted-foreground hover:text-primary disabled:opacity-30 transition-colors"
                 >
                   <ChevronDown className="w-3.5 h-3.5" />
@@ -203,6 +220,7 @@ export const NotesLog = memo(function NotesLog({ entries, onEntriesChange, place
                   <input
                     ref={(el) => {
                       if (el) fileInputRefs.current.set(entry.id, el);
+                      else fileInputRefs.current.delete(entry.id);
                     }}
                     id={`file-upload-${entry.id}`}
                     name={`file-upload-${entry.id}`}
@@ -211,7 +229,7 @@ export const NotesLog = memo(function NotesLog({ entries, onEntriesChange, place
                     multiple
                     onChange={(e) => handleFileSelect(e, entry.id)}
                     className="hidden"
-                    aria-label="Upload image files"
+                    aria-label={t("aria.uploadImageFiles")}
                   />
                 )}
               </div>
@@ -225,13 +243,13 @@ export const NotesLog = memo(function NotesLog({ entries, onEntriesChange, place
                 value={entry.text}
                 onChange={(e) => updateEntry(entry.id, { text: e.target.value })}
                 onPaste={(e) => handlePaste(e, entry.id)}
-                placeholder={allowImages ? (placeholder || "Write notes here... (Ctrl+V to paste images)") : (placeholder || "Write notes here...")}
+                placeholder={allowImages ? (placeholder || t("notes.writeHereWithImages")) : (placeholder || t("notes.writeHere"))}
                 minHeight={72}
               />
 
               {/* Images */}
               <ImageGrid
-                images={entry.images}
+                images={entry.images ?? []}
                 onRemove={(imgIndex) => removeImage(entry.id, imgIndex)}
                 imageHeight="h-32"
               />
